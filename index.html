@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RogueCFA.ai — AI Investment Scorecard</title>
+    <meta name="description" content="Score any stock ticker against your intended hold period using live analyst data and AI. Free, BYOK, no account required." />
+    <meta name="theme-color" content="#06060e" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%236366f1'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='system-ui' font-weight='700' font-size='16'%3ER%3C/text%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+              mono: ['JetBrains Mono', 'Menlo', 'monospace'],
+            },
+            colors: {
+              surface: {
+                DEFAULT: 'rgb(var(--c-surface) / <alpha-value>)',
+                card: 'rgb(var(--c-surface-card) / <alpha-value>)',
+                elevated: 'rgb(var(--c-surface-elevated) / <alpha-value>)',
+              },
+              edge: 'rgb(var(--c-edge) / <alpha-value>)',
+              prime: 'rgb(var(--c-prime) / <alpha-value>)',
+              dim: 'rgb(var(--c-dim) / <alpha-value>)',
+              faint: 'rgb(var(--c-faint) / <alpha-value>)',
+              accent: {
+                DEFAULT: 'rgb(var(--c-accent) / <alpha-value>)',
+                hover: 'rgb(var(--c-accent-hover) / <alpha-value>)',
+                muted: 'rgb(var(--c-accent-muted) / <alpha-value>)',
+              },
+              'signal-buy': 'rgb(var(--c-signal-buy) / <alpha-value>)',
+              'signal-watch': 'rgb(var(--c-signal-watch) / <alpha-value>)',
+              'signal-avoid': 'rgb(var(--c-signal-avoid) / <alpha-value>)',
+              danger: 'rgb(var(--c-danger) / <alpha-value>)',
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.4s ease-out',
+              'slide-up': 'slideUp 0.5s ease-out both',
+              'slide-right': 'slideRight 0.3s ease-out both',
+              'shimmer': 'shimmer 2s infinite linear',
+              'pulse-signal': 'pulseSignal 2s ease-in-out infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                from: { opacity: '0' },
+                to: { opacity: '1' },
+              },
+              slideUp: {
+                from: { opacity: '0', transform: 'translateY(24px)' },
+                to: { opacity: '1', transform: 'translateY(0)' },
+              },
+              slideRight: {
+                from: { transform: 'translateX(100%)' },
+                to: { transform: 'translateX(0)' },
+              },
+              shimmer: {
+                '0%': { backgroundPosition: '-200% 0' },
+                '100%': { backgroundPosition: '200% 0' },
+              },
+              pulseSignal: {
+                '0%, 100%': { opacity: '1' },
+                '50%': { opacity: '0.7' },
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      /* Pre-React background to prevent flash */
+      body { background-color: #06060e; }
+      #root { min-height: 100vh; }
+    </style>
+  </head>
+  <body class="font-sans antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
