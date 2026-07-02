@@ -8,7 +8,7 @@ const PROVIDERS = [
   {
     id: 'claude',
     label: 'Anthropic Claude',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-3-5-sonnet-20241022',
     tag: 'Paid',
   },
   {
