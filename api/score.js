@@ -114,7 +114,22 @@ async function callGemini(key, systemPrompt, userPrompt) {
   }
 
   const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return extractTextFromResponse(data);
+}
+
+function extractTextFromResponse(data) {
+  if (!data) return '';
+  const text =
+    data.content?.[0]?.text ||
+    data.choices?.[0]?.message?.content ||
+    data.candidates?.[0]?.content?.parts?.[0]?.text ||
+    '';
+  if (!text) {
+    throw new Error(
+      `Gateway returned 200 OK but unusual payload: "${JSON.stringify(data).slice(0, 100)}..."`
+    );
+  }
+  return text;
 }
 
 /* ── Claude ── */
@@ -144,7 +159,7 @@ async function callClaude(key, systemPrompt, userPrompt) {
   }
 
   const data = await response.json();
-  return data.content?.[0]?.text || '';
+  return extractTextFromResponse(data);
 }
 
 /* ── OpenAI ── */
@@ -175,7 +190,7 @@ async function callOpenAI(key, systemPrompt, userPrompt) {
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  return extractTextFromResponse(data);
 }
 
 /* ────────────────────────────────────────────
