@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
 
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 1;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -178,35 +178,17 @@ async function callOpenAI(key, systemPrompt, userPrompt) {
    ──────────────────────────────────────────── */
 
 function extractJSON(text) {
-  if (!text) return null;
-  const trimmed = text.trim();
-
-  /* 1. Direct parse */
+  // Strip markdown fences first
+  const stripped = text
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
+  
   try {
-    return JSON.parse(trimmed);
+    return JSON.parse(stripped);
   } catch {
-    /* continue */
+    const match = stripped.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error('No valid JSON found');
   }
-
-  /* 2. Strip markdown fences */
-  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (fenceMatch) {
-    try {
-      return JSON.parse(fenceMatch[1]);
-    } catch {
-      /* continue */
-    }
-  }
-
-  /* 3. Find first JSON object */
-  const objectMatch = trimmed.match(/\{[\s\S]*\}/);
-  if (objectMatch) {
-    try {
-      return JSON.parse(objectMatch[0]);
-    } catch {
-      /* continue */
-    }
-  }
-
-  return null;
 }
