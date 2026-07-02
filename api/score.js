@@ -105,8 +105,10 @@ async function callGemini(key, systemPrompt, userPrompt) {
   });
 
   if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    const detail = errBody.error?.message || response.statusText || response.status;
     throw Object.assign(
-      new Error(`Gemini API error: ${response.status}`),
+      new Error(`Gemini API error: ${detail}`),
       { status: response.status }
     );
   }
@@ -133,8 +135,10 @@ async function callClaude(key, systemPrompt, userPrompt) {
   });
 
   if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    const detail = errBody.error?.message || response.statusText || response.status;
     throw Object.assign(
-      new Error(`Claude API error: ${response.status}`),
+      new Error(`Claude API error: ${detail}`),
       { status: response.status }
     );
   }
@@ -162,8 +166,10 @@ async function callOpenAI(key, systemPrompt, userPrompt) {
   });
 
   if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    const detail = errBody.error?.message || response.statusText || response.status;
     throw Object.assign(
-      new Error(`OpenAI API error: ${response.status}`),
+      new Error(`OpenAI API error: ${detail}`),
       { status: response.status }
     );
   }
