@@ -128,7 +128,7 @@ async function callClaude(key, systemPrompt, userPrompt) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     }),
@@ -184,7 +184,7 @@ async function callOpenAI(key, systemPrompt, userPrompt) {
    ──────────────────────────────────────────── */
 
 function extractJSON(text) {
-  // Strip markdown fences first
+  if (!text) throw new Error('AI returned an empty response.');
   const stripped = text
     .replace(/```json/gi, '')
     .replace(/```/g, '')
@@ -194,7 +194,13 @@ function extractJSON(text) {
     return JSON.parse(stripped);
   } catch {
     const match = stripped.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error('No valid JSON found');
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch (err) {
+        throw new Error(`JSON cut off or malformed (${err.message}): "${match[0].slice(0, 80)}..."`);
+      }
+    }
+    throw new Error(`No JSON object found in text: "${text.slice(0, 80)}..."`);
   }
 }
