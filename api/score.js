@@ -119,14 +119,26 @@ async function callGemini(key, systemPrompt, userPrompt) {
 
 function extractTextFromResponse(data) {
   if (!data) return '';
-  const text =
-    data.content?.[0]?.text ||
-    data.choices?.[0]?.message?.content ||
-    data.candidates?.[0]?.content?.parts?.[0]?.text ||
-    '';
+
+  let text = '';
+  if (Array.isArray(data.content)) {
+    const textBlock = data.content.find((b) => b.type === 'text' || typeof b.text === 'string');
+    text = textBlock?.text || '';
+  }
+  if (!text && Array.isArray(data.choices)) {
+    text = data.choices[0]?.message?.content || '';
+  }
+  if (!text && Array.isArray(data.candidates)) {
+    const parts = data.candidates[0]?.content?.parts;
+    if (Array.isArray(parts)) {
+      const textPart = parts.find((p) => typeof p.text === 'string');
+      text = textPart?.text || '';
+    }
+  }
+
   if (!text) {
     throw new Error(
-      `Gateway returned 200 OK but unusual payload: "${JSON.stringify(data).slice(0, 100)}..."`
+      `AI returned no final text (only thinking/preamble blocks). Try increasing max_tokens or retrying.`
     );
   }
   return text;
@@ -143,7 +155,7 @@ async function callClaude(key, systemPrompt, userPrompt) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     }),
