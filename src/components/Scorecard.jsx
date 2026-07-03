@@ -30,17 +30,75 @@ const SIGNAL = {
   },
 };
 
+/* Score breakdown segment colors */
+const BREAKDOWN_COLORS = {
+  consensus: { bg: 'bg-accent', label: 'Consensus' },
+  momentum: { bg: 'bg-signal-watch', label: 'Momentum' },
+  valuation: { bg: 'bg-signal-buy', label: 'Valuation' },
+  earnings: { bg: 'bg-purple-400', label: 'Earnings' },
+  newsSentiment: { bg: 'bg-blue-400', label: 'News Sentiment' },
+};
+
+/* ── Score Breakdown Bar ── */
+function ScoreBreakdownBar({ breakdown }) {
+  if (!breakdown || Object.keys(breakdown).length === 0) return null;
+
+  const total = Object.values(breakdown).reduce((a, b) => a + b, 0);
+  if (total <= 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <h4 className="text-xs font-semibold text-faint uppercase tracking-wider">
+        Score Breakdown
+      </h4>
+      {/* Stacked bar */}
+      <div className="h-3 rounded-full overflow-hidden flex bg-surface-elevated">
+        {Object.entries(breakdown).map(([key, value]) => {
+          const config = BREAKDOWN_COLORS[key] || { bg: 'bg-dim', label: key };
+          const pct = (value / 100) * 100; /* value is out of its max weight, total is ~100 */
+          return (
+            <div
+              key={key}
+              className={`${config.bg} transition-all duration-700 ease-out`}
+              style={{ width: `${pct}%` }}
+              title={`${config.label}: ${value.toFixed(1)}`}
+            />
+          );
+        })}
+      </div>
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {Object.entries(breakdown).map(([key, value]) => {
+          const config = BREAKDOWN_COLORS[key] || { bg: 'bg-dim', label: key };
+          return (
+            <div key={key} className="flex items-center gap-1.5">
+              <div className={`w-2.5 h-2.5 rounded-sm ${config.bg}`} />
+              <span className="text-xs text-dim">
+                {config.label}: <span className="text-prime font-medium">{value.toFixed(1)}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Scorecard({ data, holdPeriod, className = '' }) {
   const {
     ticker,
     score,
     grade,
     signal,
+    score_breakdown: breakdown,
+    hasAlphaVantage,
     analyst_consensus: consensus,
+    thesis,
     sentiment_summary: sentiment,
     timeframe_verdict: verdict,
     key_risks: risks,
     key_catalysts: catalysts,
+    watch_for: watchFor,
     companyName,
     limitedData,
     scoredAt,
@@ -78,15 +136,26 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
           {companyName && companyName !== ticker && (
             <p className="text-sm text-dim">{companyName}</p>
           )}
-          {limitedData && (
-            <span
-              className="inline-flex items-center gap-1 mt-1 text-xs
-                          text-signal-watch bg-signal-watch/10
-                          border border-signal-watch/20 px-2 py-0.5 rounded-full"
-            >
-              ⚠ Limited Data
-            </span>
-          )}
+          <div className="flex items-center gap-2 mt-1">
+            {limitedData && (
+              <span
+                className="inline-flex items-center gap-1 text-xs
+                            text-signal-watch bg-signal-watch/10
+                            border border-signal-watch/20 px-2 py-0.5 rounded-full"
+              >
+                ⚠ Limited Data
+              </span>
+            )}
+            {hasAlphaVantage === false && (
+              <span
+                className="inline-flex items-center gap-1 text-xs
+                            text-faint bg-surface-elevated
+                            border border-edge px-2 py-0.5 rounded-full"
+              >
+                Finnhub Only
+              </span>
+            )}
+          </div>
         </div>
         <span className="text-xs text-faint whitespace-nowrap">
           {HOLD_LABELS[holdPeriod] || holdPeriod}
@@ -148,6 +217,21 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
 
       {/* ── Body ── */}
       <div className="px-6 py-5 space-y-5">
+        {/* Score Breakdown Bar */}
+        <ScoreBreakdownBar breakdown={breakdown} />
+
+        {/* Investment Thesis */}
+        {thesis && (
+          <div>
+            <h4 className="text-xs font-semibold text-accent uppercase tracking-wider mb-1.5">
+              Investment Thesis
+            </h4>
+            <p className="text-sm text-prime leading-relaxed font-medium">
+              {thesis}
+            </p>
+          </div>
+        )}
+
         {/* Sentiment */}
         {sentiment && (
           <div>
@@ -167,6 +251,16 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
             <p className="text-sm text-prime leading-relaxed font-medium">
               {verdict}
             </p>
+          </div>
+        )}
+
+        {/* Watch For */}
+        {watchFor && (
+          <div className="bg-surface-elevated/50 border border-edge rounded-lg px-4 py-3">
+            <h4 className="text-xs font-semibold text-signal-watch uppercase tracking-wider mb-1">
+              👁 Watch For
+            </h4>
+            <p className="text-sm text-prime leading-relaxed">{watchFor}</p>
           </div>
         )}
 

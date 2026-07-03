@@ -5,6 +5,7 @@ import ProviderSelect from './ProviderSelect';
 export default function KeySetup({ onComplete, className = '' }) {
   const [finnhubKey, setFinnhubKey] = useState('');
   const [llmKey, setLlmKey] = useState('');
+  const [alphaVantageKey, setAlphaVantageKey] = useState('');
   const [provider, setProvider] = useState('gemini');
   const [error, setError] = useState('');
 
@@ -18,7 +19,7 @@ export default function KeySetup({ onComplete, className = '' }) {
       setError('LLM API key is required.');
       return;
     }
-    saveKeys(finnhubKey, llmKey);
+    saveKeys(finnhubKey, llmKey, alphaVantageKey);
     saveProvider(provider);
     onComplete();
   };
@@ -30,7 +31,8 @@ export default function KeySetup({ onComplete, className = '' }) {
     >
       <div
         className="w-full max-w-md mx-4 bg-surface-card border border-edge
-                    rounded-2xl p-8 shadow-2xl shadow-accent/5 animate-slide-up"
+                    rounded-2xl p-8 shadow-2xl shadow-accent/5 animate-slide-up
+                    max-h-[90vh] overflow-y-auto"
       >
         {/* ── Brand header ── */}
         <div className="text-center mb-8">
@@ -120,6 +122,45 @@ export default function KeySetup({ onComplete, className = '' }) {
               LLM Provider
             </label>
             <ProviderSelect value={provider} onChange={setProvider} />
+          </div>
+
+          {/* Alpha Vantage key (optional) */}
+          <div className="border-t border-edge pt-4">
+            <label
+              htmlFor="key-alphavantage"
+              className="block text-sm font-medium text-dim mb-1.5"
+            >
+              Alpha Vantage API Key{' '}
+              <span className="text-faint font-normal">(Optional — richer analysis)</span>
+            </label>
+            <input
+              id="key-alphavantage"
+              type="password"
+              value={alphaVantageKey}
+              onChange={(e) => {
+                setAlphaVantageKey(e.target.value);
+                setError('');
+              }}
+              placeholder="Optional — adds earnings & fundamentals data"
+              className="w-full px-4 py-2.5 bg-surface border border-edge rounded-lg
+                         text-prime placeholder-faint focus:outline-none
+                         focus:border-accent focus:ring-1 focus:ring-accent/30
+                         transition-colors"
+              autoComplete="off"
+            />
+            <a
+              href="https://www.alphavantage.co/support/#api-key"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-accent hover:text-accent-hover
+                         transition-colors mt-1 inline-block"
+            >
+              Get a free Alpha Vantage key →
+            </a>
+            <p className="text-xs text-faint mt-1">
+              Adds P/E ratio, earnings beat history, revenue growth, and more.
+              Without it, scoring uses analyst consensus and price data only.
+            </p>
           </div>
 
           {/* Error */}

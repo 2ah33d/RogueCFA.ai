@@ -10,29 +10,17 @@ export const HOLD_PERIODS = {
 };
 
 /* ────────────────────────────────────────────
-   Time-horizon prompt instructions
+   Time-horizon focus instructions
    ──────────────────────────────────────────── */
-const TIME_INSTRUCTIONS = {
-  short: `TIME-HORIZON WEIGHTING (Short Term — 1 to 3 Months):
-- Recent news sentiment: 40 %
-- Analyst consensus direction-of-change: 35 %
-- Price momentum / 52-week position: 15 %
-- Company guidance / structural factors: 10 %
-INSTRUCTION: Weight recent news sentiment and analyst consensus direction-of-change most heavily. Flag any catalysts or risks materializing within 90 days. Price momentum and 52-week positioning are relevant. Discount long-term structural factors.`,
+const TIME_FOCUS = {
+  short: `HOLD PERIOD FOCUS (Short Term — 1 to 3 Months):
+Focus your analysis on near-term catalysts, upcoming earnings dates, recent momentum, and news events within the next 90 days. Discount long-term structural factors. Flag any binary events (earnings, FDA decisions, macro releases) within the window.`,
 
-  mid: `TIME-HORIZON WEIGHTING (Mid Term — 6 Months):
-- Recent news sentiment: 27.5 %
-- Analyst consensus direction: 27.5 %
-- Price momentum / 52-week position: 15 %
-- Company guidance / structural positioning: 30 %
-INSTRUCTION: Balance short-term catalysts with structural positioning. Give equal consideration to news momentum and business model durability. Flag risks in both the 0-90 day and 90-180 day windows.`,
+  mid: `HOLD PERIOD FOCUS (Mid Term — 6 Months):
+Balance near-term catalysts with business model durability. Give equal weight to current momentum and structural positioning. Flag risks in both the 0-90 day and 90-180 day windows.`,
 
-  long: `TIME-HORIZON WEIGHTING (Long Term — 1 to 3 Years):
-- Company guidance / structural durability: 50 %
-- Sector and macro tailwinds: 15 %
-- Analyst consensus count and stability: 20 %
-- Recent news (discounted): 15 %
-INSTRUCTION: Ignore short-term price action and news noise. Focus on whether the business model has structural durability, management guidance quality, and sector tailwinds. Analyst consensus stability matters more than direction-of-change.`,
+  long: `HOLD PERIOD FOCUS (Long Term — 1 to 3 Years):
+Ignore short-term price action and news noise. Focus on structural durability of the business model, management quality signals from the data, sector tailwinds, and whether the valuation supports a multi-year thesis.`,
 };
 
 /* ────────────────────────────────────────────
@@ -67,13 +55,12 @@ function formatNews(newsItems) {
     return `${i + 1}. [${date}] ${headline}${summary ? ` — ${summary}` : ''}`;
   });
 
-  /* Cap at 2000 chars per PRD security spec */
   return lines.join('\n').slice(0, 2000);
 }
 
 function formatConsensus(recommendation) {
   if (!recommendation || recommendation.length === 0) {
-    return { text: 'No analyst consensus data available.', count: 0 };
+    return { text: 'No analyst consensus data available.', count: 0, details: null };
   }
 
   const latest = recommendation[0];
@@ -93,16 +80,39 @@ function formatConsensus(recommendation) {
 - Strong Sell: ${strongSell}
 - Total Analysts: ${total}`,
     count: total,
+    details: { strongBuy, buy, hold, sell, strongSell, total },
   };
 }
 
+function formatEarnings(earnings) {
+  if (!Array.isArray(earnings) || earnings.length === 0) {
+    return 'No quarterly earnings data available.';
+  }
+
+  return earnings.map((q, i) => {
+    const beat = q.reportedEPS != null && q.estimatedEPS != null
+      ? (q.reportedEPS > q.estimatedEPS ? 'BEAT' : q.reportedEPS === q.estimatedEPS ? 'MET' : 'MISSED')
+      : 'N/A';
+    return `Q${i + 1} (${q.date}): Reported EPS $${q.reportedEPS ?? 'N/A'} vs Est $${q.estimatedEPS ?? 'N/A'} → ${beat} (${q.surprisePercentage != null ? q.surprisePercentage.toFixed(1) + '%' : 'N/A'} surprise)`;
+  }).join('\n');
+}
+
+function formatBreakdown(breakdown) {
+  return Object.entries(breakdown)
+    .map(([key, value]) => `  - ${key}: ${value.toFixed(1)}`)
+    .join('\n');
+}
+
 /* ────────────────────────────────────────────
-   buildPrompt — constructs system + user prompt
+   buildPrompt — v2 architecture
+   Math score is pre-calculated. LLM explains it.
    ──────────────────────────────────────────── */
 
-export function buildPrompt(tickerData, holdPeriod, ticker) {
+export function buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticker) {
   const { profile, quote, recommendation, news } = tickerData;
   const period = HOLD_PERIODS[holdPeriod] || HOLD_PERIODS['6M'];
+  const overview = alphaData?.overview || null;
+  const earnings = alphaData?.earnings || null;
 
   /* Price data */
   const current = quote?.c || 0;
@@ -121,60 +131,54 @@ export function buildPrompt(tickerData, holdPeriod, ticker) {
   const newsText = formatNews(news);
 
   /* ── System prompt ── */
-  const systemPrompt = `You are a CFA-level equity analyst performing a structured investment analysis. Evaluate the provided stock data and produce a scored investment assessment.
+  const systemPrompt = `You are a CFA-level equity analyst. Your role is to EXPLAIN a pre-calculated investment score — not to generate one.
 
-SCORING RUBRIC (total: 100 points):
-- Analyst Consensus Signal (35 pts): Strong Buy consensus with high coverage → 30-35. Mixed or moderate → 15-25. Strong Sell or very bearish → 0-10.
-- News Sentiment (25 pts): Overwhelmingly positive recent news → 20-25. Neutral or mixed → 10-15. Negative sentiment dominant → 0-10.
-- Price Momentum (20 pts): Near 52-week high with strength → 15-20. Mid-range → 8-12. Near 52-week low on weakness → 0-5.
-- Qualitative Judgment (20 pts): Holistic assessment of data coherence, risk/catalyst balance, and time-horizon fit.
+A deterministic math engine has already scored this stock at ${mathResult.score}/100 (Grade: ${mathResult.grade}, Signal: ${mathResult.signal}).
 
-GRADE MAPPING:
-- 90-100 → A
-- 75-89  → B
-- 60-74  → C
-- 40-59  → D
-- 0-39   → F
+Score breakdown:
+${formatBreakdown(mathResult.breakdown)}
 
-SIGNAL MAPPING:
-- Score 70-100 → BUY_SIGNAL
-- Score 45-69  → WATCH
-- Score 0-44   → AVOID
+Your job is to:
+1. Explain WHY this score makes sense given the data below
+2. Identify the STORY behind the numbers — what's driving the score up or down
+3. Provide a concise investment thesis grounded ONLY in the provided data
+4. Flag the single most important thing to watch during the ${period.label} hold period
+5. List specific risks and catalysts from the data
 
-${TIME_INSTRUCTIONS[period.category]}
+${TIME_FOCUS[period.category]}
 
-Respond ONLY with valid JSON matching this exact schema. No preamble, no markdown fences, no explanation outside the JSON object. The "score" field must be an integer 0-100. The "grade" must be one of: A, B, C, D, F. The "signal" must be exactly one of: BUY_SIGNAL, WATCH, AVOID.
+STRICT RULES — VIOLATION OF ANY RULE INVALIDATES YOUR RESPONSE:
+- Do NOT reference any data not explicitly listed in the AVAILABLE DATA section below
+- If you don't have data for a field, write "Insufficient data"
+- Do NOT describe the 52-week range as "narrow" or "wide" — state exact numbers only
+- Do NOT mention news events unless news data is explicitly provided below
+- Do NOT invent earnings dates, product launches, or events not in the data
+- Do NOT override the pre-calculated score, grade, or signal
+- Ground every claim in a specific number from the data
+
+Respond ONLY with valid JSON matching this exact schema. No preamble, no markdown fences, no explanation outside the JSON object.
 
 {
-  "ticker": "string",
-  "score": 0,
-  "grade": "C",
-  "analyst_consensus": {
-    "buy": 0,
-    "hold": 0,
-    "sell": 0,
-    "total": 0,
-    "label": "string describing the consensus"
-  },
-  "sentiment_summary": "One sentence on recent news tone and key themes.",
-  "timeframe_verdict": "One sentence specific to the ${period.label} hold period.",
-  "key_risks": ["risk one", "risk two"],
-  "key_catalysts": ["catalyst one", "catalyst two"],
-  "signal": "BUY_SIGNAL"
+  "thesis": "2-3 sentence investment thesis citing specific numbers from the data",
+  "sentiment_summary": "One sentence on recent news tone from PROVIDED headlines only, or 'Insufficient data' if no news provided",
+  "timeframe_verdict": "One sentence specific to the ${period.label} hold period",
+  "key_risks": ["risk grounded in data", "risk grounded in data"],
+  "key_catalysts": ["catalyst grounded in data", "catalyst grounded in data"],
+  "watch_for": "The single most important thing to monitor during this hold period"
 }`;
 
   /* ── User prompt ── */
   const upperTicker = ticker.toUpperCase();
-  const userPrompt = `Analyze the following stock for a ${period.label} hold period:
+  let userPrompt = `AVAILABLE DATA (use only this, infer nothing):
 
 COMPANY PROFILE:
 - Ticker: ${upperTicker}
 - Company Name: ${profile?.name || 'Unknown'}
-- Sector / Industry: ${profile?.finnhubIndustry || 'Unknown'}
+- Sector / Industry: ${profile?.finnhubIndustry || overview?.industry || 'Unknown'}
 - Market Cap: ${formatMarketCap(
     profile?.marketCapitalization
       ? profile.marketCapitalization * 1e6
-      : null
+      : overview?.marketCap || null
   )}
 - Exchange: ${profile?.exchange || 'Unknown'}
 - Country: ${profile?.country || 'Unknown'}
@@ -184,25 +188,57 @@ CURRENT PRICE DATA:
 - Daily Change: ${changePercent}%
 - 52-Week High: $${high52w.toFixed(2)}
 - 52-Week Low: $${low52w.toFixed(2)}
-- Position in 52-Week Range: ${positionInRange}%
+- Position in 52-Week Range: ${positionInRange}% from low
 - Previous Close: $${(quote?.pc || 0).toFixed(2)}
 
-${consensus.text}
+${consensus.text}`;
+
+  /* Alpha Vantage fundamentals (if available) */
+  if (overview) {
+    userPrompt += `
+
+FUNDAMENTAL DATA (Alpha Vantage):
+- P/E Ratio: ${overview.peRatio ?? 'N/A'}
+- Forward P/E: ${overview.forwardPE ?? 'N/A'}
+- PEG Ratio: ${overview.pegRatio ?? 'N/A'}
+- EPS (TTM): $${overview.eps ?? 'N/A'}
+- Dividend Yield: ${overview.dividendYield != null ? (overview.dividendYield * 100).toFixed(2) + '%' : 'N/A'}
+- Profit Margin: ${overview.profitMargin != null ? (overview.profitMargin * 100).toFixed(1) + '%' : 'N/A'}
+- Revenue Growth (QoQ YoY): ${overview.revenueGrowthYoY != null ? (overview.revenueGrowthYoY * 100).toFixed(1) + '%' : 'N/A'}
+- Earnings Growth (QoQ YoY): ${overview.earningsGrowthYoY != null ? (overview.earningsGrowthYoY * 100).toFixed(1) + '%' : 'N/A'}
+- Analyst Target Price: $${overview.analystTargetPrice ?? 'N/A'}${overview.analystTargetPrice && current > 0 ? ` (${(((overview.analystTargetPrice - current) / current) * 100).toFixed(1)}% implied upside)` : ''}
+- Beta: ${overview.beta ?? 'N/A'}
+- Return on Equity: ${overview.returnOnEquity != null ? (overview.returnOnEquity * 100).toFixed(1) + '%' : 'N/A'}
+- Return on Assets: ${overview.returnOnAssets != null ? (overview.returnOnAssets * 100).toFixed(1) + '%' : 'N/A'}`;
+  }
+
+  if (earnings && earnings.length > 0) {
+    userPrompt += `
+
+QUARTERLY EARNINGS (last ${earnings.length} quarters):
+${formatEarnings(earnings)}`;
+  }
+
+  userPrompt += `
 
 RECENT NEWS (last 30 days):
 ${newsText}
+
+PRE-CALCULATED SCORE: ${mathResult.score}/100 (${mathResult.grade}) — ${mathResult.signal}
+Score Breakdown:
+${formatBreakdown(mathResult.breakdown)}
 ${
   consensus.count < 3
-    ? '\n⚠ NOTE: Fewer than 3 analyst ratings are available for this ticker. Score reliability may be reduced. Apply wider uncertainty margins.'
+    ? '\n⚠ NOTE: Fewer than 3 analyst ratings available. Score reliability may be reduced.'
     : ''
 }
 
-Score this ticker for a ${period.label} investment horizon.`;
+Analyze this data for a ${period.label} investment horizon. Explain the score, provide a thesis, and flag risks.`;
 
   return {
     systemPrompt,
     userPrompt,
     limitedData: consensus.count < 3,
-    companyName: profile?.name || upperTicker,
+    companyName: profile?.name || overview?.name || upperTicker,
   };
 }

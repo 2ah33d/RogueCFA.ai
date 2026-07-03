@@ -5,6 +5,7 @@ const KEYS = {
   FINNHUB: 'roguecfa_finnhub_key',
   LLM: 'roguecfa_llm_key',
   PROVIDER: 'roguecfa_llm_provider',
+  ALPHAVANTAGE: 'roguecfa_alphavantage_key',
   HISTORY: 'roguecfa_history',
 };
 
@@ -14,12 +15,16 @@ export function getKeys() {
   return {
     finnhubKey: localStorage.getItem(KEYS.FINNHUB) || '',
     llmKey: localStorage.getItem(KEYS.LLM) || '',
+    alphaVantageKey: localStorage.getItem(KEYS.ALPHAVANTAGE) || '',
   };
 }
 
-export function saveKeys(finnhubKey, llmKey) {
+export function saveKeys(finnhubKey, llmKey, alphaVantageKey) {
   localStorage.setItem(KEYS.FINNHUB, finnhubKey.trim());
   localStorage.setItem(KEYS.LLM, llmKey.trim());
+  if (alphaVantageKey !== undefined) {
+    localStorage.setItem(KEYS.ALPHAVANTAGE, (alphaVantageKey || '').trim());
+  }
 }
 
 export function hasKeys() {
@@ -32,6 +37,7 @@ export function clearKeys() {
   localStorage.removeItem(KEYS.FINNHUB);
   localStorage.removeItem(KEYS.LLM);
   localStorage.removeItem(KEYS.PROVIDER);
+  localStorage.removeItem(KEYS.ALPHAVANTAGE);
 }
 
 /* ── LLM provider ── */

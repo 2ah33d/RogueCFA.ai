@@ -1,8 +1,14 @@
 /**
  * Send the constructed prompt to the LLM via the Vercel proxy.
- * Returns the parsed scorecard JSON object.
+ * Returns the merged scorecard (math score + LLM narrative).
+ *
+ * @param {string} systemPrompt
+ * @param {string} userPrompt
+ * @param {string} llmKey
+ * @param {string} provider
+ * @param {Object} mathScore - { ticker, score, grade, signal, breakdown, hasAlphaVantage }
  */
-export async function scoreWithLLM(systemPrompt, userPrompt, llmKey, provider) {
+export async function scoreWithLLM(systemPrompt, userPrompt, llmKey, provider, mathScore) {
   const response = await fetch('/api/score', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -11,6 +17,7 @@ export async function scoreWithLLM(systemPrompt, userPrompt, llmKey, provider) {
       provider,
       systemPrompt,
       userPrompt,
+      mathScore,
     }),
   });
 

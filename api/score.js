@@ -8,63 +8,65 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { llmKey, provider, systemPrompt, userPrompt } = req.body || {};
+  const { llmKey, provider, systemPrompt, userPrompt, mathScore } = req.body || {};
 
   if (!llmKey || !provider || !systemPrompt || !userPrompt) {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
 
-  const MAX_RETRIES = 1;
+  try {
+    const rawText = await callLLM(provider, llmKey, systemPrompt, userPrompt);
+    const narrative = extractJSON(rawText);
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const rawText = await callLLM(provider, llmKey, systemPrompt, userPrompt);
-      const parsed = extractJSON(rawText);
-
-      if (!parsed) {
-        if (attempt < MAX_RETRIES) continue;
-        return res.status(422).json({
-          error:
-            'AI returned an unparseable response. Try again or switch providers.',
-        });
-      }
-
-      /* Validate critical fields */
-      if (
-        typeof parsed.score !== 'number' ||
-        !parsed.ticker ||
-        !parsed.signal
-      ) {
-        if (attempt < MAX_RETRIES) continue;
-        return res.status(422).json({
-          error: 'AI response missing required fields. Try again.',
-        });
-      }
-
-      return res.status(200).json({ result: parsed });
-    } catch (error) {
-      if (attempt < MAX_RETRIES && !isAuthError(error)) continue;
-
-      if (isAuthError(error)) {
-        const label =
-          provider === 'gemini'
-            ? 'Gemini'
-            : provider === 'claude'
-              ? 'Claude'
-              : 'OpenAI';
-        return res.status(401).json({
-          error: `Your ${label} key was rejected. Check it in Settings.`,
-        });
-      }
-      if (error.status === 429) {
-        return res.status(429).json({
-          error: `${provider} rate limit reached. Wait a moment and retry.`,
-        });
-      }
-      return res.status(500).json({
-        error: `Scoring failed: ${error.message}`,
+    if (!narrative) {
+      return res.status(422).json({
+        error: 'AI returned an unparseable response. Try again or switch providers.',
       });
     }
+
+    /* Merge: math engine owns the score, LLM owns the narrative */
+    const result = {
+      /* Math-layer fields (authoritative — never overridden by LLM) */
+      ticker: mathScore?.ticker || narrative.ticker || '',
+      score: mathScore?.score ?? 0,
+      grade: mathScore?.grade || 'C',
+      signal: mathScore?.signal || 'WATCH',
+      score_breakdown: mathScore?.breakdown || {},
+      hasAlphaVantage: mathScore?.hasAlphaVantage || false,
+
+      /* LLM narrative fields */
+      thesis: narrative.thesis || '',
+      sentiment_summary: narrative.sentiment_summary || '',
+      timeframe_verdict: narrative.timeframe_verdict || '',
+      key_risks: Array.isArray(narrative.key_risks) ? narrative.key_risks : [],
+      key_catalysts: Array.isArray(narrative.key_catalysts) ? narrative.key_catalysts : [],
+      watch_for: narrative.watch_for || '',
+
+      /* Legacy compat — keep analyst_consensus if LLM returns it */
+      analyst_consensus: narrative.analyst_consensus || null,
+    };
+
+    return res.status(200).json({ result });
+  } catch (error) {
+    if (isAuthError(error)) {
+      const label =
+        provider === 'gemini'
+          ? 'Gemini'
+          : provider === 'claude'
+            ? 'Claude'
+            : 'OpenAI';
+      return res.status(401).json({
+        error: `Your ${label} key was rejected. Check it in Settings.`,
+      });
+    }
+    if (error.status === 429) {
+      return res.status(429).json({
+        error: `${provider} rate limit reached. Wait a moment and retry.`,
+      });
+    }
+    return res.status(500).json({
+      error: `Scoring failed: ${error.message}`,
+    });
   }
 }
 
@@ -117,6 +119,7 @@ async function callGemini(key, systemPrompt, userPrompt) {
   return extractTextFromResponse(data);
 }
 
+/* ── Shared response text extractor ── */
 function extractTextFromResponse(data) {
   if (!data) return '';
 
@@ -138,7 +141,7 @@ function extractTextFromResponse(data) {
 
   if (!text) {
     throw new Error(
-      `AI returned no final text (only thinking/preamble blocks). Try increasing max_tokens or retrying.`
+      `AI returned no final text. Response shape: "${JSON.stringify(data).slice(0, 120)}..."`
     );
   }
   return text;
@@ -216,7 +219,7 @@ function extractJSON(text) {
     .replace(/```json/gi, '')
     .replace(/```/g, '')
     .trim();
-  
+
   try {
     return JSON.parse(stripped);
   } catch {
@@ -225,9 +228,9 @@ function extractJSON(text) {
       try {
         return JSON.parse(match[0]);
       } catch (err) {
-        throw new Error(`JSON cut off or malformed (${err.message}): "${match[0].slice(0, 80)}..."`);
+        throw new Error(`JSON malformed (${err.message}): "${match[0].slice(0, 80)}..."`);
       }
     }
-    throw new Error(`No JSON object found in text: "${text.slice(0, 80)}..."`);
+    throw new Error(`No JSON found in response: "${text.slice(0, 80)}..."`);
   }
 }

@@ -6,6 +6,8 @@ import {
   addToHistory,
 } from './lib/storage';
 import { fetchTickerData } from './lib/finnhub';
+import { fetchAlphaVantageData } from './lib/alphavantage';
+import { calculateScore } from './lib/calculateScore';
 import { buildPrompt } from './lib/promptBuilder';
 import { scoreWithLLM } from './lib/scorer';
 import KeySetup from './components/KeySetup';
@@ -108,14 +110,14 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  /* ── Core scoring pipeline ── */
+  /* ── Core scoring pipeline (v2 architecture) ── */
   const handleScore = useCallback(
     async (tickers, holdPeriod) => {
       setLoading(true);
       setScorecards([]);
       setCurrentHoldPeriod(holdPeriod);
 
-      const { finnhubKey, llmKey } = getKeys();
+      const { finnhubKey, llmKey, alphaVantageKey } = getKeys();
       const provider = getProvider();
 
       for (const ticker of tickers) {
@@ -125,19 +127,26 @@ export default function App() {
           /* 1. Fetch Finnhub data via proxy */
           const tickerData = await fetchTickerData(ticker, finnhubKey);
 
-          /* 2. Build time-weighted prompt */
-          const { systemPrompt, userPrompt, limitedData, companyName } =
-            buildPrompt(tickerData, holdPeriod, ticker);
+          /* 2. Fetch Alpha Vantage data (optional — silently degrades) */
+          const alphaData = await fetchAlphaVantageData(ticker, alphaVantageKey);
 
-          /* 3. Score via LLM proxy */
+          /* 3. MATH LAYER: Calculate deterministic score */
+          const mathResult = calculateScore(tickerData, alphaData, holdPeriod);
+
+          /* 4. Build prompt (passes math score + all data to LLM) */
+          const { systemPrompt, userPrompt, limitedData, companyName } =
+            buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticker);
+
+          /* 5. LLM LAYER: Get narrative explanation */
           const result = await scoreWithLLM(
             systemPrompt,
             userPrompt,
             llmKey,
-            provider
+            provider,
+            { ticker: ticker.toUpperCase(), ...mathResult }
           );
 
-          /* 4. Enrich and display */
+          /* 6. Enrich and display */
           const enriched = {
             ...result,
             limitedData,
@@ -260,7 +269,7 @@ export default function App() {
               </h2>
               <p className="text-dim text-lg max-w-lg mx-auto leading-relaxed">
                 Enter a ticker, pick your hold period, and get an instant
-                investment scorecard backed by live analyst data.
+                investment scorecard backed by live data and AI analysis.
               </p>
             </div>
           )}

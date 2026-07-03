@@ -6,6 +6,9 @@
     },
     "api/finnhub.js": {
       "maxDuration": 30
+    },
+    "api/alphavantage.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
