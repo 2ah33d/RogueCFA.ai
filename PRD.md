@@ -548,37 +548,47 @@ Clicking "Re-score All" on a saved watchlist updates all stored scores and accur
 
 ---
 
-### BNN MarketCall Guest Track Record
-**Priority:** P2  
-**Status:** Planned
+### BNN MarketCall Guest Track Record & Automated TV Intelligence
+**Priority:** P1  
+**Status:** Architecture Specified / In Development
 
 **What it does**
-Logs stock picks broadcast by guest analysts on BNN Bloomberg MarketCall and evaluates them against RogueCFA math scores at airdate. Measures guest historical accuracy over 3-month and 1-year horizons to identify top-performing television commentators.
+Tracks stock picks broadcast by guest analysts on BNN Bloomberg MarketCall across a curated roster of 20 recurring fund managers. Eliminates manual television watching by automatically discovering and extracting morning broadcast picks, logging them into persistent storage, and evaluating historical guest accuracy against live market prices.
+
+#### MODULE: The Automated Data Pipeline (The $0.00 Stack)
+**Objective:**
+To automatically maintain a fresh, up-to-date database of BNN MarketCall analyst picks without triggering anti-bot firewalls, incurring scraping costs, or relying on manual data entry.
+
+**Architecture & Workflow:**
+1. **The Trigger (Vercel Cron):** A free Vercel Cron Job fires automatically every Friday at 5:00 PM EST after the market closes.
+2. **The Sweeper (Tavily Search API):** The cron job triggers Tavily (free tier) to search the web specifically for *"BNN MarketCall Top Picks"* from the past 7 days, returning the clean text of the summary articles and bypassing BNN's IP blocks.
+3. **The Extractor (Groq API + Llama 3.1):** The raw article text is sent to the Groq API (free tier). The Llama 3.1 70B model reads the text and extracts the analyst names, broadcast dates, and stock tickers into a structured JSON array.
+4. **The Storage (Supabase):** The clean JSON is appended to a free Supabase Postgres database (or local JSON registry/storage in v1 hybrid mode).
+5. **The Live Math Engine:** When a user searches for an analyst on the frontend, the app reads the historical picks from Supabase/storage, hits Finnhub/Yahoo Finance for the live stock price, and calculates the exact percentage return using standard Python/JS math (**0 tokens burned**).
+
+**The 20-Guest Curated Roster:**
+The system tracks the following recurring BNN MarketCall commentators:
+Eric Nuttall, Brian Acker, Christine Poole, Jason Bouvier, John Connell, Bruce Murray (Murray Wealth Group), Chris White (5i Research), Andrey Omelchak (LionGuard Capital Management), Greg Newman (Newman Group, ScotiaMcLeod), Brendan Caldwell (Caldwell Investment Management), Paul Harris (Harris Douglas Asset Management), Ryan Bushell (Newhaven Asset Management), Rick Rule (Rule Investment Media), Ivana Delevska (SPEAR Invest), Michael Hakes (Murray Wealth Group), Kim Bolton (Black Swan Dexteritas), Bruce Campbell (Campbell, Lee & Ross), Darren Sissons (Campbell, Lee & Ross), Norm Levine (Portfolio Management Corp.), Larry Berman (ETF Capital Management).
 
 **User flow**
-1. User navigates to MarketCall Tracker view and clicks "Log New Pick".
-2. User enters guest name, airdate, ticker symbol, and broadcast posture (Top Pick or Past Pick).
-3. App calculates historical or live score at broadcast time and stores record in local analyst ledger.
-4. App displays leaderboard ranking TV guests by average return and rogueCFA alignment percentage.
+1. User navigates to the "Trending Radar" / BNN Analyst Tracker view.
+2. App loads the 20-guest roster and displays top trending stocks backed by ELITE analysts (accuracy hit rate $\ge 70\%$).
+3. User clicks any analyst to open the **Analyst Verification Modal**, viewing their credibility tier, itemized historical pick table, starting price, live price, and percentage return.
+4. User clicks "Score Pick" on any itemized row to run RogueCFA's deterministic math model and CFA scorecard analysis on that specific stock.
 
 **Data requirements**
-- User manual input: Provides guest analyst name, airdate, ticker symbol, and call type (Top Pick / Past Pick).
-- Finnhub (`GET /quote`): Provides current price to track performance since broadcast airdate (Free tier).
-- `localStorage` (`roguecfa_marketcall`): Provides stored ledger of guest picks, broadcast prices, and historical scores.
-- OPEN QUESTION: Automated BNN Bloomberg transcript/video scraping source is undefined; v1 relies on manual user logging of broadcast picks.
+- **Vercel Cron + Tavily Search API (Free Tier):** Sweeps web articles for weekly MarketCall pick summaries without triggering site anti-bot blocking.
+- **Groq API (`llama-3.1-70b-versatile` Free Tier):** Extracts structured JSON (`guestName`, `firm`, `topPicks`, `quotes`) from raw text at $0.00 cost.
+- **Supabase Postgres / Hybrid Registry:** Stores historical pick ledgers (`ticker`, `pickPrice`, `date`, `guestId`).
+- **Finnhub (`GET /quote` Free Tier):** Provides live current stock prices (`c`) to calculate real-time percentage returns and hit-rate accuracy.
 
 **Technical notes**
-- Create `src/lib/marketcallStorage.js` to manage CRUD operations for guest pick records in `localStorage`.
-- Create `src/components/MarketCallTracker.jsx` featuring a pick entry form, commentator leaderboard table, and win-rate statistics.
-- Modify `src/App.jsx` to register navigation route/tab for MarketCall Tracker view.
-
-**Out of scope for v1 of this feature**
-- Automated audio/video transcription or web scraping of BNN Bloomberg broadcasts.
-- Guest analyst biography verification or firm affiliation tracking.
-- Sharing guest leaderboards directly to social media platforms.
+- Enforce CFA Statistical Confidence Rule: An analyst must have at least 3 resolved picks (completed hold horizon) before computing an official Accuracy Hit Rate percentage.
+- Implement Model Tiering: Never use flagship LLMs (Claude 3.5 Sonnet / GPT-4o) for automated transcript/article reading. Reserve flagship models strictly for user-initiated CFA scorecard generation.
+- Enforce Analyst Credibility Weighting in `promptBuilder.js`: If a stock is recommended by an ELITE analyst ($\ge 70\%$ hit rate), instruct the LLM to highlight their track record as a qualitative catalyst; if $< 50\%$ hit rate, flag as a risk factor.
 
 **Success metric**
-Ledger correctly stores guest picks and computes aggregate commentator return accuracy across logged tickers with 0% calculation error.
+The Automated Data Pipeline executes weekly via Vercel Cron without IP blocking or token costs ($0.00 operational expenditure), correctly storing extracted guest picks in Supabase and computing real-time commentator return accuracy across logged tickers with 0% calculation error.
 
 ---
 
