@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing finnhubKey or ticker.' });
   }
 
-  const symbol = ticker.toUpperCase().trim();
+  const symbol = ticker.toUpperCase().trim().replace(/\.(TO|TSX)$/i, '');
   const BASE = 'https://finnhub.io/api/v1';
 
   /* Date range for company news — last 30 days */
@@ -25,13 +25,14 @@ export default async function handler(req, res) {
   const fromDate = thirtyDaysAgo.toISOString().split('T')[0];
 
   try {
-    const [profileRes, quoteRes, recRes, newsRes] = await Promise.all([
+    const [profileRes, quoteRes, recRes, newsRes, metricRes] = await Promise.all([
       fetch(`${BASE}/stock/profile2?symbol=${symbol}&token=${finnhubKey}`),
       fetch(`${BASE}/quote?symbol=${symbol}&token=${finnhubKey}`),
       fetch(`${BASE}/stock/recommendation?symbol=${symbol}&token=${finnhubKey}`),
       fetch(
         `${BASE}/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}&token=${finnhubKey}`
       ),
+      fetch(`${BASE}/stock/metric?symbol=${symbol}&metric=all&token=${finnhubKey}`),
     ]);
 
     /* ── Auth / rate-limit errors (check first response as proxy) ── */
@@ -46,11 +47,12 @@ export default async function handler(req, res) {
       });
     }
 
-    const [profile, quote, recommendation, news] = await Promise.all([
+    const [profile, quote, recommendation, news, metricData] = await Promise.all([
       profileRes.json(),
       quoteRes.json(),
       recRes.json(),
       newsRes.json(),
+      metricRes.json().catch(() => ({})),
     ]);
 
     /* ── Validate ticker exists ── */
@@ -60,9 +62,19 @@ export default async function handler(req, res) {
       });
     }
 
+    /* Attach true 52-week high/low from metric to quote.h52 and quote.l52 without falling back to intraday prices or date strings */
+    const h52Val = parseFloat(quote?.h52 ?? metricData?.metric?.['52WeekHigh']);
+    const l52Val = parseFloat(quote?.l52 ?? metricData?.metric?.['52WeekLow']);
+    const h52 = !isNaN(h52Val) && h52Val > 0 ? h52Val : null;
+    const l52 = !isNaN(l52Val) && l52Val > 0 ? l52Val : null;
+
     return res.status(200).json({
       profile,
-      quote,
+      quote: {
+        ...quote,
+        h52,
+        l52,
+      },
       recommendation: Array.isArray(recommendation) ? recommendation : [],
       news: Array.isArray(news) ? news.slice(0, 20) : [],
     });

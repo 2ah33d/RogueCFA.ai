@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HOLD_PERIODS } from '../lib/promptBuilder';
 
-export default function ScoreForm({ onScore, loading, className = '' }) {
+export default function ScoreForm({ onScore, loading, prefilledTicker = '', prefilledGuest = null, className = '' }) {
   const [tickers, setTickers] = useState('');
   const [holdPeriod, setHoldPeriod] = useState('6M');
   const [tsxOnly, setTsxOnly] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (prefilledTicker) {
+      setTickers(prefilledTicker);
+      setError('');
+    }
+  }, [prefilledTicker]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -27,7 +34,7 @@ export default function ScoreForm({ onScore, loading, className = '' }) {
       return;
     }
 
-    onScore([...new Set(parsed)], holdPeriod);
+    onScore([...new Set(parsed)], holdPeriod, prefilledGuest);
   };
 
   return (
@@ -39,12 +46,19 @@ export default function ScoreForm({ onScore, loading, className = '' }) {
         <div className="space-y-5">
           {/* Ticker input */}
           <div>
-            <label
-              htmlFor="ticker-input"
-              className="block text-sm font-medium text-dim mb-1.5"
-            >
-              Ticker Symbol(s)
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label
+                htmlFor="ticker-input"
+                className="block text-sm font-medium text-dim"
+              >
+                Ticker Symbol(s)
+              </label>
+              {prefilledGuest && (
+                <span className="text-xs font-mono font-bold text-accent bg-accent/10 border border-accent/30 px-2.5 py-0.5 rounded-full">
+                  BNN Pick: {prefilledGuest}
+                </span>
+              )}
+            </div>
             <input
               id="ticker-input"
               type="text"

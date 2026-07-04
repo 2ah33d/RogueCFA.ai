@@ -38,6 +38,7 @@ export default function ScorecardGrid({
   scorecards,
   loadingTickers,
   holdPeriod,
+  onSelectGuest,
   className = '',
 }) {
   const totalCards = scorecards.length + loadingTickers.length;
@@ -67,6 +68,7 @@ export default function ScorecardGrid({
             key={`${card.ticker}-${i}`}
             data={card}
             holdPeriod={holdPeriod}
+            onSelectGuest={onSelectGuest}
           />
         ))}
 

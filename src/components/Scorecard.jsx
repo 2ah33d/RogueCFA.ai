@@ -1,3 +1,6 @@
+import React, { useEffect, useRef } from 'react';
+import { saveScoreToHistory } from '../lib/historyManager';
+
 const HOLD_LABELS = {
   '1M': '1 Month',
   '3M': '3 Months',
@@ -55,7 +58,7 @@ function ScoreBreakdownBar({ breakdown }) {
       <div className="h-3 rounded-full overflow-hidden flex bg-surface-elevated">
         {Object.entries(breakdown).map(([key, value]) => {
           const config = BREAKDOWN_COLORS[key] || { bg: 'bg-dim', label: key };
-          const pct = (value / 100) * 100; /* value is out of its max weight, total is ~100 */
+          const pct = (value / 100) * 100;
           return (
             <div
               key={key}
@@ -84,7 +87,7 @@ function ScoreBreakdownBar({ breakdown }) {
   );
 }
 
-export default function Scorecard({ data, holdPeriod, className = '' }) {
+export default function Scorecard({ data, holdPeriod, onSelectGuest, className = '' }) {
   const {
     ticker,
     score,
@@ -107,8 +110,21 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
     exchange,
     currency,
     country,
+    guest,
     scoredAt,
-  } = data;
+  } = data || {};
+
+  const savedRef = useRef(false);
+
+  /* Auto-save to history on successful generation */
+  useEffect(() => {
+    if (data && data.ticker && data.score != null && !savedRef.current) {
+      savedRef.current = true;
+      saveScoreToHistory(data, holdPeriod || '6M');
+    }
+  }, [data, holdPeriod]);
+
+  if (!data || !ticker) return null;
 
   const s = SIGNAL[signal] || SIGNAL.WATCH;
 
@@ -159,6 +175,19 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
               >
                 🇨A TSX
               </span>
+            )}
+            {guest && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSelectGuest) onSelectGuest(guest);
+                }}
+                className="inline-flex items-center gap-1 text-xs font-bold font-mono text-accent bg-accent/10 border border-accent/30 px-2.5 py-0.5 rounded-full hover:bg-accent/20 transition-colors cursor-pointer"
+                title={`BNN MarketCall pick by ${guest}. Click for track record.`}
+              >
+                📺 BNN Pick: {guest}
+              </button>
             )}
           </div>
           {companyName && companyName !== ticker && (

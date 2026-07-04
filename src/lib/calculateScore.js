@@ -57,7 +57,7 @@ function calculateFullScore(finnhubData, alphaData, holdPeriod) {
 
   const scores = {};
   if (weights.consensus > 0) scores.consensus = consensusRes.score;
-  if (weights.momentum > 0) scores.momentum = calcMomentum(quote, weights.momentum);
+  if (weights.momentum > 0) scores.momentum = calcMomentum(quote, weights.momentum, overview);
   if (weights.valuation > 0) scores.valuation = calcValuation(overview, quote, weights.valuation);
   if (weights.earnings > 0) scores.earnings = calcEarnings(earnings, overview, weights.earnings);
   if (weights.newsSentiment > 0) scores.newsSentiment = calcNewsSentiment(news, weights.newsSentiment);
@@ -144,17 +144,19 @@ function calcConsensus(recommendation, maxPoints) {
 /**
  * Price Momentum sub-score.
  */
-function calcMomentum(quote, maxPoints) {
+function calcMomentum(quote, maxPoints, overview = null) {
   if (maxPoints <= 0) return 0;
   if (!quote) return Math.round(maxPoints * 0.5 * 10) / 10;
 
   const current = quote.c || 0;
-  const high = quote.h || 0;
-  const low = quote.l || 0;
+  const high = quote.h52 || overview?.fiftyTwoWeekHigh || null;
+  const low = quote.l52 || overview?.fiftyTwoWeekLow || null;
+
+  if (high == null || low == null || high <= low || current <= 0) {
+    return Math.round(maxPoints * 0.5 * 10) / 10;
+  }
+
   const range = high - low;
-
-  if (range <= 0 || current <= 0) return Math.round(maxPoints * 0.5 * 10) / 10;
-
   const position = Math.max(0, Math.min(1, (current - low) / range));
   return Math.round(position * maxPoints * 10) / 10;
 }

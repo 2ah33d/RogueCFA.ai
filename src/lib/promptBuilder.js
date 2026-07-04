@@ -172,11 +172,11 @@ export function buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticke
 
   /* Price data */
   const current = quote?.c || 0;
-  const high52w = quote?.h || 0;
-  const low52w = quote?.l || 0;
-  const range = high52w - low52w;
+  const high52w = quote?.h52 || overview?.fiftyTwoWeekHigh || null;
+  const low52w = quote?.l52 || overview?.fiftyTwoWeekLow || null;
+  const range = (high52w != null && low52w != null) ? high52w - low52w : 0;
   const positionInRange =
-    range > 0 ? ((current - low52w) / range * 100).toFixed(1) : 'N/A';
+    (range > 0 && high52w != null && low52w != null) ? ((current - low52w) / range * 100).toFixed(1) : 'N/A';
   const changePercent =
     quote?.dp != null ? quote.dp.toFixed(2) : 'N/A';
 
@@ -225,6 +225,7 @@ STRICT RULES — VIOLATION OF ANY RULE INVALIDATES YOUR RESPONSE:
 - Do NOT invent earnings dates, product launches, or events not in the data
 - Do NOT override the pre-calculated score, grade, or signal
 - Ground every claim in a specific number from the data
+- CRITICAL JSON RULE: Do NOT use unescaped double quotes inside string values. If quoting text or ratings inside a field, use single quotes ('example') instead of double quotes. Do not use literal newlines inside string values.
 
 Respond ONLY with valid JSON matching this exact schema. No preamble, no markdown fences, no explanation outside the JSON object.
 
@@ -256,9 +257,9 @@ COMPANY PROFILE:
 CURRENT PRICE DATA:
 - Current Price: ${currPrefix}${current.toFixed(2)}
 - Daily Change: ${changePercent}%
-- 52-Week High: ${currPrefix}${high52w.toFixed(2)}
-- 52-Week Low: ${currPrefix}${low52w.toFixed(2)}
-- Position in 52-Week Range: ${positionInRange}% from low
+- 52-Week High: ${high52w != null ? currPrefix + high52w.toFixed(2) : 'N/A'}
+- 52-Week Low: ${low52w != null ? currPrefix + low52w.toFixed(2) : 'N/A'}
+- Position in 52-Week Range: ${positionInRange !== 'N/A' ? positionInRange + '% from low' : 'N/A'}
 - Previous Close: ${currPrefix}${(quote?.pc || 0).toFixed(2)}
 
 ${consensus.text}`;
@@ -341,6 +342,7 @@ STRICT RULES:
 - Do NOT invent metrics not present in the data.
 - Ground all comparison statements in the provided deterministic sub-scores or fundamentals.
 - Do NOT override deterministic scores.
+- CRITICAL JSON RULE: Do NOT use unescaped double quotes inside string values. If quoting text inside a field, use single quotes ('example') instead of double quotes. Do not use literal newlines inside string values.
 ${tsxRule}
 Respond ONLY with valid JSON matching this exact schema:
 {

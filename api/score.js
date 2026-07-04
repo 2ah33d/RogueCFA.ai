@@ -221,9 +221,71 @@ async function callOpenAI(key, systemPrompt, userPrompt) {
 }
 
 /* ────────────────────────────────────────────
-   JSON extraction — handles markdown fences,
-   preamble text, and raw JSON
+   JSON extraction & self-healing repair — handles
+   markdown fences, preamble text, unescaped quotes,
+   trailing commas, and raw JSON
    ──────────────────────────────────────────── */
+
+function repairJSON(str) {
+  if (!str) return str;
+  let cleaned = str;
+
+  /* 1. Remove trailing commas before closing braces/brackets */
+  cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
+
+  /* 2. Replace unescaped control characters (newlines/tabs) */
+  cleaned = cleaned.replace(/[\u0000-\u001F]+/g, (ch) => {
+    if (ch === '\n' || ch === '\r\n') return '\\n';
+    if (ch === '\t') return '\\t';
+    return '';
+  });
+
+  /* 3. State machine to fix unescaped double quotes inside string literals */
+  let inString = false;
+  let escaped = false;
+  let res = '';
+
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+
+    if (inString) {
+      if (escaped) {
+        res += ch;
+        escaped = false;
+      } else if (ch === '\\') {
+        res += ch;
+        escaped = true;
+      } else if (ch === '"') {
+        /* Check if this quote is a valid closing delimiter by looking ahead at next non-whitespace char */
+        let nextChar = '';
+        for (let j = i + 1; j < cleaned.length; j++) {
+          const c = cleaned[j];
+          if (!/\s/.test(c)) {
+            nextChar = c;
+            break;
+          }
+        }
+        /* Valid closing delimiters in JSON after a string are :, ,, }, ] or empty (EOF) */
+        if (nextChar === ':' || nextChar === ',' || nextChar === '}' || nextChar === ']' || nextChar === '') {
+          inString = false;
+          res += ch;
+        } else {
+          /* Unescaped quote inside string! Replace with single quote to prevent JSON syntax error */
+          res += "'";
+        }
+      } else {
+        res += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inString = true;
+      }
+      res += ch;
+    }
+  }
+
+  return res;
+}
 
 function extractJSON(text) {
   if (!text) throw new Error('AI returned an empty response.');
@@ -239,8 +301,14 @@ function extractJSON(text) {
     if (match) {
       try {
         return JSON.parse(match[0]);
-      } catch (err) {
-        throw new Error(`JSON malformed (${err.message}): "${match[0].slice(0, 80)}..."`);
+      } catch {
+        /* Attempt self-healing repair for unescaped quotes, trailing commas, or control characters */
+        try {
+          const repaired = repairJSON(match[0]);
+          return JSON.parse(repaired);
+        } catch (err) {
+          throw new Error(`JSON malformed (${err.message}): "${match[0].slice(0, 80)}..."`);
+        }
       }
     }
     throw new Error(`No JSON found in response: "${text.slice(0, 80)}..."`);

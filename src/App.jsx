@@ -3,20 +3,22 @@ import {
   hasKeys as checkHasKeys,
   getKeys,
   getProvider,
-  addToHistory,
 } from './lib/storage';
 import { fetchTickerData } from './lib/finnhub';
 import { fetchAlphaVantageData } from './lib/alphavantage';
 import { calculateScore } from './lib/calculateScore';
 import { buildPrompt, buildComparisonPrompt } from './lib/promptBuilder';
 import { scoreWithLLM } from './lib/scorer';
+import { resolveOutcomes, saveScoreToHistory } from './lib/historyManager';
 import KeySetup from './components/KeySetup';
 import ScoreForm from './components/ScoreForm';
 import ScorecardGrid from './components/ScorecardGrid';
 import Disclaimer from './components/Disclaimer';
 import SettingsPanel from './components/SettingsPanel';
-import HistoryTable from './components/HistoryTable';
+import HistoryTab from './components/HistoryTab';
 import ComparisonMatrix from './components/ComparisonMatrix';
+import MarketCallBar from './components/MarketCallBar';
+import GuestModal from './components/GuestModal';
 
 /* ════════════════════════════════════════════════════════════════
    THEME — Every colour lives here as a CSS custom property.
@@ -103,6 +105,17 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [currentHoldPeriod, setCurrentHoldPeriod] = useState('6M');
+  const [prefilledTicker, setPrefilledTicker] = useState('');
+  const [prefilledGuest, setPrefilledGuest] = useState(null);
+  const [selectedGuest, setSelectedGuest] = useState(null);
+
+  /* ── Outcome resolution on app load ── */
+  useEffect(() => {
+    const { finnhubKey } = getKeys();
+    if (finnhubKey) {
+      resolveOutcomes(finnhubKey);
+    }
+  }, []);
 
   /* ── Toast helpers ── */
   const addToast = useCallback((message, type = 'error') => {
@@ -116,7 +129,7 @@ export default function App() {
 
   /* ── Core scoring pipeline (v2 architecture) ── */
   const handleScore = useCallback(
-    async (tickers, holdPeriod) => {
+    async (tickers, holdPeriod, guestName = null) => {
       setLoading(true);
       setScorecards([]);
       setComparisonResult(null);
@@ -162,12 +175,13 @@ export default function App() {
             country: tickerData?.profile?.country || null,
             limitedData,
             companyName: companyName || result.ticker,
+            guest: guestName || prefilledGuest || null,
             scoredAt: new Date().toISOString(),
           };
 
           setScorecards((prev) => [...prev, enriched]);
           computedCards.push(enriched);
-          addToHistory(enriched);
+          saveScoreToHistory(enriched, holdPeriod);
         } catch (err) {
           addToast(`${ticker}: ${err.message}`);
         } finally {
@@ -194,7 +208,7 @@ export default function App() {
 
       setLoading(false);
     },
-    [addToast]
+    [addToast, prefilledGuest]
   );
 
   /* ── Key management ── */
@@ -328,7 +342,21 @@ export default function App() {
                 </div>
               )}
 
-              <ScoreForm onScore={handleScore} loading={loading} />
+              {/* BNN MarketCall Picks Strip */}
+              <MarketCallBar
+                onSelectTicker={(ticker, guest) => {
+                  setPrefilledTicker(ticker);
+                  setPrefilledGuest(guest);
+                }}
+                onSelectGuest={(guest) => setSelectedGuest(guest)}
+              />
+
+              <ScoreForm
+                onScore={handleScore}
+                loading={loading}
+                prefilledTicker={prefilledTicker}
+                prefilledGuest={prefilledGuest}
+              />
 
               {scorecards.length > 1 && (
                 <ComparisonMatrix
@@ -341,13 +369,14 @@ export default function App() {
                 scorecards={scorecards}
                 loadingTickers={loadingTickers}
                 holdPeriod={currentHoldPeriod}
+                onSelectGuest={(guest) => setSelectedGuest(guest)}
               />
             </>
           ) : (
-            <HistoryTable
-              finnhubKey={getKeys().finnhubKey}
+            <HistoryTab
               onSelectTicker={(ticker) => {
-                handleScore([ticker], currentHoldPeriod);
+                setPrefilledTicker(ticker);
+                setActiveTab('score');
               }}
             />
           )}
@@ -361,6 +390,19 @@ export default function App() {
           <SettingsPanel
             onClose={() => setShowSettings(false)}
             onKeysCleared={handleKeysCleared}
+          />
+        )}
+
+        {/* ── Guest Track Record Modal ── */}
+        {selectedGuest && (
+          <GuestModal
+            guestName={selectedGuest}
+            onClose={() => setSelectedGuest(null)}
+            onSelectTicker={(ticker, guest) => {
+              setPrefilledTicker(ticker);
+              setPrefilledGuest(guest);
+              setActiveTab('score');
+            }}
           />
         )}
 
