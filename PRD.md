@@ -369,6 +369,217 @@ These weights are embedded in the prompt, not calculated client-side. The LLM is
 | **Signal**      | The top-level recommendation: `BUY_SIGNAL`, `WATCH`, or `AVOID`.                                       |
 | **Proxy**       | The Vercel serverless function that sits between the browser and external APIs, handling auth and CORS.  |
 
+## 17. Scoring Philosophy
+**Status:** Implemented in V2, framing revised
+
+**Core decision:**
+The deterministic calculateScore.js produces a 0-100 number from hard data. This number is NOT a buy/sell prediction. It is a confidence indicator — how much data exists and how consistently it points in one direction. Claude's reasoning layer is the actual analysis. The score is the transparency layer.
+
+**Why fixed-weight formulas are insufficient as primary signals:**
+- Any formula with fixed weights breaks under unanticipated conditions
+- 1 analyst recommending Buy out of 10 scores identically to 1 out of 10 in a naive formula — but these are completely different signals
+- Strong earnings + weak analyst consensus is a contradiction that requires interpretation, not arithmetic
+- Sector conditions, macro environment, and coverage depth cannot be captured in static multipliers
+
+**What the math score should represent:**
+- High score = strong data quality + high signal consistency
+- Low score = weak data, conflicting signals, or low analyst coverage
+- NOT a prediction of price direction
+
+**Coverage depth modifier (required):**
+Analyst consensus weight must scale with total analyst coverage:
+- 1-3 analysts: weight consensus at 20% of normal
+- 4-10 analysts: weight consensus at 60% of normal  
+- 11-20 analysts: weight consensus at 80% of normal
+- 20+ analysts: full consensus weight
+Flag low coverage explicitly in the scorecard UI.
+
+**Signal conflict detection (required):**
+Before Claude writes narrative, the prompt must explicitly flag contradictions in the data:
+- Strong earnings + weak analyst consensus → flag and explain
+- High buy consensus + stock at 52W low → flag and explain
+- Analyst upgrades + insider selling → flag and explain
+Claude must address the conflict directly before writing the thesis.
+If no conflict: proceed normally.
+
+**Claude's role in scoring:**
+Claude receives the pre-calculated score + all raw data + any detected conflicts. Claude does not modify the score. Claude explains:
+1. Which signals were weighted most for this hold period and why
+2. What the conflict means if one was detected
+3. What to watch for that could change the thesis
+
+**What Claude must never do:**
+- Reference data not explicitly provided in the prompt
+- Describe price ranges as "narrow" or "wide" without exact numbers
+- Invent analyst sentiment beyond what the count data shows
+- Produce or modify the numerical score
+
+OPEN QUESTION: At what point does low data availability warrant blocking the scorecard entirely vs showing a low-confidence result?
+
+---
+
+## 18. Roadmap Features
+
+### Score History + Outcome Tracking
+**Priority:** P1  
+**Status:** Implemented in V2
+
+**What it does**
+Logs every generated scorecard to browser storage alongside its historical entry price and date. Evaluates past scorecards against current market prices to display percentage return and accuracy against the original buy/avoid signal.
+
+**User flow**
+1. User clicks the History tab in the main navigation.
+2. App renders a chronological table of all saved scorecards with entry date, ticker, original score, and original entry price.
+3. User clicks "Update Outcomes" button.
+4. App fetches current price for each historical ticker and renders percentage gain/loss alongside outcome verification status.
+
+**Data requirements**
+- Finnhub (`GET /quote`): Provides current real-time stock price to calculate historical return (Free tier: 60 calls/min).
+- `localStorage` (`roguecfa_history`): Provides stored scorecard object, timestamp, original price (`quote.c`), and original signal (`BUY_SIGNAL`, `WATCH`, `AVOID`).
+
+**Technical notes**
+- Modify `src/lib/storage.js` to store original `quote.c` entry price and historical timestamp inside `addToHistory`.
+- Create `src/components/HistoryTable.jsx` to render stored scorecards, calculate return percentage, and display hit/miss outcome tags.
+- Modify `src/App.jsx` to add navigation view toggle between Score Form and History Table views.
+
+**Out of scope for v1 of this feature**
+- Automated background price fetching or daily portfolio tracking.
+- Cloud storage or cross-device history synchronization.
+- Benchmark comparison against S&P 500 or TSX Composite indices.
+
+**Success metric**
+History table accurately calculates and displays entry-to-current percentage return for 100% of stored scorecards when manually refreshed.
+
+---
+
+### Head-to-Head Ticker Comparison
+**Priority:** P1  
+**Status:** Implemented in V2
+
+**What it does**
+Compares two to five stock tickers side-by-side across deterministic math sub-scores and valuation metrics for a shared hold period. Highlights the top-scoring ticker and provides a comparative LLM narrative summarizing relative risks and trade-offs.
+
+**User flow**
+1. User enters multiple comma-separated tickers in the input box and selects a shared hold period.
+2. App fetches market data and executes `calculateScore` independently for each ticker.
+3. App sends unified comparison payload to LLM proxy requesting comparative analysis across all inputs.
+4. App renders a comparative matrix table above individual cards highlighting the highest-ranking ticker.
+
+**Data requirements**
+- Finnhub (`GET /stock/profile2`, `GET /quote`, `GET /stock/recommendation`): Provides price, consensus, and profile data for each ticker (Free tier).
+- Alpha Vantage (`OVERVIEW`, `EARNINGS`): Provides P/E, EPS growth, and valuation ratios per ticker (Free tier: 5 calls/min).
+- LLM Provider (Gemini / Claude / OpenAI): Produces structured JSON comparative summary and relative winner selection (User API quota).
+
+**Technical notes**
+- Modify `src/lib/promptBuilder.js` to add a `buildComparisonPrompt` function accepting multiple pre-calculated score objects and raw fundamentals.
+- Create `src/components/ComparisonMatrix.jsx` to render side-by-side data columns highlighting winning sub-scores using utility CSS classes.
+- Modify `src/App.jsx` to detect multi-ticker submissions and trigger the unified comparison prompt alongside individual card rendering.
+
+**Out of scope for v1 of this feature**
+- Cross-industry normalization or sector-specific custom weighting models.
+- Exporting comparison table to CSV, PDF, or spreadsheet formats.
+- Comparing tickers across different hold periods simultaneously.
+
+**Success metric**
+Submitting two to five valid tickers renders a side-by-side comparison matrix identifying the highest-scoring stock in under 60 seconds.
+
+---
+
+### Canadian Market Identity (TSX-first)
+**Priority:** P2  
+**Status:** Planned
+
+**What it does**
+Automatically detects Canadian stock symbols and prioritizes Toronto Stock Exchange (`.TO`) ticker formatting, Canadian dollar currency display, and domestic benchmark framing. Resolves dual-listed equities by highlighting Canadian exchange liquidity and reporting currency.
+
+**User flow**
+1. User types a Canadian stock symbol or company name into the ticker input box.
+2. App appends `.TO` extension if un-suffixed and validates against Canadian exchange listings.
+3. App displays financial figures explicitly labeled in CAD and compares valuation metrics against Canadian sector norms.
+
+**Data requirements**
+- Finnhub (`GET /stock/profile2`): Provides country of headquarters, exchange listing (`TSX` or `TORONTO`), and reporting currency (`CAD`) (Free tier).
+- Alpha Vantage (`OVERVIEW`): Provides fundamental metrics labeled with currency unit (`Currency: CAD`) (Free tier).
+
+**Technical notes**
+- Modify `src/components/ScoreForm.jsx` to append `.TO` suffix automatically when user toggles a "TSX Only" input filter checkbox.
+- Modify `src/lib/promptBuilder.js` to inject explicit currency instructions into the system prompt requiring CAD formatting for TSX-listed tickers.
+- Modify `src/components/Scorecard.jsx` to display a distinct red-and-white "TSX" badge and render price strings with CAD prefix.
+
+**Out of scope for v1 of this feature**
+- SEDAR+ regulatory filing retrieval or scraping.
+- Currency conversion rates or real-time CAD/USD FX adjustments.
+- Canadian tax optimization or dividend tax credit calculations.
+
+**Success metric**
+100% of valid TSX tickers entered without a suffix resolve correctly to their `.TO` profile and display all monetary metrics clearly designated in CAD.
+
+---
+
+### Watchlist + Re-score Alerts
+**Priority:** P2  
+**Status:** Planned
+
+**What it does**
+Allows users to save scored stocks to a persistent local watchlist categorized by intended hold horizon. Highlights score or rating shifts when the user manually re-scores stored watchlist items.
+
+**User flow**
+1. User clicks "Add to Watchlist" button on any rendered scorecard.
+2. App stores ticker, current score, and hold horizon in local storage watchlist array.
+3. User navigates to Watchlist tab and clicks "Re-score All".
+4. App executes fresh scoring pipeline sequentially and displays point deltas (`+5` or `-8`) relative to previous score.
+
+**Data requirements**
+- `localStorage` (`roguecfa_watchlist`): Provides saved watchlist array containing tickers, baseline score, baseline grade, and horizon.
+- Finnhub & Alpha Vantage APIs: Provides fresh market data and fundamentals during manual re-score batches (Free tiers).
+
+**Technical notes**
+- Modify `src/lib/storage.js` to add `roguecfa_watchlist` CRUD helpers (`getWatchlist`, `addToWatchlist`, `removeFromWatchlist`).
+- Create `src/components/WatchlistPanel.jsx` to display saved items, execute sequential re-scoring to respect rate limits, and render score change badges.
+- Modify `src/components/Scorecard.jsx` to add an action button for bookmarking current card directly into `roguecfa_watchlist`.
+
+**Out of scope for v1 of this feature**
+- Email, SMS, or browser push notifications when scores change.
+- Automated scheduled background re-scoring while app is closed.
+- Watchlists exceeding 10 tickers due to API rate constraints.
+
+**Success metric**
+Clicking "Re-score All" on a saved watchlist updates all stored scores and accurately computes numerical point deltas without triggering API rate limit errors.
+
+---
+
+### BNN MarketCall Guest Track Record
+**Priority:** P2  
+**Status:** Planned
+
+**What it does**
+Logs stock picks broadcast by guest analysts on BNN Bloomberg MarketCall and evaluates them against RogueCFA math scores at airdate. Measures guest historical accuracy over 3-month and 1-year horizons to identify top-performing television commentators.
+
+**User flow**
+1. User navigates to MarketCall Tracker view and clicks "Log New Pick".
+2. User enters guest name, airdate, ticker symbol, and broadcast posture (Top Pick or Past Pick).
+3. App calculates historical or live score at broadcast time and stores record in local analyst ledger.
+4. App displays leaderboard ranking TV guests by average return and rogueCFA alignment percentage.
+
+**Data requirements**
+- User manual input: Provides guest analyst name, airdate, ticker symbol, and call type (Top Pick / Past Pick).
+- Finnhub (`GET /quote`): Provides current price to track performance since broadcast airdate (Free tier).
+- `localStorage` (`roguecfa_marketcall`): Provides stored ledger of guest picks, broadcast prices, and historical scores.
+- OPEN QUESTION: Automated BNN Bloomberg transcript/video scraping source is undefined; v1 relies on manual user logging of broadcast picks.
+
+**Technical notes**
+- Create `src/lib/marketcallStorage.js` to manage CRUD operations for guest pick records in `localStorage`.
+- Create `src/components/MarketCallTracker.jsx` featuring a pick entry form, commentator leaderboard table, and win-rate statistics.
+- Modify `src/App.jsx` to register navigation route/tab for MarketCall Tracker view.
+
+**Out of scope for v1 of this feature**
+- Automated audio/video transcription or web scraping of BNN Bloomberg broadcasts.
+- Guest analyst biography verification or firm affiliation tracking.
+- Sharing guest leaderboards directly to social media platforms.
+
+**Success metric**
+Ledger correctly stores guest picks and computes aggregate commentator return accuracy across logged tickers with 0% calculation error.
+
 ---
 
 *End of PRD — RogueCFA.ai v1.0*

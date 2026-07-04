@@ -24,6 +24,16 @@ export default async function handler(req, res) {
       });
     }
 
+    if (mathScore?.isComparison) {
+      return res.status(200).json({
+        result: {
+          winner: narrative.winner || '',
+          comparative_summary: narrative.comparative_summary || '',
+          key_tradeoffs: Array.isArray(narrative.key_tradeoffs) ? narrative.key_tradeoffs : [],
+        },
+      });
+    }
+
     /* Merge: math engine owns the score, LLM owns the narrative */
     const result = {
       /* Math-layer fields (authoritative — never overridden by LLM) */
@@ -32,6 +42,8 @@ export default async function handler(req, res) {
       grade: mathScore?.grade || 'C',
       signal: mathScore?.signal || 'WATCH',
       score_breakdown: mathScore?.breakdown || {},
+      coverageDepth: mathScore?.coverageDepth ?? null,
+      coverageModifier: mathScore?.coverageModifier ?? 1.0,
       hasAlphaVantage: mathScore?.hasAlphaVantage || false,
 
       /* LLM narrative fields */

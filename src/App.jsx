@@ -8,13 +8,15 @@ import {
 import { fetchTickerData } from './lib/finnhub';
 import { fetchAlphaVantageData } from './lib/alphavantage';
 import { calculateScore } from './lib/calculateScore';
-import { buildPrompt } from './lib/promptBuilder';
+import { buildPrompt, buildComparisonPrompt } from './lib/promptBuilder';
 import { scoreWithLLM } from './lib/scorer';
 import KeySetup from './components/KeySetup';
 import ScoreForm from './components/ScoreForm';
 import ScorecardGrid from './components/ScorecardGrid';
 import Disclaimer from './components/Disclaimer';
 import SettingsPanel from './components/SettingsPanel';
+import HistoryTable from './components/HistoryTable';
+import ComparisonMatrix from './components/ComparisonMatrix';
 
 /* ════════════════════════════════════════════════════════════════
    THEME — Every colour lives here as a CSS custom property.
@@ -94,7 +96,9 @@ function Toast({ message, type = 'error', onDismiss }) {
 export default function App() {
   const [keysReady, setKeysReady] = useState(checkHasKeys());
   const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState('score'); /* 'score' | 'history' */
   const [scorecards, setScorecards] = useState([]);
+  const [comparisonResult, setComparisonResult] = useState(null);
   const [loadingTickers, setLoadingTickers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -115,10 +119,13 @@ export default function App() {
     async (tickers, holdPeriod) => {
       setLoading(true);
       setScorecards([]);
+      setComparisonResult(null);
       setCurrentHoldPeriod(holdPeriod);
+      setActiveTab('score');
 
       const { finnhubKey, llmKey, alphaVantageKey } = getKeys();
       const provider = getProvider();
+      const computedCards = [];
 
       for (const ticker of tickers) {
         setLoadingTickers((prev) => [...prev, ticker]);
@@ -149,17 +156,36 @@ export default function App() {
           /* 6. Enrich and display */
           const enriched = {
             ...result,
+            entryPrice: tickerData?.quote?.c || null,
             limitedData,
             companyName: companyName || result.ticker,
             scoredAt: new Date().toISOString(),
           };
 
           setScorecards((prev) => [...prev, enriched]);
+          computedCards.push(enriched);
           addToHistory(enriched);
         } catch (err) {
           addToast(`${ticker}: ${err.message}`);
         } finally {
           setLoadingTickers((prev) => prev.filter((t) => t !== ticker));
+        }
+      }
+
+      /* Trigger Head-to-Head Comparative Narrative if multiple tickers succeeded */
+      if (computedCards.length > 1) {
+        try {
+          const { systemPrompt, userPrompt } = buildComparisonPrompt(computedCards, holdPeriod);
+          const compRes = await scoreWithLLM(
+            systemPrompt,
+            userPrompt,
+            llmKey,
+            provider,
+            { isComparison: true, ticker: 'COMPARISON' }
+          );
+          setComparisonResult(compRes);
+        } catch (err) {
+          console.warn('Comparative analysis summary failed:', err.message);
         }
       }
 
@@ -202,6 +228,29 @@ export default function App() {
                 RogueCFA<span className="text-accent">.ai</span>
               </span>
             </div>
+
+            <nav className="flex items-center gap-1 bg-surface-elevated p-1 rounded-xl border border-edge text-xs font-semibold">
+              <button
+                onClick={() => setActiveTab('score')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  activeTab === 'score'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-dim hover:text-prime'
+                }`}
+              >
+                Score Ticker
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  activeTab === 'history'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-dim hover:text-prime'
+                }`}
+              >
+                📊 Score History
+              </button>
+            </nav>
 
             <button
               onClick={() => setShowSettings(true)}
@@ -261,26 +310,44 @@ export default function App() {
           className="flex-1 w-full max-w-6xl mx-auto px-4 py-10
                       flex flex-col items-center gap-10"
         >
-          {/* Hero (hidden once results appear) */}
-          {scorecards.length === 0 && loadingTickers.length === 0 && (
-            <div className="text-center space-y-3 animate-fade-in">
-              <h2 className="text-3xl md:text-4xl font-extrabold text-prime">
-                AI-Powered Stock Scoring
-              </h2>
-              <p className="text-dim text-lg max-w-lg mx-auto leading-relaxed">
-                Enter a ticker, pick your hold period, and get an instant
-                investment scorecard backed by live data and AI analysis.
-              </p>
-            </div>
+          {activeTab === 'score' ? (
+            <>
+              {/* Hero (hidden once results appear) */}
+              {scorecards.length === 0 && loadingTickers.length === 0 && (
+                <div className="text-center space-y-3 animate-fade-in">
+                  <h2 className="text-3xl md:text-4xl font-extrabold text-prime">
+                    AI-Powered Stock Scoring
+                  </h2>
+                  <p className="text-dim text-lg max-w-lg mx-auto leading-relaxed">
+                    Enter a ticker, pick your hold period, and get an instant
+                    investment scorecard backed by live data and AI analysis.
+                  </p>
+                </div>
+              )}
+
+              <ScoreForm onScore={handleScore} loading={loading} />
+
+              {scorecards.length > 1 && (
+                <ComparisonMatrix
+                  scorecards={scorecards}
+                  comparisonResult={comparisonResult}
+                />
+              )}
+
+              <ScorecardGrid
+                scorecards={scorecards}
+                loadingTickers={loadingTickers}
+                holdPeriod={currentHoldPeriod}
+              />
+            </>
+          ) : (
+            <HistoryTable
+              finnhubKey={getKeys().finnhubKey}
+              onSelectTicker={(ticker) => {
+                handleScore([ticker], currentHoldPeriod);
+              }}
+            />
           )}
-
-          <ScoreForm onScore={handleScore} loading={loading} />
-
-          <ScorecardGrid
-            scorecards={scorecards}
-            loadingTickers={loadingTickers}
-            holdPeriod={currentHoldPeriod}
-          />
         </main>
 
         {/* ── Disclaimer ── */}

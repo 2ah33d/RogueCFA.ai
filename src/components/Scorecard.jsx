@@ -101,6 +101,8 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
     watch_for: watchFor,
     companyName,
     limitedData,
+    coverageDepth,
+    coverageModifier,
     scoredAt,
   } = data;
 
@@ -136,7 +138,7 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
           {companyName && companyName !== ticker && (
             <p className="text-sm text-dim">{companyName}</p>
           )}
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             {limitedData && (
               <span
                 className="inline-flex items-center gap-1 text-xs
@@ -144,6 +146,16 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
                             border border-signal-watch/20 px-2 py-0.5 rounded-full"
               >
                 ⚠ Limited Data
+              </span>
+            )}
+            {coverageDepth != null && coverageDepth <= 10 && (
+              <span
+                className="inline-flex items-center gap-1 text-xs
+                            text-signal-watch bg-signal-watch/10
+                            border border-signal-watch/20 px-2 py-0.5 rounded-full"
+                title={`Analyst consensus weighted at ${(coverageModifier * 100).toFixed(0)}% due to low coverage depth (${coverageDepth} analysts)`}
+              >
+                📉 Low Coverage ({coverageDepth} Analysts — {(coverageModifier * 100).toFixed(0)}% Wt)
               </span>
             )}
             {hasAlphaVantage === false && (
