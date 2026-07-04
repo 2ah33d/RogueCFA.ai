@@ -4,6 +4,7 @@ import { HOLD_PERIODS } from '../lib/promptBuilder';
 export default function ScoreForm({ onScore, loading, className = '' }) {
   const [tickers, setTickers] = useState('');
   const [holdPeriod, setHoldPeriod] = useState('6M');
+  const [tsxOnly, setTsxOnly] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
@@ -14,7 +15,8 @@ export default function ScoreForm({ onScore, loading, className = '' }) {
       .toUpperCase()
       .split(/[,\s]+/)
       .map((t) => t.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .map((t) => (tsxOnly && !t.includes('.') ? `${t}.TO` : t));
 
     if (parsed.length === 0) {
       setError('Enter at least one ticker symbol.');
@@ -61,9 +63,21 @@ export default function ScoreForm({ onScore, loading, className = '' }) {
               autoComplete="off"
               spellCheck="false"
             />
-            <p className="text-xs text-faint mt-1.5">
-              Enter up to 5 tickers separated by commas
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
+              <p className="text-xs text-faint">
+                Enter up to 5 tickers separated by commas
+              </p>
+              <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs text-dim hover:text-prime transition-colors select-none">
+                <input
+                  type="checkbox"
+                  checked={tsxOnly}
+                  onChange={(e) => setTsxOnly(e.target.checked)}
+                  disabled={loading}
+                  className="rounded border-edge bg-surface text-accent focus:ring-accent/30 w-3.5 h-3.5 cursor-pointer"
+                />
+                <span>🇨A TSX-First (Auto-append <code className="text-accent font-mono">.TO</code>)</span>
+              </label>
+            </div>
           </div>
 
           {/* Hold period + submit */}

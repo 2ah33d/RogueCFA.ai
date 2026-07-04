@@ -166,20 +166,35 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                 }
               }
 
+              const isTSX =
+                entry.ticker?.toUpperCase().endsWith('.TO') ||
+                entry.ticker?.toUpperCase().endsWith('.V') ||
+                entry.exchange?.toUpperCase().includes('TORONTO') ||
+                entry.exchange?.toUpperCase().includes('TSX') ||
+                entry.currency === 'CAD' ||
+                entry.country === 'CA';
+
               return (
                 <tr key={entry.scoredAt || idx} className="hover:bg-surface-elevated/40 transition-colors">
                   <td className="py-4 px-6 text-dim text-xs whitespace-nowrap">{dateStr}</td>
                   <td className="py-4 px-4 font-mono font-bold text-prime">
-                    {onSelectTicker ? (
-                      <button
-                        onClick={() => onSelectTicker(entry.ticker)}
-                        className="hover:text-accent transition-colors underline decoration-accent/30"
-                      >
-                        {entry.ticker}
-                      </button>
-                    ) : (
-                      entry.ticker
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {onSelectTicker ? (
+                        <button
+                          onClick={() => onSelectTicker(entry.ticker)}
+                          className="hover:text-accent transition-colors underline decoration-accent/30"
+                        >
+                          {entry.ticker}
+                        </button>
+                      ) : (
+                        entry.ticker
+                      )}
+                      {isTSX && (
+                        <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-1 py-0 rounded">
+                          🇨A
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-4 px-4">
                     <span className="font-bold text-prime">{entry.score}</span>
@@ -199,10 +214,10 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                     </span>
                   </td>
                   <td className="py-4 px-4 text-right font-mono text-dim">
-                    {entryPrice != null ? `$${entryPrice.toFixed(2)}` : '—'}
+                    {entryPrice != null ? `${isTSX ? 'CAD ' : ''}$${entryPrice.toFixed(2)}` : '—'}
                   </td>
                   <td className="py-4 px-4 text-right font-mono text-prime">
-                    {currentPrice != null ? `$${currentPrice.toFixed(2)}` : '—'}
+                    {currentPrice != null ? `${isTSX ? 'CAD ' : ''}$${currentPrice.toFixed(2)}` : '—'}
                   </td>
                   <td className="py-4 px-6">{outcomeBadge}</td>
                 </tr>

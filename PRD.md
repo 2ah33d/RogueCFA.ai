@@ -487,7 +487,7 @@ Submitting two to five valid tickers renders a side-by-side comparison matrix id
 
 ### Canadian Market Identity (TSX-first)
 **Priority:** P2  
-**Status:** Planned
+**Status:** Implemented in V2
 
 **What it does**
 Automatically detects Canadian stock symbols and prioritizes Toronto Stock Exchange (`.TO`) ticker formatting, Canadian dollar currency display, and domestic benchmark framing. Resolves dual-listed equities by highlighting Canadian exchange liquidity and reporting currency.

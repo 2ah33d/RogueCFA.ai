@@ -45,11 +45,23 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
               <th className="py-3.5 px-4">Metric / Sub-Score</th>
               {scorecards.map((card) => {
                 const isWinner = card.ticker === winnerTicker;
+                const isTSX =
+                  card.ticker?.toUpperCase().endsWith('.TO') ||
+                  card.ticker?.toUpperCase().endsWith('.V') ||
+                  card.exchange?.toUpperCase().includes('TORONTO') ||
+                  card.exchange?.toUpperCase().includes('TSX') ||
+                  card.currency === 'CAD' ||
+                  card.country === 'CA';
                 return (
                   <th key={card.ticker} className={`py-3.5 px-4 text-center ${isWinner ? 'bg-accent/10 font-bold text-prime' : 'text-dim'}`}>
                     <div className="text-base font-mono font-bold text-prime flex items-center justify-center gap-1.5">
                       {card.ticker}
                       {isWinner && <span className="text-xs text-signal-buy">★</span>}
+                      {isTSX && (
+                        <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-1 py-0 rounded">
+                          🇨A
+                        </span>
+                      )}
                     </div>
                     <div className="text-[10px] text-faint font-normal truncate max-w-[120px] mx-auto">
                       {card.companyName || card.ticker}

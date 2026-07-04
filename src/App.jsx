@@ -157,6 +157,9 @@ export default function App() {
           const enriched = {
             ...result,
             entryPrice: tickerData?.quote?.c || null,
+            exchange: tickerData?.profile?.exchange || null,
+            currency: tickerData?.profile?.currency || null,
+            country: tickerData?.profile?.country || null,
             limitedData,
             companyName: companyName || result.ticker,
             scoredAt: new Date().toISOString(),

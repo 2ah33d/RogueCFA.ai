@@ -103,10 +103,22 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
     limitedData,
     coverageDepth,
     coverageModifier,
+    entryPrice,
+    exchange,
+    currency,
+    country,
     scoredAt,
   } = data;
 
   const s = SIGNAL[signal] || SIGNAL.WATCH;
+
+  const isTSX =
+    ticker?.toUpperCase().endsWith('.TO') ||
+    ticker?.toUpperCase().endsWith('.V') ||
+    exchange?.toUpperCase().includes('TORONTO') ||
+    exchange?.toUpperCase().includes('TSX') ||
+    currency === 'CAD' ||
+    country === 'CA';
 
   /* SVG score ring */
   const RADIUS = 44;
@@ -122,10 +134,15 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
       {/* ── Header ── */}
       <div className="px-6 pt-6 pb-4 border-b border-edge flex items-start justify-between">
         <div>
-          <div className="flex items-center gap-3 mb-1">
+          <div className="flex flex-wrap items-center gap-3 mb-1">
             <h3 className="text-2xl font-bold text-prime font-mono tracking-wide">
               {ticker}
             </h3>
+            {entryPrice != null && (
+              <span className="text-base font-semibold text-prime font-mono bg-surface-elevated px-2.5 py-0.5 rounded border border-edge">
+                {isTSX ? 'CAD ' : ''}${Number(entryPrice).toFixed(2)}
+              </span>
+            )}
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full
                           text-xs font-bold uppercase tracking-wider
@@ -134,11 +151,28 @@ export default function Scorecard({ data, holdPeriod, className = '' }) {
             >
               {s.label}
             </span>
+            {isTSX && (
+              <span
+                className="inline-flex items-center gap-1 text-xs font-bold font-mono
+                            text-red-400 bg-red-500/15 border border-red-500/40 px-2.5 py-0.5 rounded-full shadow-sm"
+                title="Toronto Stock Exchange / Canadian Asset"
+              >
+                🇨A TSX
+              </span>
+            )}
           </div>
           {companyName && companyName !== ticker && (
             <p className="text-sm text-dim">{companyName}</p>
           )}
           <div className="flex flex-wrap items-center gap-2 mt-1">
+            {isTSX && (
+              <span
+                className="inline-flex items-center gap-1 text-xs font-mono
+                            text-red-300 bg-red-950/40 border border-red-800/50 px-2 py-0.5 rounded-full"
+              >
+                🇨A CAD Currency & TSX Peer Framing
+              </span>
+            )}
             {limitedData && (
               <span
                 className="inline-flex items-center gap-1 text-xs

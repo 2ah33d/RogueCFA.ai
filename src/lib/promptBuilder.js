@@ -84,7 +84,7 @@ function formatConsensus(recommendation) {
   };
 }
 
-function formatEarnings(earnings) {
+function formatEarnings(earnings, currPrefix = '$') {
   if (!Array.isArray(earnings) || earnings.length === 0) {
     return 'No quarterly earnings data available.';
   }
@@ -93,7 +93,7 @@ function formatEarnings(earnings) {
     const beat = q.reportedEPS != null && q.estimatedEPS != null
       ? (q.reportedEPS > q.estimatedEPS ? 'BEAT' : q.reportedEPS === q.estimatedEPS ? 'MET' : 'MISSED')
       : 'N/A';
-    return `Q${i + 1} (${q.date}): Reported EPS $${q.reportedEPS ?? 'N/A'} vs Est $${q.estimatedEPS ?? 'N/A'} → ${beat} (${q.surprisePercentage != null ? q.surprisePercentage.toFixed(1) + '%' : 'N/A'} surprise)`;
+    return `Q${i + 1} (${q.date}): Reported EPS ${currPrefix}${q.reportedEPS ?? 'N/A'} vs Est ${currPrefix}${q.estimatedEPS ?? 'N/A'} → ${beat} (${q.surprisePercentage != null ? q.surprisePercentage.toFixed(1) + '%' : 'N/A'} surprise)`;
   }).join('\n');
 }
 
@@ -159,6 +159,17 @@ export function buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticke
   const overview = alphaData?.overview || null;
   const earnings = alphaData?.earnings || null;
 
+  /* Canadian Market Identity Detection */
+  const isTSX =
+    ticker.toUpperCase().endsWith('.TO') ||
+    ticker.toUpperCase().endsWith('.V') ||
+    profile?.exchange?.toUpperCase().includes('TORONTO') ||
+    profile?.exchange?.toUpperCase().includes('TSX') ||
+    profile?.currency === 'CAD' ||
+    profile?.country === 'CA';
+
+  const currPrefix = isTSX ? 'CAD $' : '$';
+
   /* Price data */
   const current = quote?.c || 0;
   const high52w = quote?.h || 0;
@@ -181,6 +192,14 @@ export function buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticke
     ? `\nDETECTED SIGNAL CONFLICTS (YOU MUST ADDRESS THESE DIRECTLY IN YOUR THESIS OR RISKS):\n${conflicts.map((c, i) => `${i + 1}. ${c}`).join('\n')}\nExplain what caused this contradiction and resolve it for the investor.\n`
     : '';
 
+  const tsxInstruction = isTSX
+    ? `\n\nCANADIAN MARKET IDENTITY (TSX-FIRST RULE):
+This asset is traded on a Canadian stock exchange (${profile?.exchange || 'TSX/TORONTO'}) or reports in Canadian Dollars (CAD).
+- You MUST explicitly label all price targets, valuation ratios, and financial figures in Canadian Dollars (CAD) or use the CAD$ prefix.
+- Frame comparative benchmarks and industry norms relative to the Canadian market and TSX sector peers where applicable.
+- Note Canadian exchange liquidity or dual-listing context if relevant in your risk analysis.\n`
+    : '';
+
   /* ── System prompt ── */
   const systemPrompt = `You are a CFA-level equity analyst. Your role is to EXPLAIN a pre-calculated investment score — not to generate one.
 
@@ -196,7 +215,7 @@ Your job is to:
 4. Flag the single most important thing to watch during the ${period.label} hold period
 5. List specific risks and catalysts from the data
 
-${TIME_FOCUS[period.category]}
+${TIME_FOCUS[period.category]}${tsxInstruction}
 
 STRICT RULES — VIOLATION OF ANY RULE INVALIDATES YOUR RESPONSE:
 - Do NOT reference any data not explicitly listed in the AVAILABLE DATA section below
@@ -235,12 +254,12 @@ COMPANY PROFILE:
 - Country: ${profile?.country || 'Unknown'}
 
 CURRENT PRICE DATA:
-- Current Price: $${current.toFixed(2)}
+- Current Price: ${currPrefix}${current.toFixed(2)}
 - Daily Change: ${changePercent}%
-- 52-Week High: $${high52w.toFixed(2)}
-- 52-Week Low: $${low52w.toFixed(2)}
+- 52-Week High: ${currPrefix}${high52w.toFixed(2)}
+- 52-Week Low: ${currPrefix}${low52w.toFixed(2)}
 - Position in 52-Week Range: ${positionInRange}% from low
-- Previous Close: $${(quote?.pc || 0).toFixed(2)}
+- Previous Close: ${currPrefix}${(quote?.pc || 0).toFixed(2)}
 
 ${consensus.text}`;
 
@@ -252,12 +271,12 @@ FUNDAMENTAL DATA (Alpha Vantage):
 - P/E Ratio: ${overview.peRatio ?? 'N/A'}
 - Forward P/E: ${overview.forwardPE ?? 'N/A'}
 - PEG Ratio: ${overview.pegRatio ?? 'N/A'}
-- EPS (TTM): $${overview.eps ?? 'N/A'}
+- EPS (TTM): ${currPrefix}${overview.eps ?? 'N/A'}
 - Dividend Yield: ${overview.dividendYield != null ? (overview.dividendYield * 100).toFixed(2) + '%' : 'N/A'}
 - Profit Margin: ${overview.profitMargin != null ? (overview.profitMargin * 100).toFixed(1) + '%' : 'N/A'}
 - Revenue Growth (QoQ YoY): ${overview.revenueGrowthYoY != null ? (overview.revenueGrowthYoY * 100).toFixed(1) + '%' : 'N/A'}
 - Earnings Growth (QoQ YoY): ${overview.earningsGrowthYoY != null ? (overview.earningsGrowthYoY * 100).toFixed(1) + '%' : 'N/A'}
-- Analyst Target Price: $${overview.analystTargetPrice ?? 'N/A'}${overview.analystTargetPrice && current > 0 ? ` (${(((overview.analystTargetPrice - current) / current) * 100).toFixed(1)}% implied upside)` : ''}
+- Analyst Target Price: ${currPrefix}${overview.analystTargetPrice ?? 'N/A'}${overview.analystTargetPrice && current > 0 ? ` (${(((overview.analystTargetPrice - current) / current) * 100).toFixed(1)}% implied upside)` : ''}
 - Beta: ${overview.beta ?? 'N/A'}
 - Return on Equity: ${overview.returnOnEquity != null ? (overview.returnOnEquity * 100).toFixed(1) + '%' : 'N/A'}
 - Return on Assets: ${overview.returnOnAssets != null ? (overview.returnOnAssets * 100).toFixed(1) + '%' : 'N/A'}`;
@@ -267,7 +286,7 @@ FUNDAMENTAL DATA (Alpha Vantage):
     userPrompt += `
 
 QUARTERLY EARNINGS (last ${earnings.length} quarters):
-${formatEarnings(earnings)}`;
+${formatEarnings(earnings, currPrefix)}`;
   }
 
   userPrompt += `
@@ -300,6 +319,19 @@ Analyze this data for a ${period.label} investment horizon. Explain the score, p
 export function buildComparisonPrompt(scorecardsList, holdPeriod) {
   const period = HOLD_PERIODS[holdPeriod] || HOLD_PERIODS['6M'];
 
+  const hasTSX = scorecardsList.some((card) =>
+    card.ticker?.toUpperCase().endsWith('.TO') ||
+    card.ticker?.toUpperCase().endsWith('.V') ||
+    card.exchange?.toUpperCase().includes('TORONTO') ||
+    card.exchange?.toUpperCase().includes('TSX') ||
+    card.currency === 'CAD' ||
+    card.country === 'CA'
+  );
+
+  const tsxRule = hasTSX
+    ? `- For Canadian / TSX-listed stocks (e.g. ending in .TO or reporting in CAD), explicitly label all financial figures and price targets in CAD or with CAD$ prefix and frame against Canadian market liquidity.\n`
+    : '';
+
   const systemPrompt = `You are a CFA-level head-to-head equity comparison analyst.
 You will receive pre-calculated deterministic math scores and data summaries for multiple stocks over a shared ${period.label} investment horizon.
 
@@ -309,7 +341,7 @@ STRICT RULES:
 - Do NOT invent metrics not present in the data.
 - Ground all comparison statements in the provided deterministic sub-scores or fundamentals.
 - Do NOT override deterministic scores.
-
+${tsxRule}
 Respond ONLY with valid JSON matching this exact schema:
 {
   "winner": "TICKER",
@@ -323,12 +355,19 @@ Respond ONLY with valid JSON matching this exact schema:
   const userPrompt = `HEAD-TO-HEAD COMPARISON DATA (${period.label} Hold Period):
 
 ${scorecardsList
-  .map(
-    (card) => `[${card.ticker}] (${card.companyName || card.ticker})
+  .map((card) => {
+    const isTSX =
+      card.ticker?.toUpperCase().endsWith('.TO') ||
+      card.ticker?.toUpperCase().endsWith('.V') ||
+      card.exchange?.toUpperCase().includes('TORONTO') ||
+      card.exchange?.toUpperCase().includes('TSX') ||
+      card.currency === 'CAD' ||
+      card.country === 'CA';
+    return `[${card.ticker}] (${card.companyName || card.ticker})${isTSX ? ' [TSX / CAD Asset]' : ''}
 - Total Math Score: ${card.score}/100 (Grade: ${card.grade}, Signal: ${card.signal})
 - Breakdown: Consensus: ${card.score_breakdown?.consensus ?? 'N/A'}, Momentum: ${card.score_breakdown?.momentum ?? 'N/A'}, Valuation: ${card.score_breakdown?.valuation ?? 'N/A'}, Earnings: ${card.score_breakdown?.earnings ?? 'N/A'}
-- Thesis: ${card.thesis || 'N/A'}`
-  )
+- Thesis: ${card.thesis || 'N/A'}`;
+  })
   .join('\n\n')}
 
 Compare these assets and determine which has the strongest quantitative and qualitative profile for a ${period.label} horizon.`;
