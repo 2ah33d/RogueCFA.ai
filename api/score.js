@@ -161,32 +161,47 @@ function extractTextFromResponse(data) {
 
 /* ── Claude ── */
 async function callClaude(key, systemPrompt, userPrompt) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
-  });
+  const models = [
+    'claude-3-5-sonnet-latest',
+    'claude-3-5-sonnet-20241022',
+    'claude-3-5-sonnet-20240620',
+    'claude-3-haiku-20240307'
+  ];
 
-  if (!response.ok) {
+  let lastErr = null;
+  for (const model of models) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return extractTextFromResponse(data);
+    }
+
     const errBody = await response.json().catch(() => ({}));
     const detail = errBody.error?.message || response.statusText || response.status;
-    throw Object.assign(
-      new Error(`Claude API error: ${detail}`),
+    lastErr = Object.assign(
+      new Error(`Claude API error (${model}): ${detail}`),
       { status: response.status }
     );
+    if (response.status === 404 || errBody.error?.message?.toLowerCase().includes('model')) {
+      continue;
+    }
+    throw lastErr;
   }
-
-  const data = await response.json();
-  return extractTextFromResponse(data);
+  throw lastErr || new Error('All Claude model aliases failed.');
 }
 
 /* ── OpenAI ── */

@@ -681,33 +681,49 @@ async function callGemini(key, systemPrompt, userPrompt) {
 }
 
 async function callClaude(key, systemPrompt, userPrompt) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
-  });
+  const models = [
+    'claude-3-5-sonnet-latest',
+    'claude-3-5-sonnet-20241022',
+    'claude-3-5-sonnet-20240620',
+    'claude-3-haiku-20240307'
+  ];
 
-  if (!response.ok) {
+  let lastErr = null;
+  for (const model of models) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const textBlock = data.content?.find((b) => b.type === 'text');
+      if (textBlock) return textBlock.text;
+      throw new Error('Claude returned no text content.');
+    }
+
     const errBody = await response.json().catch(() => ({}));
-    throw Object.assign(
-      new Error(`Claude API error: ${errBody.error?.message || response.statusText}`),
+    lastErr = Object.assign(
+      new Error(`Claude API error (${model}): ${errBody.error?.message || response.statusText}`),
       { status: response.status }
     );
+    /* If it is a 404 or model error, continue to the next model in the fallback list */
+    if (response.status === 404 || errBody.error?.message?.toLowerCase().includes('model')) {
+      continue;
+    }
+    throw lastErr;
   }
-
-  const data = await response.json();
-  const textBlock = data.content?.find((b) => b.type === 'text');
-  if (textBlock) return textBlock.text;
-  throw new Error('Claude returned no text content.');
+  throw lastErr || new Error('All Claude model aliases failed.');
 }
 
 async function callOpenAI(key, systemPrompt, userPrompt) {
