@@ -275,7 +275,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
                              text-accent text-sm font-semibold rounded-lg
                              hover:bg-accent/20 transition-all"
                 >
-                  ⚙️ Open Settings (Add Groq Key)
+                  ⚙️ Open Settings {getGroqKey() ? '' : '(Add Groq Key)'}
                 </button>
               </div>
             </>
