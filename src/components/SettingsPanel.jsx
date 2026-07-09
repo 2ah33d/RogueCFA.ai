@@ -3,6 +3,8 @@ import {
   getKeys,
   getProvider,
   getYoutubeKey,
+  saveKeys,
+  saveYoutubeKey,
   saveProvider,
   clearKeys,
   clearHistory,
@@ -16,15 +18,40 @@ function maskKey(key) {
 }
 
 export default function SettingsPanel({ onClose, onKeysCleared, className = '' }) {
-  const { finnhubKey, llmKey, alphaVantageKey } = getKeys();
-  const youtubeKey = getYoutubeKey();
+  const storedKeys = getKeys();
+  const storedYoutube = getYoutubeKey();
+  const [finnhubKey, setFinnhubKey] = useState(storedKeys.finnhubKey);
+  const [llmKey, setLlmKey] = useState(storedKeys.llmKey);
+  const [alphaVantageKey, setAlphaVantageKey] = useState(storedKeys.alphaVantageKey);
+  const [youtubeKey, setYoutubeKey] = useState(storedYoutube);
+  
   const [provider, setProvider] = useState(getProvider());
   const [confirmClearKeys, setConfirmClearKeys] = useState(false);
   const [historyCleared, setHistoryCleared] = useState(false);
+  const [isEditingKeys, setIsEditingKeys] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleProviderChange = (val) => {
     setProvider(val);
     saveProvider(val);
+  };
+
+  const handleSaveKeys = (e) => {
+    if (e) e.preventDefault();
+    saveKeys(finnhubKey, llmKey, alphaVantageKey);
+    saveYoutubeKey(youtubeKey);
+    setIsEditingKeys(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const handleCancelEdit = () => {
+    const current = getKeys();
+    setFinnhubKey(current.finnhubKey);
+    setLlmKey(current.llmKey);
+    setAlphaVantageKey(current.alphaVantageKey);
+    setYoutubeKey(getYoutubeKey());
+    setIsEditingKeys(false);
   };
 
   const handleClearKeys = () => {
@@ -84,39 +111,152 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* API keys (read-only display) */}
+          {/* API keys */}
           <section>
-            <h3 className="text-xs font-semibold text-faint uppercase tracking-wider mb-3">
-              API Keys
-            </h3>
-            <div className="space-y-3">
-              <div className="bg-surface rounded-lg p-3 border border-edge">
-                <div className="text-xs text-faint mb-1">Finnhub</div>
-                <div className="text-sm text-prime font-mono">
-                  {maskKey(finnhubKey)}
-                </div>
-              </div>
-              <div className="bg-surface rounded-lg p-3 border border-edge">
-                <div className="text-xs text-faint mb-1">
-                  LLM ({provider})
-                </div>
-                <div className="text-sm text-prime font-mono">
-                  {maskKey(llmKey)}
-                </div>
-              </div>
-              <div className="bg-surface rounded-lg p-3 border border-edge">
-                <div className="text-xs text-faint mb-1">Alpha Vantage (optional)</div>
-                <div className="text-sm text-prime font-mono">
-                  {alphaVantageKey ? maskKey(alphaVantageKey) : <span className="text-faint italic">Not set</span>}
-                </div>
-              </div>
-              <div className="bg-surface rounded-lg p-3 border border-edge">
-                <div className="text-xs text-faint mb-1">YouTube Data API (optional)</div>
-                <div className="text-sm text-prime font-mono">
-                  {youtubeKey ? maskKey(youtubeKey) : <span className="text-faint italic">Not set</span>}
-                </div>
-              </div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-faint uppercase tracking-wider">
+                API Keys
+              </h3>
+              {saveSuccess && (
+                <span className="text-xs font-semibold text-signal-buy animate-fade-in">
+                  ✓ Saved!
+                </span>
+              )}
+              {!isEditingKeys && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingKeys(true)}
+                  className="text-xs font-semibold text-accent hover:text-accent-hover transition-colors"
+                >
+                  ✏️ Edit / Add Keys
+                </button>
+              )}
             </div>
+
+            {isEditingKeys ? (
+              <form onSubmit={handleSaveKeys} className="space-y-3 bg-surface/50 p-3.5 rounded-xl border border-edge/80 animate-fade-in">
+                <div>
+                  <label className="block text-[11px] font-medium text-dim mb-1">
+                    Finnhub API Key <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={finnhubKey}
+                    onChange={(e) => setFinnhubKey(e.target.value)}
+                    placeholder="Your Finnhub API key"
+                    className="w-full px-3 py-1.5 bg-surface border border-edge rounded text-sm text-prime font-mono placeholder-faint focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-dim mb-1">
+                    LLM API Key ({provider}) <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={llmKey}
+                    onChange={(e) => setLlmKey(e.target.value)}
+                    placeholder="Your LLM API key"
+                    className="w-full px-3 py-1.5 bg-surface border border-edge rounded text-sm text-prime font-mono placeholder-faint focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-dim mb-1">
+                    YouTube Data API Key <span className="text-faint font-normal">(Digest)</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={youtubeKey}
+                    onChange={(e) => setYoutubeKey(e.target.value)}
+                    placeholder="Optional — enables MarketCall Digest"
+                    className="w-full px-3 py-1.5 bg-surface border border-edge rounded text-sm text-prime font-mono placeholder-faint focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-dim mb-1">
+                    Alpha Vantage Key <span className="text-faint font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={alphaVantageKey}
+                    onChange={(e) => setAlphaVantageKey(e.target.value)}
+                    placeholder="Optional — earnings & fundamentals"
+                    className="w-full px-3 py-1.5 bg-surface border border-edge rounded text-sm text-prime font-mono placeholder-faint focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-gradient-to-r from-accent to-accent-muted text-white text-xs font-semibold rounded-lg hover:from-accent-hover hover:to-accent transition-all shadow-md shadow-accent/20"
+                  >
+                    Save Keys
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="px-3 py-2 bg-surface border border-edge text-dim hover:text-prime text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-3">
+                <div className="bg-surface rounded-lg p-3 border border-edge flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-faint mb-1">Finnhub</div>
+                    <div className="text-sm text-prime font-mono">
+                      {maskKey(finnhubKey)}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-surface rounded-lg p-3 border border-edge flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-faint mb-1">
+                      LLM ({provider})
+                    </div>
+                    <div className="text-sm text-prime font-mono">
+                      {maskKey(llmKey)}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-surface rounded-lg p-3 border border-edge flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-faint mb-1">YouTube Data API (MarketCall Digest)</div>
+                    <div className="text-sm text-prime font-mono">
+                      {youtubeKey ? maskKey(youtubeKey) : <span className="text-faint italic">Not set</span>}
+                    </div>
+                  </div>
+                  {!youtubeKey && (
+                    <button
+                      onClick={() => setIsEditingKeys(true)}
+                      className="text-xs font-semibold text-accent hover:text-accent-hover bg-accent/10 border border-accent/20 px-2 py-1 rounded"
+                    >
+                      + Add Key
+                    </button>
+                  )}
+                </div>
+                <div className="bg-surface rounded-lg p-3 border border-edge flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-faint mb-1">Alpha Vantage (optional)</div>
+                    <div className="text-sm text-prime font-mono">
+                      {alphaVantageKey ? maskKey(alphaVantageKey) : <span className="text-faint italic">Not set</span>}
+                    </div>
+                  </div>
+                  {!alphaVantageKey && (
+                    <button
+                      onClick={() => setIsEditingKeys(true)}
+                      className="text-xs font-semibold text-accent hover:text-accent-hover bg-accent/10 border border-accent/20 px-2 py-1 rounded"
+                    >
+                      + Add Key
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Provider */}
