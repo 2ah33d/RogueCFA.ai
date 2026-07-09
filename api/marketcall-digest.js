@@ -30,49 +30,51 @@ export default async function handler(req, res) {
 
   try {
     /* ──────────────────────────────────────────
-       Step 1: Find most recent MarketCall video
+       Step 1: Find recent MarketCall videos
        (Multi-strategy: Uploads playlist first, then global search)
        ────────────────────────────────────────── */
-    const videoInfo = await findLatestMarketCallVideo(youtubeKey);
+    const candidateVideos = await findRecentMarketCallVideos(youtubeKey);
 
-    if (!videoInfo || !videoInfo.videoId) {
+    if (!candidateVideos || candidateVideos.length === 0) {
       return res.status(200).json({
         error: 'no_episode',
         message: "No MarketCall episodes found on BNN Bloomberg's channel recently. Verified both recent channel uploads and global search.",
       });
     }
 
-    const { videoId, videoTitle, episodeDate } = videoInfo;
-
     /* ──────────────────────────────────────────
-       Step 2: Fetch auto-generated transcript
+       Step 2 & 3: Iterate candidates to find the latest
+       episode whose auto-captions are ready & complete
        ────────────────────────────────────────── */
-    const transcript = await fetchTranscript(videoId);
+    let selectedVideo = null;
+    let transcript = null;
+    let cleanedTranscript = null;
 
-    if (!transcript || transcript.length < 100) {
+    for (const candidate of candidateVideos) {
+      const raw = await fetchTranscript(candidate.videoId);
+      if (raw && raw.length >= 100) {
+        const cleaned = cleanRawTranscript(raw);
+        if (cleaned && cleaned.length >= 200) {
+          selectedVideo = candidate;
+          transcript = raw;
+          cleanedTranscript = cleaned;
+          break;
+        }
+      }
+    }
+
+    if (!selectedVideo || !cleanedTranscript) {
+      const firstCandidate = candidateVideos[0] || {};
       return res.status(200).json({
         error: 'no_transcript',
-        message: `Found episode "${videoTitle}" (${episodeDate ? 'aired ' + episodeDate : 'recent'}), but YouTube auto-captions aren't available yet. Auto-captions can take 1-2 hours after broadcast. Try again shortly.`,
-        videoId,
-        videoTitle,
-        episodeDate,
+        message: `Found recent episode "${firstCandidate.videoTitle || 'Market Call'}" (${firstCandidate.episodeDate ? 'aired ' + firstCandidate.episodeDate : 'recent'}), but auto-captions aren't available yet for any recent episodes. YouTube auto-captions can take 1-2 hours after broadcast. Try again shortly.`,
+        videoId: firstCandidate.videoId,
+        videoTitle: firstCandidate.videoTitle,
+        episodeDate: firstCandidate.episodeDate,
       });
     }
 
-    /* ──────────────────────────────────────────
-       Step 3: Clean transcript
-       ────────────────────────────────────────── */
-    const cleanedTranscript = cleanRawTranscript(transcript);
-
-    if (cleanedTranscript.length < 200) {
-      return res.status(200).json({
-        error: 'no_transcript',
-        message: `Found episode "${videoTitle}", but the extracted transcript is too short or incomplete. Captions may still be processing.`,
-        videoId,
-        videoTitle,
-        episodeDate,
-      });
-    }
+    const { videoId, videoTitle, episodeDate } = selectedVideo;
 
     /* ──────────────────────────────────────────
        Step 4: Build prompt & call LLM
@@ -108,32 +110,47 @@ export default async function handler(req, res) {
    No API key needed, no OAuth required.
    ════════════════════════════════════════════════════════════════ */
 
-async function findLatestMarketCallVideo(youtubeKey) {
-  /* Strategy 1: Check BNN Bloomberg's Uploads playlist directly (UU... instead of UC...).
-     Uploads playlist has 0 indexing delay and only uses 1 quota unit. */
+function decodeHTMLEntities(str) {
+  if (!str) return '';
+  return str
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#([0-9]+);/g, (_, dec) => String.fromCharCode(dec));
+}
+
+async function findRecentMarketCallVideos(youtubeKey) {
+  const candidateMap = new Map();
+
+  /* Strategy 1: Check BNN Bloomberg's Uploads playlist directly (UU... instead of UC...). */
   try {
     const uploadsPlaylistId = BNN_CHANNEL_ID.replace(/^UC/, 'UU');
     const playlistUrl = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
     playlistUrl.searchParams.set('part', 'snippet');
     playlistUrl.searchParams.set('playlistId', uploadsPlaylistId);
-    playlistUrl.searchParams.set('maxResults', '20');
+    playlistUrl.searchParams.set('maxResults', '25');
     playlistUrl.searchParams.set('key', youtubeKey);
 
     const res = await fetch(playlistUrl.toString(), { signal: AbortSignal.timeout(8000) });
     if (res.ok) {
       const data = await res.json();
       const items = data.items || [];
-      const match = items.find((item) => {
+      for (const item of items) {
         const title = (item.snippet?.title || '').toLowerCase();
         const desc = (item.snippet?.description || '').toLowerCase();
-        return title.includes('market call') || title.includes('marketcall') || desc.includes('market call') || desc.includes('marketcall');
-      });
-      if (match && match.snippet?.resourceId?.videoId) {
-        return {
-          videoId: match.snippet.resourceId.videoId,
-          videoTitle: match.snippet.title || '',
-          episodeDate: match.snippet.publishedAt ? match.snippet.publishedAt.split('T')[0] : '',
-        };
+        if (title.includes('market call') || title.includes('marketcall') || desc.includes('market call') || desc.includes('marketcall')) {
+          const videoId = item.snippet?.resourceId?.videoId;
+          if (videoId && !candidateMap.has(videoId)) {
+            candidateMap.set(videoId, {
+              videoId,
+              videoTitle: decodeHTMLEntities(item.snippet.title || ''),
+              episodeDate: item.snippet.publishedAt ? item.snippet.publishedAt.split('T')[0] : '',
+            });
+          }
+        }
       }
     } else if (res.status === 403 || res.status === 401) {
       const errBody = await res.json().catch(() => ({}));
@@ -141,45 +158,52 @@ async function findLatestMarketCallVideo(youtubeKey) {
     }
   } catch (err) {
     if (err.message && err.message.includes('rejected')) throw err;
-    console.warn('Uploads playlist lookup failed or had no MarketCall, trying search fallback:', err.message);
+    console.warn('Uploads playlist lookup failed, trying search fallback:', err.message);
   }
 
-  /* Strategy 2: Global YouTube search ordered by date (no channelId filter to bypass channel-search indexing lag). */
-  const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
-  searchUrl.searchParams.set('part', 'snippet');
-  searchUrl.searchParams.set('q', 'BNN Bloomberg Market Call');
-  searchUrl.searchParams.set('type', 'video');
-  searchUrl.searchParams.set('order', 'date');
-  searchUrl.searchParams.set('maxResults', '15');
-  searchUrl.searchParams.set('key', youtubeKey);
+  /* Strategy 2: Global YouTube search ordered by date (no channelId filter to bypass channel lag). */
+  if (candidateMap.size < 5) {
+    const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+    searchUrl.searchParams.set('part', 'snippet');
+    searchUrl.searchParams.set('q', 'BNN Bloomberg Market Call');
+    searchUrl.searchParams.set('type', 'video');
+    searchUrl.searchParams.set('order', 'date');
+    searchUrl.searchParams.set('maxResults', '20');
+    searchUrl.searchParams.set('key', youtubeKey);
 
-  const searchRes = await fetch(searchUrl.toString(), { signal: AbortSignal.timeout(10000) });
-  if (!searchRes.ok) {
-    const errBody = await searchRes.json().catch(() => ({}));
-    const detail = errBody.error?.message || searchRes.statusText;
-    if (searchRes.status === 403 || searchRes.status === 401) {
-      throw new Error(`YouTube API key rejected: ${detail}`);
+    const searchRes = await fetch(searchUrl.toString(), { signal: AbortSignal.timeout(10000) });
+    if (!searchRes.ok) {
+      const errBody = await searchRes.json().catch(() => ({}));
+      const detail = errBody.error?.message || searchRes.statusText;
+      if (searchRes.status === 403 || searchRes.status === 401) {
+        if (candidateMap.size === 0) throw new Error(`YouTube API key rejected: ${detail}`);
+      } else {
+        if (candidateMap.size === 0) throw new Error(`YouTube search failed: ${detail}`);
+      }
+    } else {
+      const searchData = await searchRes.json();
+      const videos = searchData.items || [];
+      for (const v of videos) {
+        const title = (v.snippet?.title || '').toLowerCase();
+        const desc = (v.snippet?.description || '').toLowerCase();
+        const channel = (v.snippet?.channelTitle || '').toLowerCase();
+        const isBnnOrRelevant = channel.includes('bnn') || channel.includes('bloomberg') || channel.includes('market call') || channel.includes('marketcall');
+        const hasMarketCall = title.includes('market call') || title.includes('marketcall') || desc.includes('market call') || desc.includes('marketcall');
+        if (isBnnOrRelevant && hasMarketCall) {
+          const videoId = v.id?.videoId;
+          if (videoId && !candidateMap.has(videoId)) {
+            candidateMap.set(videoId, {
+              videoId,
+              videoTitle: decodeHTMLEntities(v.snippet.title || ''),
+              episodeDate: v.snippet.publishedAt ? v.snippet.publishedAt.split('T')[0] : '',
+            });
+          }
+        }
+      }
     }
-    throw new Error(`YouTube search failed: ${detail}`);
   }
 
-  const searchData = await searchRes.json();
-  const videos = searchData.items || [];
-  const marketCallVideo = videos.find((v) => {
-    const title = (v.snippet?.title || '').toLowerCase();
-    const desc = (v.snippet?.description || '').toLowerCase();
-    const channel = (v.snippet?.channelTitle || '').toLowerCase();
-    const isBnnOrRelevant = channel.includes('bnn') || channel.includes('bloomberg') || channel.includes('market call') || channel.includes('marketcall');
-    const hasMarketCall = title.includes('market call') || title.includes('marketcall') || desc.includes('market call') || desc.includes('marketcall');
-    return isBnnOrRelevant && hasMarketCall;
-  });
-
-  if (!marketCallVideo || !marketCallVideo.id?.videoId) return null;
-  return {
-    videoId: marketCallVideo.id.videoId,
-    videoTitle: marketCallVideo.snippet?.title || '',
-    episodeDate: marketCallVideo.snippet?.publishedAt ? marketCallVideo.snippet.publishedAt.split('T')[0] : '',
-  };
+  return Array.from(candidateMap.values()).slice(0, 8);
 }
 
 /* ════════════════════════════════════════════════════════════════
