@@ -90,25 +90,62 @@ export default async function handler(req, res) {
        Step 2 & 3: Iterate candidates to find the latest
        episode whose auto-captions are ready & complete
        ────────────────────────────────────────── */
+    /* ──────────────────────────────────────────
+       Step 2 & 3: Candidate Selection & Architecture A Priority
+       1. Check Candidate #0 (Newest Episode) via YouTube auto-captions.
+       2. If Candidate #0 has no auto-captions yet, immediately run Architecture A (Groq Whisper MP3 audio transcription) on the live OmnyStudio stream!
+       3. If Groq Whisper fails or is not configured, check older candidate videos (slice 1).
+       ────────────────────────────────────────── */
     let selectedVideo = null;
     let cleanedTranscript = null;
 
-    for (const candidate of candidateVideos) {
-      const raw = await fetchTranscript(candidate.videoId);
-      if (raw && raw.length >= 100) {
-        const cleaned = cleanRawTranscript(raw);
+    if (candidateVideos.length > 0) {
+      const firstCandidate = candidateVideos[0];
+      const firstRaw = await fetchTranscript(firstCandidate.videoId);
+      if (firstRaw && firstRaw.length >= 100) {
+        const cleaned = cleanRawTranscript(firstRaw);
         if (cleaned && cleaned.length >= 200) {
-          selectedVideo = candidate;
+          selectedVideo = firstCandidate;
           cleanedTranscript = cleaned;
-          break;
         }
       }
     }
 
+    /* If newest episode lacks YouTube captions, run Architecture A (Groq Whisper MP3 stream) immediately! */
     if (!selectedVideo || !cleanedTranscript) {
-      /* Architecture A: Check public OmnyStudio RSS / MP3 audio feeds with optional Groq Whisper ASR */
-      const rssText = await fetchRssPodcastFallback(groqKey);
-      if (rssText && rssText.length >= 100) {
+      if (groqKey && groqKey.startsWith('gsk_')) {
+        const rssText = await fetchRssPodcastFallback(groqKey);
+        if (rssText && rssText.length >= 200) {
+          selectedVideo = candidateVideos[0] || {
+            videoId: '',
+            videoTitle: 'BNN Bloomberg MarketCall (Audio/RSS Feed)',
+            episodeDate: new Date().toISOString().split('T')[0],
+          };
+          cleanedTranscript = cleanRawTranscript(rssText);
+        }
+      }
+    }
+
+    /* If still no transcript, try older candidate videos (Candidate #1, #2...) before yielding no_transcript */
+    if (!selectedVideo || !cleanedTranscript) {
+      for (let i = 1; i < candidateVideos.length; i++) {
+        const candidate = candidateVideos[i];
+        const raw = await fetchTranscript(candidate.videoId);
+        if (raw && raw.length >= 100) {
+          const cleaned = cleanRawTranscript(raw);
+          if (cleaned && cleaned.length >= 200) {
+            selectedVideo = candidate;
+            cleanedTranscript = cleaned;
+            break;
+          }
+        }
+      }
+    }
+
+    /* Final fallback: Check text description in RSS feed or return diagnostic error */
+    if (!selectedVideo || !cleanedTranscript) {
+      const rssText = await fetchRssPodcastFallback(''); /* Get text summary fallback if any */
+      if (rssText && rssText.length >= 150) {
         selectedVideo = candidateVideos[0] || {
           videoId: '',
           videoTitle: 'BNN Bloomberg MarketCall (Audio/RSS Feed)',
