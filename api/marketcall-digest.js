@@ -146,30 +146,34 @@ export default async function handler(req, res) {
       }
     }
 
-    /* Final fallback: Check text description in RSS feed or return diagnostic error */
+    /* Final fallback: Check text description in RSS feed only if groqKey not provided, or return diagnostic error */
     if (!selectedVideo || !cleanedTranscript) {
-      const rssFallback = await fetchRssPodcastFallback(''); /* Get text summary fallback if any */
-      if (rssFallback && rssFallback.text && rssFallback.text.length >= 150) {
-        selectedVideo = candidateVideos[0] || {
-          videoId: '',
-          videoTitle: 'BNN Bloomberg MarketCall (Audio/RSS Feed)',
-          episodeDate: new Date().toISOString().split('T')[0],
-        };
-        cleanedTranscript = cleanRawTranscript(rssFallback.text);
-      } else {
-        const newest = candidateVideos[0] || {};
-        const missingGroqMsg = !groqKey || !groqKey.startsWith('gsk_')
-          ? ' [DIAGNOSTIC: No free Groq API Key (gsk_...) was found in your Settings. To automatically download and transcribe BNN Bloomberg\'s official MP3 audio stream server-side ($0.00 cost via Architecture A), paste your free Groq API key under Settings -> Groq API Key (Free Audio Whisper).]'
-          : (groqDiagnosticMsg || ' [DIAGNOSTIC: Groq Whisper audio transcription was attempted on the live MP3 stream but did not yield full text.]');
-
-        return res.status(200).json({
-          error: 'no_transcript',
-          message: `Found "${newest.videoTitle || 'Market Call'}" (${newest.episodeDate ? 'aired ' + newest.episodeDate : 'recent'}), but YouTube auto-captions aren't ready yet from Google's servers.${missingGroqMsg} Alternatively, use the RogueCFA Chrome extension to extract directly from your browser tab.`,
-          videoId: newest.videoId,
-          videoTitle: newest.videoTitle,
-          episodeDate: newest.episodeDate,
-        });
+      if (!groqKey || !groqKey.startsWith('gsk_')) {
+        const rssFallback = await fetchRssPodcastFallback('');
+        if (rssFallback && rssFallback.text && rssFallback.text.length >= 150) {
+          selectedVideo = candidateVideos[0] || {
+            videoId: '',
+            videoTitle: 'BNN Bloomberg MarketCall (Audio/RSS Feed)',
+            episodeDate: new Date().toISOString().split('T')[0],
+          };
+          cleanedTranscript = cleanRawTranscript(rssFallback.text);
+        }
       }
+    }
+
+    if (!selectedVideo || !cleanedTranscript) {
+      const newest = candidateVideos[0] || {};
+      const missingGroqMsg = !groqKey || !groqKey.startsWith('gsk_')
+        ? ' [DIAGNOSTIC: No free Groq API Key (gsk_...) was found in your Settings. To automatically download and transcribe BNN Bloomberg\'s official MP3 audio stream server-side ($0.00 cost via Architecture A), paste your free Groq API key under Settings -> Groq API Key (Free Audio Whisper).]'
+        : (groqDiagnosticMsg || ' [DIAGNOSTIC: Groq Whisper audio transcription was attempted on the live MP3 stream but did not yield full text.]');
+
+      return res.status(200).json({
+        error: 'no_transcript',
+        message: `Found "${newest.videoTitle || 'Market Call'}" (${newest.episodeDate ? 'aired ' + newest.episodeDate : 'recent'}), but full audio/captions are not ready yet.${missingGroqMsg}`,
+        videoId: newest.videoId,
+        videoTitle: newest.videoTitle,
+        episodeDate: newest.episodeDate,
+      });
     }
 
     /* ──────────────────────────────────────────
@@ -545,8 +549,15 @@ async function fetchRssPodcastFallback(groqKey = '') {
             if (mp3Match) {
               try {
                 const mp3Url = mp3Match[0];
-                const audioRes = await fetch(mp3Url, { signal: AbortSignal.timeout(12000) });
-                if (!audioRes.ok) {
+                /* Request first ~16MB (approx 18.5 mins of MP3 audio covering intro, thesis, & top picks) to execute cleanly within Vercel 10s timeout */
+                const audioRes = await fetch(mp3Url, {
+                  headers: {
+                    'Range': 'bytes=0-16000000',
+                    'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0)'
+                  },
+                  signal: AbortSignal.timeout(6000)
+                });
+                if (!audioRes.ok && audioRes.status !== 206) {
                   return { text: '', groqDiagnostic: `BNN Bloomberg audio stream returned HTTP ${audioRes.status}` };
                 }
                 const audioBuffer = await audioRes.arrayBuffer();
@@ -559,7 +570,7 @@ async function fetchRssPodcastFallback(groqKey = '') {
                   method: 'POST',
                   headers: { 'Authorization': `Bearer ${groqKey}` },
                   body: formData,
-                  signal: AbortSignal.timeout(15000),
+                  signal: AbortSignal.timeout(8000),
                 });
                 if (groqRes.ok) {
                   const groqData = await groqRes.json().catch(() => null);
