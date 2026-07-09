@@ -3,6 +3,9 @@
    Vercel serverless function: YouTube search → transcript → LLM digest
    ════════════════════════════════════════════════════════════════ */
 
+/* Allow up to 60s execution on Vercel Hobby tier (default is 10s) */
+export const config = { maxDuration: 60 };
+
 const BNN_CHANNEL_ID = 'UCo7DCnBKIHEtJNSQbFXFJnA';
 
 export default async function handler(req, res) {
@@ -565,21 +568,47 @@ async function fetchRssPodcastFallback(groqKey = '') {
                 const audioRes = await fetch(mp3Url, {
                   headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0)' },
                   redirect: 'follow',
-                  signal: AbortSignal.timeout(9000)
+                  signal: AbortSignal.timeout(20000)
                 });
                 if (!audioRes.ok) {
                   return { text: '', groqDiagnostic: `BNN Bloomberg audio stream returned HTTP ${audioRes.status}` };
                 }
                 const audioBuffer = await audioRes.arrayBuffer();
-                
-                /* Split MP3 into 21MB chunks to guarantee strict compliance with Groq's 25MB request limit */
-                const CHUNK_LIMIT_BYTES = 21 * 1024 * 1024;
+
+                /*
+                 * Nullify Xing/Info VBR header in first 4KB of the audio buffer.
+                 * MP3 files contain a Xing or Info frame near byte 0 that declares
+                 * total track duration (e.g. 2823s). When we byte-slice the file,
+                 * FFmpeg on Groq reads this header, expects 2823s of frames, finds
+                 * only ~23 mins, and hangs scanning past EOF → 502 after 131s.
+                 * Zeroing the 4-byte marker makes FFmpeg treat it as a raw MPEG
+                 * stream and stop naturally at EOF.
+                 */
+                const headerRegion = new Uint8Array(audioBuffer, 0, Math.min(4096, audioBuffer.byteLength));
+                const markers = [
+                  [0x58, 0x69, 0x6E, 0x67], /* "Xing" */
+                  [0x49, 0x6E, 0x66, 0x6F], /* "Info" */
+                ];
+                for (const marker of markers) {
+                  for (let i = 0; i < headerRegion.length - 3; i++) {
+                    if (headerRegion[i] === marker[0] && headerRegion[i+1] === marker[1] &&
+                        headerRegion[i+2] === marker[2] && headerRegion[i+3] === marker[3]) {
+                      headerRegion[i] = 0; headerRegion[i+1] = 0;
+                      headerRegion[i+2] = 0; headerRegion[i+3] = 0;
+                    }
+                  }
+                }
+
+                /* Split MP3 into <25MB chunks for Groq's upload limit */
+                const CHUNK_LIMIT_BYTES = 24 * 1024 * 1024;
                 const chunks = [];
                 if (audioBuffer.byteLength <= CHUNK_LIMIT_BYTES) {
                   chunks.push(audioBuffer);
                 } else {
                   chunks.push(audioBuffer.slice(0, CHUNK_LIMIT_BYTES));
-                  chunks.push(audioBuffer.slice(CHUNK_LIMIT_BYTES, CHUNK_LIMIT_BYTES * 2));
+                  if (audioBuffer.byteLength > CHUNK_LIMIT_BYTES) {
+                    chunks.push(audioBuffer.slice(CHUNK_LIMIT_BYTES));
+                  }
                 }
 
                 /* Transcribe a single audio chunk via Groq Whisper Turbo */
@@ -593,7 +622,7 @@ async function fetchRssPodcastFallback(groqKey = '') {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${groqKey}` },
                     body: formData,
-                    signal: AbortSignal.timeout(9000),
+                    signal: AbortSignal.timeout(30000),
                   });
 
                   if (!res.ok && res.status === 400) {
@@ -603,7 +632,7 @@ async function fetchRssPodcastFallback(groqKey = '') {
                       method: 'POST',
                       headers: { 'Authorization': `Bearer ${groqKey}` },
                       body: formData,
-                      signal: AbortSignal.timeout(9000),
+                      signal: AbortSignal.timeout(30000),
                     });
                   }
 
