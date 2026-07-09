@@ -98,17 +98,20 @@ export default async function handler(req, res) {
        ────────────────────────────────────────── */
     let selectedVideo = null;
     let cleanedTranscript = null;
+    let groqDiagnosticMsg = '';
 
     /* ── Priority 1: Official OmnyStudio MP3 Stream with Groq Whisper ASR (Architecture A) ── */
     if (groqKey && groqKey.startsWith('gsk_')) {
-      const rssText = await fetchRssPodcastFallback(groqKey);
-      if (rssText && rssText.length >= 200) {
+      const rssResult = await fetchRssPodcastFallback(groqKey);
+      if (rssResult && rssResult.text && rssResult.text.length >= 200) {
         selectedVideo = candidateVideos[0] || {
           videoId: '',
           videoTitle: 'BNN Bloomberg MarketCall (Official MP3 Audio Feed)',
           episodeDate: new Date().toISOString().split('T')[0],
         };
-        cleanedTranscript = cleanRawTranscript(rssText);
+        cleanedTranscript = cleanRawTranscript(rssResult.text);
+      } else if (rssResult && rssResult.groqDiagnostic) {
+        groqDiagnosticMsg = ` [DIAGNOSTIC: Groq Whisper MP3 transcription issue: ${rssResult.groqDiagnostic}]`;
       }
     }
 
@@ -145,19 +148,19 @@ export default async function handler(req, res) {
 
     /* Final fallback: Check text description in RSS feed or return diagnostic error */
     if (!selectedVideo || !cleanedTranscript) {
-      const rssText = await fetchRssPodcastFallback(''); /* Get text summary fallback if any */
-      if (rssText && rssText.length >= 150) {
+      const rssFallback = await fetchRssPodcastFallback(''); /* Get text summary fallback if any */
+      if (rssFallback && rssFallback.text && rssFallback.text.length >= 150) {
         selectedVideo = candidateVideos[0] || {
           videoId: '',
           videoTitle: 'BNN Bloomberg MarketCall (Audio/RSS Feed)',
           episodeDate: new Date().toISOString().split('T')[0],
         };
-        cleanedTranscript = cleanRawTranscript(rssText);
+        cleanedTranscript = cleanRawTranscript(rssFallback.text);
       } else {
         const newest = candidateVideos[0] || {};
         const missingGroqMsg = !groqKey || !groqKey.startsWith('gsk_')
           ? ' [DIAGNOSTIC: No free Groq API Key (gsk_...) was found in your Settings. To automatically download and transcribe BNN Bloomberg\'s official MP3 audio stream server-side ($0.00 cost via Architecture A), paste your free Groq API key under Settings -> Groq API Key (Free Audio Whisper).]'
-          : ' [DIAGNOSTIC: Groq Whisper audio transcription was attempted on the live MP3 stream but did not yield full text.]';
+          : (groqDiagnosticMsg || ' [DIAGNOSTIC: Groq Whisper audio transcription was attempted on the live MP3 stream but did not yield full text.]');
 
         return res.status(200).json({
           error: 'no_transcript',
@@ -178,7 +181,7 @@ export default async function handler(req, res) {
 
     if (!digest || !digest.guest) {
       return res.status(422).json({
-        error: 'LLM returned an unparseable digest. Try again.',
+        error: `LLM returned an unparseable digest.${groqDiagnosticMsg} Try again.`,
       });
     }
 
@@ -196,7 +199,7 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('MarketCall digest error:', error);
     return res.status(500).json({
-      error: `Digest generation failed: ${error.message}`,
+      error: `Digest generation failed: ${error.message}${typeof groqDiagnosticMsg !== 'undefined' ? groqDiagnosticMsg : ''}`,
     });
   }
 }
@@ -542,29 +545,42 @@ async function fetchRssPodcastFallback(groqKey = '') {
             if (mp3Match) {
               try {
                 const mp3Url = mp3Match[0];
-                const audioRes = await fetch(mp3Url, { signal: AbortSignal.timeout(30000) });
-                if (audioRes.ok) {
-                  const audioBuffer = await audioRes.arrayBuffer();
-                  const formData = new FormData();
-                  formData.append('file', new Blob([audioBuffer], { type: 'audio/mpeg' }), 'marketcall.mp3');
-                  formData.append('model', 'distil-whisper-large-v3-en');
-                  formData.append('response_format', 'json');
-
-                  const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${groqKey}` },
-                    body: formData,
-                    signal: AbortSignal.timeout(35000),
-                  });
-                  if (groqRes.ok) {
-                    const groqData = await groqRes.json().catch(() => null);
-                    if (groqData && groqData.text && groqData.text.length >= 200) {
-                      return groqData.text;
-                    }
-                  }
+                const audioRes = await fetch(mp3Url, { signal: AbortSignal.timeout(12000) });
+                if (!audioRes.ok) {
+                  return { text: '', groqDiagnostic: `BNN Bloomberg audio stream returned HTTP ${audioRes.status}` };
                 }
+                const audioBuffer = await audioRes.arrayBuffer();
+                const formData = new FormData();
+                formData.append('file', new Blob([audioBuffer], { type: 'audio/mpeg' }), 'marketcall.mp3');
+                formData.append('model', 'distil-whisper-large-v3-en');
+                formData.append('response_format', 'json');
+
+                const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${groqKey}` },
+                  body: formData,
+                  signal: AbortSignal.timeout(15000),
+                });
+                if (groqRes.ok) {
+                  const groqData = await groqRes.json().catch(() => null);
+                  if (groqData && groqData.text && groqData.text.length >= 200) {
+                    return { text: groqData.text, groqDiagnostic: null };
+                  }
+                  return { text: '', groqDiagnostic: 'Groq API returned an empty audio transcription payload.' };
+                }
+                const groqErr = await groqRes.json().catch(() => ({}));
+                return {
+                  text: '',
+                  groqDiagnostic: `Groq API error (${groqRes.status}): ${groqErr.error?.message || groqRes.statusText}`
+                };
               } catch (asrErr) {
-                console.warn('Groq Whisper transcription fallback failed, using RSS text:', asrErr.message);
+                const isTimeout = asrErr.name === 'TimeoutError' || asrErr.message?.toLowerCase().includes('timeout') || asrErr.message?.toLowerCase().includes('aborted');
+                return {
+                  text: '',
+                  groqDiagnostic: isTimeout
+                    ? 'Downloading and transcribing the 40MB MP3 file exceeded Vercel\'s 10-second serverless execution timeout.'
+                    : `Groq MP3 transcription exception: ${asrErr.message}`
+                };
               }
             }
           }
@@ -577,7 +593,7 @@ async function fetchRssPodcastFallback(groqKey = '') {
               .filter((t) => t.length > 50)
               .join(' ');
             if (text.length >= 100) {
-              return text;
+              return { text, groqDiagnostic: null };
             }
           }
         }
@@ -751,17 +767,21 @@ async function callClaude(key, systemPrompt, userPrompt) {
     }
 
     const errBody = await response.json().catch(() => ({}));
+    const detail = errBody.error?.message || response.statusText;
     lastErr = Object.assign(
-      new Error(`Claude API error (${model}): ${errBody.error?.message || response.statusText}`),
+      new Error(`Claude API error (${model}): ${detail}`),
       { status: response.status }
     );
     /* If it is a 404 or model error, continue to the next model in the fallback list */
-    if (response.status === 404 || errBody.error?.message?.toLowerCase().includes('model')) {
+    if (response.status === 404 || detail.toLowerCase().includes('model')) {
       continue;
     }
     throw lastErr;
   }
-  throw lastErr || new Error('All Claude model aliases failed.');
+  
+  throw new Error(
+    `[DIAGNOSTIC: Anthropic API rejected all Claude models (Sonnet & Haiku) with error '${lastErr?.message || 'model not found'}'.] REMEDIATION: This error ('model: claude-3-...') is returned by Anthropic when your API key belongs to an account that does not have API billing credits enabled. Please visit https://console.anthropic.com/settings/billing to add $5 credit to enable API access, or switch to Gemini in Settings.`
+  );
 }
 
 async function callOpenAI(key, systemPrompt, userPrompt) {

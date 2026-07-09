@@ -196,12 +196,14 @@ async function callClaude(key, systemPrompt, userPrompt) {
       new Error(`Claude API error (${model}): ${detail}`),
       { status: response.status }
     );
-    if (response.status === 404 || errBody.error?.message?.toLowerCase().includes('model')) {
+    if (response.status === 404 || detail.toLowerCase().includes('model')) {
       continue;
     }
     throw lastErr;
   }
-  throw lastErr || new Error('All Claude model aliases failed.');
+  throw new Error(
+    `[DIAGNOSTIC: Anthropic API rejected all Claude models (Sonnet & Haiku) with error '${lastErr?.message || 'model not found'}'.] REMEDIATION: This error ('model: claude-3-...') is returned by Anthropic when your API key belongs to an account that does not have API billing credits enabled. Please visit https://console.anthropic.com/settings/billing to add $5 credit to enable API access, or switch to Gemini in Settings.`
+  );
 }
 
 /* ── OpenAI ── */
