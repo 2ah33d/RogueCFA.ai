@@ -24,13 +24,23 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
   /* Check cache on mount */
   useEffect(() => {
-    const cached = getDigestCache(todayStr);
+    const cached = getDigestCache('latest_marketcall') || getDigestCache(todayStr);
     if (cached && cached.digest) {
       setDigest(cached.digest);
-      setVideoInfo({ videoId: cached.videoId, videoTitle: cached.videoTitle });
+      setVideoInfo({
+        videoId: cached.videoId,
+        videoTitle: cached.videoTitle,
+        episodeDate: cached.episodeDate || todayStr,
+      });
       setHasAttempted(true);
     }
   }, [todayStr]);
+
+  const handleRefresh = () => {
+    setDigest(null);
+    setHasAttempted(false);
+    setError(null);
+  };
 
   const fetchDigest = useCallback(async () => {
     const youtubeKey = getYoutubeKey();
@@ -87,14 +97,22 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         });
       } else if (data.digest) {
         setDigest(data.digest);
-        setVideoInfo({ videoId: data.videoId, videoTitle: data.videoTitle });
-        /* Cache for today */
-        saveDigestCache(todayStr, {
+        const epDate = data.episodeDate || todayStr;
+        setVideoInfo({
+          videoId: data.videoId,
+          videoTitle: data.videoTitle,
+          episodeDate: epDate,
+        });
+        /* Cache for latest and specific date */
+        const cacheData = {
           digest: data.digest,
           videoId: data.videoId,
           videoTitle: data.videoTitle,
+          episodeDate: epDate,
           generatedAt: data.generatedAt,
-        });
+        };
+        saveDigestCache('latest_marketcall', cacheData);
+        saveDigestCache(epDate, cacheData);
       }
     } catch (err) {
       setError({
@@ -127,7 +145,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <span className="font-mono text-xs">Generating today&apos;s MarketCall digest…</span>
+            <span className="font-mono text-xs">Generating latest MarketCall digest…</span>
           </div>
           <p className="text-[10px] text-faint mt-1">
             Fetching transcript &amp; summarizing with AI — this takes 10-15 seconds
@@ -201,7 +219,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
                               flex items-center justify-center">
                 <span className="text-2xl">📺</span>
               </div>
-              <h3 className="text-lg font-bold text-prime mb-2">No Episode Today</h3>
+              <h3 className="text-lg font-bold text-prime mb-2">No Recent Episode Found</h3>
               <p className="text-sm text-dim leading-relaxed max-w-md mx-auto">
                 {error.message}
               </p>
@@ -273,11 +291,19 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center justify-center w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           <h2 className="text-xs font-bold uppercase tracking-wider text-prime font-mono">
-            Today&apos;s MarketCall Digest
+            Latest MarketCall Digest
           </h2>
           <span className="text-[10px] text-faint font-mono bg-surface-elevated px-1.5 py-0.5 rounded border border-edge">
-            {todayStr}
+            {videoInfo?.episodeDate || todayStr}
           </span>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="text-[10px] text-accent hover:text-accent-hover font-mono px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 transition-colors flex items-center gap-1"
+            title="Check YouTube for a newer episode"
+          >
+            🔄 Check Newer
+          </button>
         </div>
         {videoInfo?.videoId && (
           <a
@@ -300,7 +326,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         guestName={digest.guest}
         firm={digest.firm}
         episodeFocus={digest.episodeFocus}
-        date={todayStr}
+        date={videoInfo?.episodeDate || todayStr}
         trackRecord={trackRecord}
         onSelectGuest={onSelectGuest}
       />

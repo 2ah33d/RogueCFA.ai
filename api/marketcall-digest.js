@@ -30,21 +30,15 @@ export default async function handler(req, res) {
 
   try {
     /* ──────────────────────────────────────────
-       Step 1: Find today's MarketCall video
+       Step 1: Find most recent MarketCall video
        ────────────────────────────────────────── */
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    /* Search window: start of today (UTC) */
-    const publishedAfter = todayStr + 'T00:00:00Z';
-
     const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
     searchUrl.searchParams.set('part', 'snippet');
     searchUrl.searchParams.set('channelId', BNN_CHANNEL_ID);
     searchUrl.searchParams.set('q', 'Market Call');
     searchUrl.searchParams.set('type', 'video');
-    searchUrl.searchParams.set('publishedAfter', publishedAfter);
     searchUrl.searchParams.set('order', 'date');
-    searchUrl.searchParams.set('maxResults', '5');
+    searchUrl.searchParams.set('maxResults', '10');
     searchUrl.searchParams.set('key', youtubeKey);
 
     const searchRes = await fetch(searchUrl.toString(), {
@@ -76,12 +70,14 @@ export default async function handler(req, res) {
     if (!marketCallVideo) {
       return res.status(200).json({
         error: 'no_episode',
-        message: "No MarketCall episode found for today. The show airs weekdays only — check back on a trading day.",
+        message: "No MarketCall episodes found on BNN Bloomberg's channel recently.",
       });
     }
 
     const videoId = marketCallVideo.id?.videoId;
     const videoTitle = marketCallVideo.snippet?.title || '';
+    const publishedAt = marketCallVideo.snippet?.publishedAt || '';
+    const episodeDate = publishedAt ? publishedAt.split('T')[0] : '';
 
     if (!videoId) {
       return res.status(200).json({
@@ -135,6 +131,7 @@ export default async function handler(req, res) {
       digest,
       videoId,
       videoTitle,
+      episodeDate,
       generatedAt: new Date().toISOString(),
     });
 

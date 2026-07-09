@@ -266,7 +266,7 @@ export default function App() {
                     : 'text-dim hover:text-prime'
                 }`}
               >
-                📺 Today&apos;s Picks
+                📺 Latest Picks
               </button>
               <button
                 onClick={() => setActiveTab('history')}
