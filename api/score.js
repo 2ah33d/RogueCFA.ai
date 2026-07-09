@@ -162,8 +162,7 @@ function extractTextFromResponse(data) {
 /* ── Claude ── */
 async function callClaude(key, systemPrompt, userPrompt) {
   const models = [
-    'claude-3-5-sonnet-20241022',
-    'claude-3-7-sonnet-20250219',
+    'claude-sonnet-5',
     'claude-3-5-sonnet-latest'
   ];
 
@@ -200,7 +199,7 @@ async function callClaude(key, systemPrompt, userPrompt) {
     }
     throw lastErr;
   }
-  throw lastErr || new Error('Claude API request failed across active Sonnet models.');
+  throw lastErr || new Error('Claude API request failed.');
 }
 
 /* ── OpenAI ── */
