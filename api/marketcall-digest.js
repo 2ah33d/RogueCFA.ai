@@ -576,15 +576,15 @@ async function fetchRssPodcastFallback(groqKey = '') {
                 const audioBuffer = await audioRes.arrayBuffer();
 
                 /*
-                 * Nullify Xing/Info VBR header in first 4KB of the audio buffer.
-                 * MP3 files contain a Xing or Info frame near byte 0 that declares
-                 * total track duration (e.g. 2823s). When we byte-slice the file,
-                 * FFmpeg on Groq reads this header, expects 2823s of frames, finds
-                 * only ~23 mins, and hangs scanning past EOF → 502 after 131s.
-                 * Zeroing the 4-byte marker makes FFmpeg treat it as a raw MPEG
-                 * stream and stop naturally at EOF.
+                 * Nullify Xing/Info VBR header in the audio buffer.
+                 * Podcast MP3s contain large ID3v2 tags (with embedded album art)
+                 * that push the Xing frame well beyond 4KB. Search the first 512KB
+                 * to guarantee we find and zero it. Without this, FFmpeg on Groq
+                 * reads the Xing-declared duration (e.g. 2778s), expects that many
+                 * frames in a byte-sliced chunk, and hangs → 502 after 150+ seconds.
                  */
-                const headerRegion = new Uint8Array(audioBuffer, 0, Math.min(4096, audioBuffer.byteLength));
+                const HEADER_SCAN_BYTES = Math.min(524288, audioBuffer.byteLength);
+                const headerRegion = new Uint8Array(audioBuffer, 0, HEADER_SCAN_BYTES);
                 const markers = [
                   [0x58, 0x69, 0x6E, 0x67], /* "Xing" */
                   [0x49, 0x6E, 0x66, 0x6F], /* "Info" */
@@ -622,7 +622,7 @@ async function fetchRssPodcastFallback(groqKey = '') {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${groqKey}` },
                     body: formData,
-                    signal: AbortSignal.timeout(30000),
+                    signal: AbortSignal.timeout(45000),
                   });
 
                   if (!res.ok && res.status === 400) {
