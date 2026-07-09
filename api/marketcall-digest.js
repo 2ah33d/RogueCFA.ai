@@ -572,42 +572,61 @@ async function fetchRssPodcastFallback(groqKey = '') {
                 }
                 const audioBuffer = await audioRes.arrayBuffer();
                 
-                /* Attempt 1: ultra-fast whisper-large-v3-turbo (transcribes 45 mins in < 1s on Groq LPU) */
-                const formData = new FormData();
-                formData.append('file', new Blob([audioBuffer], { type: 'audio/mpeg' }), 'marketcall.mp3');
-                formData.append('model', 'whisper-large-v3-turbo');
-                formData.append('response_format', 'json');
+                /* Split MP3 into 21MB chunks to guarantee strict compliance with Groq's 25MB request limit */
+                const CHUNK_LIMIT_BYTES = 21 * 1024 * 1024;
+                const chunks = [];
+                if (audioBuffer.byteLength <= CHUNK_LIMIT_BYTES) {
+                  chunks.push(audioBuffer);
+                } else {
+                  chunks.push(audioBuffer.slice(0, CHUNK_LIMIT_BYTES));
+                  chunks.push(audioBuffer.slice(CHUNK_LIMIT_BYTES, CHUNK_LIMIT_BYTES * 2));
+                }
 
-                let groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-                  method: 'POST',
-                  headers: { 'Authorization': `Bearer ${groqKey}` },
-                  body: formData,
-                  signal: AbortSignal.timeout(9000),
-                });
+                /* Transcribe a single audio chunk via Groq Whisper Turbo */
+                const transcribeChunk = async (chunkBuf, idx) => {
+                  const formData = new FormData();
+                  formData.append('file', new Blob([chunkBuf], { type: 'audio/mpeg' }), `marketcall_part${idx}.mp3`);
+                  formData.append('model', 'whisper-large-v3-turbo');
+                  formData.append('response_format', 'json');
 
-                if (!groqRes.ok && groqRes.status === 400) {
-                  /* Fallback to distil-whisper-large-v3-en if turbo alias is rejected */
-                  formData.set('model', 'distil-whisper-large-v3-en');
-                  groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                  let res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${groqKey}` },
                     body: formData,
                     signal: AbortSignal.timeout(9000),
                   });
+
+                  if (!res.ok && res.status === 400) {
+                    /* Fallback to distil-whisper if turbo model string is rejected */
+                    formData.set('model', 'distil-whisper-large-v3-en');
+                    res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                      method: 'POST',
+                      headers: { 'Authorization': `Bearer ${groqKey}` },
+                      body: formData,
+                      signal: AbortSignal.timeout(9000),
+                    });
+                  }
+
+                  if (res.ok) {
+                    const data = await res.json().catch(() => null);
+                    return { text: data?.text || '', error: null };
+                  }
+                  const errData = await res.json().catch(() => ({}));
+                  return { text: '', error: `Groq API error (${res.status} chunk ${idx}): ${errData.error?.message || res.statusText}` };
+                };
+
+                /* Execute chunk transcriptions concurrently (Promise.all completes both halves in ~1 sec) */
+                const results = await Promise.all(chunks.map((buf, i) => transcribeChunk(buf, i + 1)));
+                const firstError = results.find(r => r.error);
+                if (firstError && !results.some(r => r.text && r.text.length >= 200)) {
+                  return { text: '', groqDiagnostic: firstError.error };
                 }
 
-                if (groqRes.ok) {
-                  const groqData = await groqRes.json().catch(() => null);
-                  if (groqData && groqData.text && groqData.text.length >= 200) {
-                    return { text: groqData.text, groqDiagnostic: null };
-                  }
-                  return { text: '', groqDiagnostic: 'Groq API returned an empty audio transcription payload.' };
+                const combinedText = results.map(r => r.text).filter(Boolean).join('\n\n');
+                if (combinedText.length >= 200) {
+                  return { text: combinedText, groqDiagnostic: null };
                 }
-                const groqErr = await groqRes.json().catch(() => ({}));
-                return {
-                  text: '',
-                  groqDiagnostic: `Groq API error (${groqRes.status}): ${groqErr.error?.message || groqRes.statusText}`
-                };
+                return { text: '', groqDiagnostic: 'Groq API returned an empty audio transcription payload.' };
               } catch (asrErr) {
                 const isTimeout = asrErr.name === 'TimeoutError' || asrErr.message?.toLowerCase().includes('timeout') || asrErr.message?.toLowerCase().includes('aborted');
                 return {
