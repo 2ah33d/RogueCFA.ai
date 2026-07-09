@@ -19,6 +19,7 @@ import HistoryTab from './components/HistoryTab';
 import ComparisonMatrix from './components/ComparisonMatrix';
 import MarketCallBar from './components/MarketCallBar';
 import GuestModal from './components/GuestModal';
+import DigestView from './components/DigestView';
 
 /* ════════════════════════════════════════════════════════════════
    THEME — Every colour lives here as a CSS custom property.
@@ -98,7 +99,7 @@ function Toast({ message, type = 'error', onDismiss }) {
 export default function App() {
   const [keysReady, setKeysReady] = useState(checkHasKeys());
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState('score'); /* 'score' | 'history' */
+  const [activeTab, setActiveTab] = useState('score'); /* 'score' | 'history' | 'digest' */
   const [scorecards, setScorecards] = useState([]);
   const [comparisonResult, setComparisonResult] = useState(null);
   const [loadingTickers, setLoadingTickers] = useState([]);
@@ -258,6 +259,16 @@ export default function App() {
                 Score Ticker
               </button>
               <button
+                onClick={() => setActiveTab('digest')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  activeTab === 'digest'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-dim hover:text-prime'
+                }`}
+              >
+                📺 Today&apos;s Picks
+              </button>
+              <button
                 onClick={() => setActiveTab('history')}
                 className={`px-3 py-1.5 rounded-lg transition-all ${
                   activeTab === 'history'
@@ -372,6 +383,16 @@ export default function App() {
                 onSelectGuest={(guest) => setSelectedGuest(guest)}
               />
             </>
+          ) : activeTab === 'digest' ? (
+            <DigestView
+              onScoreTicker={(ticker, guestName) => {
+                setPrefilledTicker(ticker);
+                setPrefilledGuest(guestName || null);
+                setActiveTab('score');
+              }}
+              onSelectGuest={(guest) => setSelectedGuest(guest)}
+              onOpenSettings={() => setShowSettings(true)}
+            />
           ) : (
             <HistoryTab
               onSelectTicker={(ticker) => {

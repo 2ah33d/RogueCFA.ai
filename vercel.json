@@ -9,6 +9,9 @@
     },
     "api/alphavantage.js": {
       "maxDuration": 30
+    },
+    "api/marketcall-digest.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { saveKeys, saveProvider } from '../lib/storage';
+import { saveKeys, saveProvider, saveYoutubeKey } from '../lib/storage';
 import ProviderSelect from './ProviderSelect';
 
 export default function KeySetup({ onComplete, className = '' }) {
   const [finnhubKey, setFinnhubKey] = useState('');
   const [llmKey, setLlmKey] = useState('');
   const [alphaVantageKey, setAlphaVantageKey] = useState('');
+  const [youtubeKey, setYoutubeKey] = useState('');
   const [provider, setProvider] = useState('gemini');
   const [error, setError] = useState('');
 
@@ -21,6 +22,7 @@ export default function KeySetup({ onComplete, className = '' }) {
     }
     saveKeys(finnhubKey, llmKey, alphaVantageKey);
     saveProvider(provider);
+    saveYoutubeKey(youtubeKey);
     onComplete();
   };
 
@@ -160,6 +162,45 @@ export default function KeySetup({ onComplete, className = '' }) {
             <p className="text-xs text-faint mt-1">
               Adds P/E ratio, earnings beat history, revenue growth, and more.
               Without it, scoring uses analyst consensus and price data only.
+            </p>
+          </div>
+
+          {/* YouTube API key (optional) */}
+          <div className="border-t border-edge pt-4">
+            <label
+              htmlFor="key-youtube"
+              className="block text-sm font-medium text-dim mb-1.5"
+            >
+              YouTube API Key{' '}
+              <span className="text-faint font-normal">(Optional — MarketCall Digest)</span>
+            </label>
+            <input
+              id="key-youtube"
+              type="password"
+              value={youtubeKey}
+              onChange={(e) => {
+                setYoutubeKey(e.target.value);
+                setError('');
+              }}
+              placeholder="Optional — enables daily MarketCall digest"
+              className="w-full px-4 py-2.5 bg-surface border border-edge rounded-lg
+                         text-prime placeholder-faint focus:outline-none
+                         focus:border-accent focus:ring-1 focus:ring-accent/30
+                         transition-colors"
+              autoComplete="off"
+            />
+            <a
+              href="https://console.cloud.google.com/apis/credentials"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-accent hover:text-accent-hover
+                         transition-colors mt-1 inline-block"
+            >
+              Get a free YouTube Data API key →
+            </a>
+            <p className="text-xs text-faint mt-1">
+              Enables the &quot;Today&apos;s Picks&quot; tab — auto-fetches and summarizes
+              BNN MarketCall episodes so you never need to watch the 45-min broadcast.
             </p>
           </div>
 

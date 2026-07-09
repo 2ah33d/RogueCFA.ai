@@ -592,4 +592,60 @@ The Automated Data Pipeline executes weekly via Vercel Cron without IP blocking 
 
 ---
 
+### Tier 1: Daily MarketCall Digest
+**Priority:** P1  
+**Status:** Planned
+
+**What it does**
+Automatically fetches that day's BNN MarketCall episode transcript and produces a condensed, readable digest (500–1000 words) covering the guest's background, market outlook, and every stock pick with their full stated reasoning. Fully replaces the need to watch the episode.
+
+**User flow**
+1. User opens RogueCFA and navigates to the "Today's Picks" tab.
+2. If today's digest hasn't been generated yet, app fetches it on-demand (or shows cached digest if already generated today).
+3. App displays: guest name + firm, their stated market outlook/theme for the episode, and each pick with reasoning.
+4. Each pick shown as an expandable card with a "Score This" button that pre-fills the ticker into the main scoring flow.
+5. User reads the full digest in under 2 minutes instead of watching a 45-minute broadcast.
+
+**Data requirements**
+- **YouTube Data API (free tier, 10,000 units/day):** Fetches BNN Bloomberg's MarketCall video ID and auto-generated transcript for the current day's episode.
+- **Claude API (Sonnet):** Condenses raw transcript into structured digest — this is a summarization/cleanup task, not open-ended research, so hallucination risk is low when the full transcript is provided as grounding context.
+
+**Output structure (500–1000 words total):**
+```
+GUEST: [name], [firm/title]
+EPISODE FOCUS: [stated theme, e.g. "Energy Sector Outlook"]
+MARKET OUTLOOK (100-150 words):
+[Guest's overall market view/thesis for the episode, condensed from their opening remarks]
+
+TOP PICKS:
+[TICKER] — [Company Name]
+"[Condensed reasoning in guest's own logic, 80-150 words per pick — WHY they like it,
+any stated price target or timeframe, any specific catalyst or metric they referenced]"
+[Repeat per pick — typically 3-8 picks per episode]
+
+CLOSING NOTES (optional, 50-100 words):
+[Any caller Q&A insights or risk caveats the guest mentioned]
+```
+
+> [!NOTE]
+> **Estimated cost:** ~9,000 input tokens (transcript) + ~2,000 output tokens (digest) per generation using Claude Sonnet ≈ $0.038/day, or under $1/month at 20 trading days. Negligible relative to the 45 minutes/day of user time saved.
+
+**Technical notes**
+- New Vercel function `/api/marketcall-digest.js`: fetches today's MarketCall video ID (search YouTube Data API for "BNN Bloomberg Market Call" uploaded today), retrieves auto-generated transcript via YouTube transcript endpoint.
+- New file `src/lib/digestBuilder.js`: constructs the summarization prompt, enforces the 500–1000 word output range, and enforces "only reference what the guest actually said — do not add outside analysis or opinion" as a strict rule.
+- Digest generation prompt must instruct Claude to preserve the guest's specific language and reasoning rather than generic boilerplate (e.g. not "the guest is bullish" but the actual stated logic).
+- Cache the digest in localStorage per date (`marketcall_digest_YYYY-MM-DD`) so it is generated once per day, not on every page load.
+- New component `src/components/DigestView.jsx`: renders the digest with expandable pick cards.
+- New component `src/components/DigestPickCard.jsx`: individual pick card with "Score This" button that navigates to main ScoreForm with ticker pre-filled.
+
+**Out of scope for v1 of this feature**
+- Historical digest archive/search across past episodes.
+- Multi-guest digests (MarketCall features one guest per episode).
+- Automatic scheduled generation without user action (v1 is on-demand, generated when user opens the tab).
+
+**Success metric**
+Digest generation completes in under 15 seconds and produces a 500–1000 word summary where every stock pick includes the guest's actual stated reasoning, verified by spot-checking 5 digests against manually watching the corresponding episode.
+
+---
+
 *End of PRD — RogueCFA.ai v1.0*

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   getKeys,
   getProvider,
+  getYoutubeKey,
   saveProvider,
   clearKeys,
   clearHistory,
@@ -16,6 +17,7 @@ function maskKey(key) {
 
 export default function SettingsPanel({ onClose, onKeysCleared, className = '' }) {
   const { finnhubKey, llmKey, alphaVantageKey } = getKeys();
+  const youtubeKey = getYoutubeKey();
   const [provider, setProvider] = useState(getProvider());
   const [confirmClearKeys, setConfirmClearKeys] = useState(false);
   const [historyCleared, setHistoryCleared] = useState(false);
@@ -106,6 +108,12 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                 <div className="text-xs text-faint mb-1">Alpha Vantage (optional)</div>
                 <div className="text-sm text-prime font-mono">
                   {alphaVantageKey ? maskKey(alphaVantageKey) : <span className="text-faint italic">Not set</span>}
+                </div>
+              </div>
+              <div className="bg-surface rounded-lg p-3 border border-edge">
+                <div className="text-xs text-faint mb-1">YouTube Data API (optional)</div>
+                <div className="text-sm text-prime font-mono">
+                  {youtubeKey ? maskKey(youtubeKey) : <span className="text-faint italic">Not set</span>}
                 </div>
               </div>
             </div>
