@@ -91,42 +91,43 @@ export default async function handler(req, res) {
        episode whose auto-captions are ready & complete
        ────────────────────────────────────────── */
     /* ──────────────────────────────────────────
-       Step 2 & 3: Candidate Selection & Architecture A Priority
-       1. Check Candidate #0 (Newest Episode) via YouTube auto-captions.
-       2. If Candidate #0 has no auto-captions yet, immediately run Architecture A (Groq Whisper MP3 audio transcription) on the live OmnyStudio stream!
-       3. If Groq Whisper fails or is not configured, check older candidate videos (slice 1).
+       Step 2 & 3: Primary Audio vs Fallback Captions Routing Priority
+       1. If `groqKey` (gsk_...) is provided, run Architecture A (Groq Whisper MP3 Reading) immediately as the #1 Primary Source!
+       2. If no Groq key is provided or MP3 reading fails, check Candidate #0 via YouTube auto-captions (~300ms fallback).
+       3. If still no transcript, check older candidate videos before returning diagnostic notice.
        ────────────────────────────────────────── */
     let selectedVideo = null;
     let cleanedTranscript = null;
 
-    if (candidateVideos.length > 0) {
-      const firstCandidate = candidateVideos[0];
-      const firstRaw = await fetchTranscript(firstCandidate.videoId);
-      if (firstRaw && firstRaw.length >= 100) {
-        const cleaned = cleanRawTranscript(firstRaw);
-        if (cleaned && cleaned.length >= 200) {
-          selectedVideo = firstCandidate;
-          cleanedTranscript = cleaned;
-        }
+    /* ── Priority 1: Official OmnyStudio MP3 Stream with Groq Whisper ASR (Architecture A) ── */
+    if (groqKey && groqKey.startsWith('gsk_')) {
+      const rssText = await fetchRssPodcastFallback(groqKey);
+      if (rssText && rssText.length >= 200) {
+        selectedVideo = candidateVideos[0] || {
+          videoId: '',
+          videoTitle: 'BNN Bloomberg MarketCall (Official MP3 Audio Feed)',
+          episodeDate: new Date().toISOString().split('T')[0],
+        };
+        cleanedTranscript = cleanRawTranscript(rssText);
       }
     }
 
-    /* If newest episode lacks YouTube captions, run Architecture A (Groq Whisper MP3 stream) immediately! */
+    /* ── Priority 2: YouTube Auto-Captions (if Groq key not provided or MP3 reading returned empty) ── */
     if (!selectedVideo || !cleanedTranscript) {
-      if (groqKey && groqKey.startsWith('gsk_')) {
-        const rssText = await fetchRssPodcastFallback(groqKey);
-        if (rssText && rssText.length >= 200) {
-          selectedVideo = candidateVideos[0] || {
-            videoId: '',
-            videoTitle: 'BNN Bloomberg MarketCall (Audio/RSS Feed)',
-            episodeDate: new Date().toISOString().split('T')[0],
-          };
-          cleanedTranscript = cleanRawTranscript(rssText);
+      if (candidateVideos.length > 0) {
+        const firstCandidate = candidateVideos[0];
+        const firstRaw = await fetchTranscript(firstCandidate.videoId);
+        if (firstRaw && firstRaw.length >= 100) {
+          const cleaned = cleanRawTranscript(firstRaw);
+          if (cleaned && cleaned.length >= 200) {
+            selectedVideo = firstCandidate;
+            cleanedTranscript = cleaned;
+          }
         }
       }
     }
 
-    /* If still no transcript, try older candidate videos (Candidate #1, #2...) before yielding no_transcript */
+    /* ── Priority 3: Try older candidate videos (#1, #2...) before yielding no_transcript ── */
     if (!selectedVideo || !cleanedTranscript) {
       for (let i = 1; i < candidateVideos.length; i++) {
         const candidate = candidateVideos[i];
