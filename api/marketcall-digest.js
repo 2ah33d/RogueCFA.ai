@@ -117,9 +117,13 @@ export default async function handler(req, res) {
         cleanedTranscript = cleanRawTranscript(rssText);
       } else {
         const newest = candidateVideos[0] || {};
+        const missingGroqMsg = !groqKey || !groqKey.startsWith('gsk_')
+          ? ' [DIAGNOSTIC: No free Groq API Key (gsk_...) was found in your Settings. To automatically download and transcribe BNN Bloomberg\'s official MP3 audio stream server-side ($0.00 cost via Architecture A), paste your free Groq API key under Settings -> Groq API Key (Free Audio Whisper).]'
+          : ' [DIAGNOSTIC: Groq Whisper audio transcription was attempted on the live MP3 stream but did not yield full text.]';
+
         return res.status(200).json({
           error: 'no_transcript',
-          message: `Found "${newest.videoTitle || 'Market Call'}" (${newest.episodeDate ? 'aired ' + newest.episodeDate : 'recent'}), but auto-captions aren't available yet from the server. Use the RogueCFA Chrome extension to extract the transcript directly from your browser.`,
+          message: `Found "${newest.videoTitle || 'Market Call'}" (${newest.episodeDate ? 'aired ' + newest.episodeDate : 'recent'}), but YouTube auto-captions aren't ready yet from Google's servers.${missingGroqMsg} Alternatively, use the RogueCFA Chrome extension to extract directly from your browser tab.`,
           videoId: newest.videoId,
           videoTitle: newest.videoTitle,
           episodeDate: newest.episodeDate,
@@ -491,8 +495,9 @@ async function fetchRssPodcastFallback(groqKey = '') {
       const xml = await res.text();
       const items = xml.match(/<item>([\s\S]*?)<\/item>/gi) || [];
 
+      const isOmny = url.includes('omnycontent.com');
       for (const itemXml of items) {
-        if (itemXml.toLowerCase().includes('market call') || itemXml.toLowerCase().includes('marketcall')) {
+        if (isOmny || itemXml.toLowerCase().includes('market call') || itemXml.toLowerCase().includes('marketcall')) {
           /* If groqKey is present, attempt free Whisper audio transcription on the MP3 stream */
           if (groqKey && groqKey.startsWith('gsk_')) {
             const mp3Match = itemXml.match(/https?:\/\/[^"'\s<>]+\.mp3[^"'\s<>]*/i);
