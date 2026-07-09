@@ -681,4 +681,22 @@ When scoring any SEC-reporting stock, RogueCFA successfully fetches and parses t
 
 ---
 
+### Task 5: Optimize Error & Diagnostic Messages Across AI Engine
+**Priority:** P1  
+**Status:** In Progress / Partially Deployed  
+**Core Objective:** Replace generic, opaque error dialogs (`e.g., "Something went wrong" or "Transcript not found"`) across both backend serverless functions and frontend UI modules with crystal-clear, actionable, and self-diagnosing error messages. This ensures zero ambiguity during QA testing and live execution.
+
+#### Implementation Scope
+1. **MarketCall Digest Diagnostics (`api/marketcall-digest.js`):**
+   - When a transcript cannot be generated, the API returns itemized diagnostics explaining *why* (`e.g., distinguishing whether YouTube captions were blocked vs. whether the free Groq Whisper API key was missing in Settings vs. whether the OmnyStudio audio stream timed out`).
+2. **Stock Scoring Diagnostics (`api/score.js` & `api/analyze.js`):**
+   - Itemize API barrier notices so users immediately see which external dependency failed (`e.g., specifying "Finnhub rate limit reached (60 req/min)" vs. "Alpha Vantage API key missing or invalid" vs. "Claude 3.5 Sonnet authorization error (`401`)"`).
+3. **Frontend UI Error Panels (`src/components/ScoreForm.jsx`, `DigestView.jsx`, `SettingsPanel.jsx`):**
+   - Render diagnostic error cards with highlighted resolution steps (`e.g., direct deep links or instructions to open Settings when a key is missing or rejected`).
+
+#### Success Metric
+100% of pipeline errors or missing API credentials across all Vercel endpoints and React modals produce human-readable, diagnostic explanations with exact remediation steps, completely eliminating generic error states during user testing.
+
+---
+
 *End of PRD — RogueCFA.ai v1.0*
