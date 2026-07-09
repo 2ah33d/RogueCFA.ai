@@ -550,7 +550,10 @@ async function fetchRssPodcastFallback(groqKey = '') {
             const mp3Match = itemXml.match(/https?:\/\/[^"'\s<>]+\.mp3[^"'\s<>]*/i);
             if (mp3Match) {
               try {
-                let mp3Url = mp3Match[0];
+                let mp3Url = mp3Match[0]
+                  .replace(/&amp;/g, '&')   /* Decode XML entity — RSS feeds encode & as &amp; */
+                  .replace(/&lt;/g, '<')
+                  .replace(/&gt;/g, '>');
                 /* Unwrap third-party Podtrac tracking redirect (dts.podtrac.com/redirect.mp3/) to hit clean OmnyStudio audio CDN directly */
                 if (mp3Url.includes('dts.podtrac.com/redirect.mp3/')) {
                   const unwrapped = mp3Url.split('dts.podtrac.com/redirect.mp3/')[1];
@@ -630,11 +633,15 @@ async function fetchRssPodcastFallback(groqKey = '') {
           }
         }
       }
-    } catch {
-      /* continue */
+    } catch (rssErr) {
+      /* If groqKey was provided, surface the error instead of silently swallowing */
+      if (groqKey && groqKey.startsWith('gsk_')) {
+        return { text: '', groqDiagnostic: `RSS/MP3 fetch exception: ${rssErr.message}` };
+      }
+      /* continue to next RSS URL for non-Groq paths */
     }
   }
-  return null;
+  return { text: '', groqDiagnostic: groqKey ? 'No MarketCall episode found in any RSS feed.' : null };
 }
 
 /**
