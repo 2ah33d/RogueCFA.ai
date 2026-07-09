@@ -648,4 +648,37 @@ Digest generation completes in under 15 seconds and produces a 500–1000 word s
 
 ---
 
+### Task 4: Deep Institutional SEC & Forensic Transcript Engine (10-K MD&A, Earnings Q&A, DEF 14A Proxy)
+**Priority:** P1  
+**Status:** Planned  
+**Core Objective:** Transform RogueCFA from a standard quantitative "Claude wrapper" into an elite, institutional-grade CFA research analyst ("almost trained solely on financial data"). By moving beyond simple price/valuation ratios and reading raw forensic accounting filings, the AI performs rigorous, institutional diligence before formulating any investment thesis.
+
+#### The Three Institutional Qualitative Pillars
+1. **The 10-K Annual Report (Focus: Item 7 — Management's Discussion and Analysis / MD&A):**
+   - **Why it matters:** Raw accounting statements show *what* happened, but Management's Discussion & Analysis shows *why* and *how* leadership thinks.
+   - **Extraction Focus:** Audits leadership’s rationale behind segment financial performance, cost-of-goods inflation, operating margin compression/expansion, research & development efficiency, and capital allocation strategy (debt paydown vs. buybacks vs. CapEx).
+2. **Earnings Call Transcripts (Focus: The Q&A Interrogation Section):**
+   - **Why it matters:** Prepared remarks (`CEO/CFO opening statements`) are heavily scripted marketing copy. The Q&A section is where institutional sell-side and buy-side analysts grill management under pressure.
+   - **Extraction Focus:** Automatically strips out prepared remarks and isolates the Q&A dialogue. Audits how leadership handles scrutiny when pushed on missed revenue guidance, compressing gross margins, customer churn, inventory write-downs, and macroeconomic headwinds. Detects evasive answers vs. transparent operational clarity.
+3. **The Proxy Statement (Focus: DEF 14A — Corporate Governance & Executive Pay):**
+   - **Why it matters:** A company can have great short-term numbers while management loots the treasury or dilutes retail shareholders.
+   - **Extraction Focus:** Audits board independence, CEO-to-median employee pay ratios, related-party transactions, insider equity ownership, and executive compensation hurdles (`Item 402 of Regulation S-K`). Specifically verifies whether executive bonuses are tied to long-term value creation (`Return on Invested Capital / ROIC` and `Free Cash Flow per Share`) or dilutionary, short-term vanity metrics (`Raw Revenue` or `Adjusted EBITDA`).
+
+#### Architecture & Implementation Workflow (`The $0.00 Free Tier Stack`)
+1. **SEC EDGAR Direct API (`api/sec.js`):**
+   - Uses the official US Securities and Exchange Commission public data API (`https://data.sec.gov/submissions/CIK{cik}.json`). **Cost: $0.00 (No API keys required).**
+   - Resolves stock tickers (`AAPL`, `MSFT`) to official SEC Central Index Key (`CIK`) numbers.
+   - Downloads the latest `10-K` filing and extracts the verbatim `Item 7 (MD&A)` text block (`~3,000–5,000 words condensed`).
+   - Downloads the latest `DEF 14A` proxy filing and extracts the executive compensation alignment summary.
+2. **Earnings Q&A Extractor (`api/earnings-qa.js`):**
+   - Retrieves quarterly earnings call Q&A dialogues via public syndication feeds or financial transcript aggregators (`Finnhub / Alpha Vantage / Web Scrape Fallback`).
+3. **Deep Forensic Prompt Injection (`src/lib/promptBuilder.js`):**
+   - Injects the extracted `10-K MD&A`, `Earnings Q&A`, and `DEF 14A Proxy` data directly alongside the quantitative math breakdown (`Score, Valuation, Earnings Surprises, Consensus`).
+   - Explicitly instructs the LLM (`Claude 3.5 Sonnet` / `Gemini 1.5 Pro` high-capacity context windows) to **cross-examine** management's statements against the cold quantitative numbers (e.g., *"If management blames macro headwinds in the MD&A, verify whether Alpha Vantage profit margins have compressed more than industry peers"*).
+
+#### Success Metric
+When scoring any SEC-reporting stock, RogueCFA successfully fetches and parses the `10-K MD&A`, `Earnings Q&A`, and `DEF 14A Proxy` data within 8 seconds at $0.00 data cost, producing a CFA-level narrative that explicitly cites forensic governance insights, executive pay alignment, and management's Q&A defensiveness alongside the deterministic 0–100 numerical score.
+
+---
+
 *End of PRD — RogueCFA.ai v1.0*
