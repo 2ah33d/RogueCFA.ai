@@ -3,8 +3,10 @@ import {
   getKeys,
   getProvider,
   getYoutubeKey,
+  getGroqKey,
   saveKeys,
   saveYoutubeKey,
+  saveGroqKey,
   saveProvider,
   clearKeys,
   clearHistory,
@@ -20,10 +22,12 @@ function maskKey(key) {
 export default function SettingsPanel({ onClose, onKeysCleared, className = '' }) {
   const storedKeys = getKeys();
   const storedYoutube = getYoutubeKey();
+  const storedGroq = getGroqKey();
   const [finnhubKey, setFinnhubKey] = useState(storedKeys.finnhubKey);
   const [llmKey, setLlmKey] = useState(storedKeys.llmKey);
   const [alphaVantageKey, setAlphaVantageKey] = useState(storedKeys.alphaVantageKey);
   const [youtubeKey, setYoutubeKey] = useState(storedYoutube);
+  const [groqKey, setGroqKey] = useState(storedGroq);
   
   const [provider, setProvider] = useState(getProvider());
   const [confirmClearKeys, setConfirmClearKeys] = useState(false);
@@ -40,6 +44,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
     if (e) e.preventDefault();
     saveKeys(finnhubKey, llmKey, alphaVantageKey);
     saveYoutubeKey(youtubeKey);
+    saveGroqKey(groqKey);
     setIsEditingKeys(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
@@ -51,6 +56,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
     setLlmKey(current.llmKey);
     setAlphaVantageKey(current.alphaVantageKey);
     setYoutubeKey(getYoutubeKey());
+    setGroqKey(getGroqKey());
     setIsEditingKeys(false);
   };
 
@@ -187,6 +193,19 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                   />
                 </div>
 
+                <div>
+                  <label className="block text-[11px] font-medium text-dim mb-1">
+                    Groq API Key <span className="text-faint font-normal">(Free Audio Whisper)</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={groqKey}
+                    onChange={(e) => setGroqKey(e.target.value)}
+                    placeholder="Optional — gsk_... for free MP3 audio transcription"
+                    className="w-full px-3 py-1.5 bg-surface border border-edge rounded text-sm text-prime font-mono placeholder-faint focus:outline-none focus:border-accent"
+                  />
+                </div>
+
                 <div className="flex items-center gap-2 pt-2">
                   <button
                     type="submit"
@@ -247,6 +266,22 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                     </div>
                   </div>
                   {!alphaVantageKey && (
+                    <button
+                      onClick={() => setIsEditingKeys(true)}
+                      className="text-xs font-semibold text-accent hover:text-accent-hover bg-accent/10 border border-accent/20 px-2 py-1 rounded"
+                    >
+                      + Add Key
+                    </button>
+                  )}
+                </div>
+                <div className="bg-surface rounded-lg p-3 border border-edge flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-faint mb-1">Groq Whisper (Free MP3 Transcription)</div>
+                    <div className="text-sm text-prime font-mono">
+                      {groqKey ? maskKey(groqKey) : <span className="text-faint italic">Not set</span>}
+                    </div>
+                  </div>
+                  {!groqKey && (
                     <button
                       onClick={() => setIsEditingKeys(true)}
                       className="text-xs font-semibold text-accent hover:text-accent-hover bg-accent/10 border border-accent/20 px-2 py-1 rounded"

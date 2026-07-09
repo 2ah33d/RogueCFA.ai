@@ -7,6 +7,7 @@ const KEYS = {
   PROVIDER: 'roguecfa_llm_provider',
   ALPHAVANTAGE: 'roguecfa_alphavantage_key',
   YOUTUBE: 'roguecfa_youtube_key',
+  GROQ: 'roguecfa_groq_key',
   HISTORY: 'roguecfa_history',
   DIGEST_PREFIX: 'marketcall_digest_',
 };
@@ -87,6 +88,20 @@ export function saveYoutubeKey(key) {
     localStorage.setItem(KEYS.YOUTUBE, key.trim());
   } else {
     localStorage.removeItem(KEYS.YOUTUBE);
+  }
+}
+
+/* ── Groq API key (for Free Whisper Audio Transcription) ── */
+
+export function getGroqKey() {
+  return localStorage.getItem(KEYS.GROQ) || '';
+}
+
+export function saveGroqKey(key) {
+  if (key && key.trim()) {
+    localStorage.setItem(KEYS.GROQ, key.trim());
+  } else {
+    localStorage.removeItem(KEYS.GROQ);
   }
 }
 

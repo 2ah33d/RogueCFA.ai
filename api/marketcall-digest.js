@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   }
 
   const {
-    youtubeKey, llmKey, provider,
+    youtubeKey, llmKey, provider, groqKey,
     /* Client-provided transcript (from Chrome extension) */
     transcript: clientTranscript,
     videoId: clientVideoId,
@@ -106,12 +106,12 @@ export default async function handler(req, res) {
     }
 
     if (!selectedVideo || !cleanedTranscript) {
-      /* Task 3: Check public RSS/podcast syndication feeds before returning error */
-      const rssText = await fetchRssPodcastFallback();
-      if (rssText && rssText.length >= 250) {
+      /* Architecture A: Check public OmnyStudio RSS / MP3 audio feeds with optional Groq Whisper ASR */
+      const rssText = await fetchRssPodcastFallback(groqKey);
+      if (rssText && rssText.length >= 100) {
         selectedVideo = candidateVideos[0] || {
           videoId: '',
-          videoTitle: 'BNN Bloomberg MarketCall (RSS Feed)',
+          videoTitle: 'BNN Bloomberg MarketCall (Audio/RSS Feed)',
           episodeDate: new Date().toISOString().split('T')[0],
         };
         cleanedTranscript = cleanRawTranscript(rssText);
@@ -273,8 +273,11 @@ const YOUTUBE_BROWSER_HEADERS = {
   'Accept-Language': 'en-US,en;q=0.9',
 };
 
-async function fetchTranscript(videoId) {
-  /* Strategy A: Open-source residential Piped & Invidious API proxies (bypasses AWS/Vercel datacenter blocks) */
+/**
+ * Preserved 3rd-Party Volunteer Proxy Extraction Code (Inactive by default per user request)
+ * Kept for future offline or optional deep-fallback use.
+ */
+async function _fetchViaProxiesInactive(videoId) {
   const proxyHosts = [
     { type: 'piped', url: 'https://pipedapi.kavin.rocks' },
     { type: 'piped', url: 'https://pipedapi.leptons.xyz' },
@@ -344,6 +347,10 @@ async function fetchTranscript(videoId) {
       /* continue to next proxy host */
     }
   }
+  return '';
+}
+
+async function fetchTranscript(videoId) {
 
   /* Strategy B: YouTube Page HTML with GDPR CONSENT cookies */
   try {
@@ -462,36 +469,72 @@ async function fetchTimedText(videoId) {
 }
 
 /**
- * Task 3: Public RSS Podcast & Syndication Feed Fallback
- * Checks BNN Bloomberg's public syndication and podcast feeds for episode transcripts/summaries.
+ * Architecture A: Public RSS Podcast & Syndication Feed Fallback with Groq Whisper ASR
+ * Checks BNN Bloomberg's active OmnyStudio syndication feed. If a free Groq key is provided,
+ * downloads the latest MP3 stream and transcribes verbatim via Groq Whisper.
  */
-async function fetchRssPodcastFallback() {
+async function fetchRssPodcastFallback(groqKey = '') {
   const rssUrls = [
+    'https://www.omnycontent.com/d/playlist/4809bc8a-e41a-405c-93da-a8cf011df2f4/fcfd42e4-d5c6-4b4a-8c62-ae32016f1b9a/4ecaf48c-23a4-4f5e-84b3-ae3201711923/podcast.rss',
     'https://www.bnnbloomberg.ca/feed/podcast/market-call',
     'https://www.bnnbloomberg.ca/investing/rss/',
-    'https://www.bnnbloomberg.ca/rss/',
   ];
 
   for (const url of rssUrls) {
     try {
       const res = await fetch(url, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0)' },
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(8000),
       });
-      if (res.ok) {
-        const xml = await res.text();
-        const items = xml.match(/<item>([\s\S]*?)<\/item>/gi) || [];
-        for (const itemXml of items) {
-          if (itemXml.toLowerCase().includes('market call') || itemXml.toLowerCase().includes('marketcall')) {
-            const contentMatches = itemXml.match(/<(?:content:encoded|description)[^>]*>([\s\S]*?)<\/(?:content:encoded|description)>/gi);
-            if (contentMatches) {
-              const text = contentMatches
-                .map((m) => m.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').trim())
-                .filter((t) => t.length > 50)
-                .join(' ');
-              if (text.length >= 250) {
-                return text;
+      if (!res.ok) continue;
+
+      const xml = await res.text();
+      const items = xml.match(/<item>([\s\S]*?)<\/item>/gi) || [];
+
+      for (const itemXml of items) {
+        if (itemXml.toLowerCase().includes('market call') || itemXml.toLowerCase().includes('marketcall')) {
+          /* If groqKey is present, attempt free Whisper audio transcription on the MP3 stream */
+          if (groqKey && groqKey.startsWith('gsk_')) {
+            const mp3Match = itemXml.match(/https?:\/\/[^"'\s<>]+\.mp3[^"'\s<>]*/i);
+            if (mp3Match) {
+              try {
+                const mp3Url = mp3Match[0];
+                const audioRes = await fetch(mp3Url, { signal: AbortSignal.timeout(30000) });
+                if (audioRes.ok) {
+                  const audioBuffer = await audioRes.arrayBuffer();
+                  const formData = new FormData();
+                  formData.append('file', new Blob([audioBuffer], { type: 'audio/mpeg' }), 'marketcall.mp3');
+                  formData.append('model', 'distil-whisper-large-v3-en');
+                  formData.append('response_format', 'json');
+
+                  const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${groqKey}` },
+                    body: formData,
+                    signal: AbortSignal.timeout(35000),
+                  });
+                  if (groqRes.ok) {
+                    const groqData = await groqRes.json().catch(() => null);
+                    if (groqData && groqData.text && groqData.text.length >= 200) {
+                      return groqData.text;
+                    }
+                  }
+                }
+              } catch (asrErr) {
+                console.warn('Groq Whisper transcription fallback failed, using RSS text:', asrErr.message);
               }
+            }
+          }
+
+          /* Text-based RSS description fallback */
+          const contentMatches = itemXml.match(/<(?:content:encoded|description)[^>]*>([\s\S]*?)<\/(?:content:encoded|description)>/gi);
+          if (contentMatches) {
+            const text = contentMatches
+              .map((m) => m.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').trim())
+              .filter((t) => t.length > 50)
+              .join(' ');
+            if (text.length >= 100) {
+              return text;
             }
           }
         }
@@ -641,7 +684,7 @@ async function callClaude(key, systemPrompt, userPrompt) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],

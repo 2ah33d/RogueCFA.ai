@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getKeys, getYoutubeKey, getProvider, getDigestCache, saveDigestCache } from '../lib/storage';
+import { getKeys, getYoutubeKey, getGroqKey, getProvider, getDigestCache, saveDigestCache } from '../lib/storage';
 import { getGuestTrackRecord } from '../lib/guestTracker';
 import AnalystBubble from './AnalystBubble';
 import DigestPickCard from './DigestPickCard';
@@ -44,6 +44,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
   const fetchDigest = useCallback(async () => {
     const youtubeKey = getYoutubeKey();
+    const groqKey = getGroqKey();
     const { llmKey } = getKeys();
     const provider = getProvider();
 
@@ -72,7 +73,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       const res = await fetch('/api/marketcall-digest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ youtubeKey, llmKey, provider }),
+        body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey }),
       });
 
       const data = await res.json();
