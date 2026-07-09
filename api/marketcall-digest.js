@@ -549,29 +549,39 @@ async function fetchRssPodcastFallback(groqKey = '') {
             if (mp3Match) {
               try {
                 const mp3Url = mp3Match[0];
-                /* Request first ~16MB (approx 18.5 mins of MP3 audio covering intro, thesis, & top picks) to execute cleanly within Vercel 10s timeout */
                 const audioRes = await fetch(mp3Url, {
-                  headers: {
-                    'Range': 'bytes=0-16000000',
-                    'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0)'
-                  },
-                  signal: AbortSignal.timeout(6000)
+                  headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0)' },
+                  signal: AbortSignal.timeout(9000)
                 });
-                if (!audioRes.ok && audioRes.status !== 206) {
+                if (!audioRes.ok) {
                   return { text: '', groqDiagnostic: `BNN Bloomberg audio stream returned HTTP ${audioRes.status}` };
                 }
                 const audioBuffer = await audioRes.arrayBuffer();
+                
+                /* Attempt 1: ultra-fast whisper-large-v3-turbo (transcribes 45 mins in < 1s on Groq LPU) */
                 const formData = new FormData();
                 formData.append('file', new Blob([audioBuffer], { type: 'audio/mpeg' }), 'marketcall.mp3');
-                formData.append('model', 'distil-whisper-large-v3-en');
+                formData.append('model', 'whisper-large-v3-turbo');
                 formData.append('response_format', 'json');
 
-                const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                let groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
                   method: 'POST',
                   headers: { 'Authorization': `Bearer ${groqKey}` },
                   body: formData,
-                  signal: AbortSignal.timeout(8000),
+                  signal: AbortSignal.timeout(9000),
                 });
+
+                if (!groqRes.ok && groqRes.status === 400) {
+                  /* Fallback to distil-whisper-large-v3-en if turbo alias is rejected */
+                  formData.set('model', 'distil-whisper-large-v3-en');
+                  groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${groqKey}` },
+                    body: formData,
+                    signal: AbortSignal.timeout(9000),
+                  });
+                }
+
                 if (groqRes.ok) {
                   const groqData = await groqRes.json().catch(() => null);
                   if (groqData && groqData.text && groqData.text.length >= 200) {
@@ -589,7 +599,7 @@ async function fetchRssPodcastFallback(groqKey = '') {
                 return {
                   text: '',
                   groqDiagnostic: isTimeout
-                    ? 'Downloading and transcribing the 40MB MP3 file exceeded Vercel\'s 10-second serverless execution timeout.'
+                    ? 'Downloading and transcribing the complete MP3 file exceeded Vercel\'s serverless execution timeout.'
                     : `Groq MP3 transcription exception: ${asrErr.message}`
                 };
               }
