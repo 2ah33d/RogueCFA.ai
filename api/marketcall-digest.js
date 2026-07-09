@@ -130,17 +130,19 @@ export default async function handler(req, res) {
       }
     }
 
-    /* ── Priority 3: Try older candidate videos (#1, #2...) before yielding no_transcript ── */
+    /* ── Priority 3: Try older candidate videos (#1, #2...) only if groqKey not provided (`prevents 30x YouTube timedtext spams on Vercel`) ── */
     if (!selectedVideo || !cleanedTranscript) {
-      for (let i = 1; i < candidateVideos.length; i++) {
-        const candidate = candidateVideos[i];
-        const raw = await fetchTranscript(candidate.videoId);
-        if (raw && raw.length >= 100) {
-          const cleaned = cleanRawTranscript(raw);
-          if (cleaned && cleaned.length >= 200) {
-            selectedVideo = candidate;
-            cleanedTranscript = cleaned;
-            break;
+      if (!groqKey || !groqKey.startsWith('gsk_')) {
+        for (let i = 1; i < candidateVideos.length; i++) {
+          const candidate = candidateVideos[i];
+          const raw = await fetchTranscript(candidate.videoId);
+          if (raw && raw.length >= 100) {
+            const cleaned = cleanRawTranscript(raw);
+            if (cleaned && cleaned.length >= 200) {
+              selectedVideo = candidate;
+              cleanedTranscript = cleaned;
+              break;
+            }
           }
         }
       }
@@ -548,9 +550,18 @@ async function fetchRssPodcastFallback(groqKey = '') {
             const mp3Match = itemXml.match(/https?:\/\/[^"'\s<>]+\.mp3[^"'\s<>]*/i);
             if (mp3Match) {
               try {
-                const mp3Url = mp3Match[0];
+                let mp3Url = mp3Match[0];
+                /* Unwrap third-party Podtrac tracking redirect (dts.podtrac.com/redirect.mp3/) to hit clean OmnyStudio audio CDN directly */
+                if (mp3Url.includes('dts.podtrac.com/redirect.mp3/')) {
+                  const unwrapped = mp3Url.split('dts.podtrac.com/redirect.mp3/')[1];
+                  if (unwrapped) {
+                    mp3Url = unwrapped.startsWith('http') ? unwrapped : `https://${unwrapped}`;
+                  }
+                }
+
                 const audioRes = await fetch(mp3Url, {
                   headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0)' },
+                  redirect: 'follow',
                   signal: AbortSignal.timeout(9000)
                 });
                 if (!audioRes.ok) {
