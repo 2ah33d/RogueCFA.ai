@@ -31,60 +31,18 @@ export default async function handler(req, res) {
   try {
     /* ──────────────────────────────────────────
        Step 1: Find most recent MarketCall video
+       (Multi-strategy: Uploads playlist first, then global search)
        ────────────────────────────────────────── */
-    const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
-    searchUrl.searchParams.set('part', 'snippet');
-    searchUrl.searchParams.set('channelId', BNN_CHANNEL_ID);
-    searchUrl.searchParams.set('q', 'Market Call');
-    searchUrl.searchParams.set('type', 'video');
-    searchUrl.searchParams.set('order', 'date');
-    searchUrl.searchParams.set('maxResults', '10');
-    searchUrl.searchParams.set('key', youtubeKey);
+    const videoInfo = await findLatestMarketCallVideo(youtubeKey);
 
-    const searchRes = await fetch(searchUrl.toString(), {
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!searchRes.ok) {
-      const errBody = await searchRes.json().catch(() => ({}));
-      const detail = errBody.error?.message || searchRes.statusText;
-      if (searchRes.status === 403 || searchRes.status === 401) {
-        return res.status(401).json({
-          error: `YouTube API key was rejected: ${detail}. Check your key in Settings.`,
-        });
-      }
-      return res.status(502).json({
-        error: `YouTube search failed: ${detail}`,
-      });
-    }
-
-    const searchData = await searchRes.json();
-    const videos = searchData.items || [];
-
-    /* Filter for MarketCall episodes specifically */
-    const marketCallVideo = videos.find((v) => {
-      const title = (v.snippet?.title || '').toLowerCase();
-      return title.includes('market call') || title.includes('marketcall');
-    });
-
-    if (!marketCallVideo) {
+    if (!videoInfo || !videoInfo.videoId) {
       return res.status(200).json({
         error: 'no_episode',
-        message: "No MarketCall episodes found on BNN Bloomberg's channel recently.",
+        message: "No MarketCall episodes found on BNN Bloomberg's channel recently. Verified both recent channel uploads and global search.",
       });
     }
 
-    const videoId = marketCallVideo.id?.videoId;
-    const videoTitle = marketCallVideo.snippet?.title || '';
-    const publishedAt = marketCallVideo.snippet?.publishedAt || '';
-    const episodeDate = publishedAt ? publishedAt.split('T')[0] : '';
-
-    if (!videoId) {
-      return res.status(200).json({
-        error: 'no_episode',
-        message: 'Could not extract video ID from search results.',
-      });
-    }
+    const { videoId, videoTitle, episodeDate } = videoInfo;
 
     /* ──────────────────────────────────────────
        Step 2: Fetch auto-generated transcript
@@ -94,9 +52,10 @@ export default async function handler(req, res) {
     if (!transcript || transcript.length < 100) {
       return res.status(200).json({
         error: 'no_transcript',
-        message: "Today's episode was found but the transcript isn't available yet. YouTube auto-captions can take 1-2 hours after upload. Try again later.",
+        message: `Found episode "${videoTitle}" (${episodeDate ? 'aired ' + episodeDate : 'recent'}), but YouTube auto-captions aren't available yet. Auto-captions can take 1-2 hours after broadcast. Try again shortly.`,
         videoId,
         videoTitle,
+        episodeDate,
       });
     }
 
@@ -108,9 +67,10 @@ export default async function handler(req, res) {
     if (cleanedTranscript.length < 200) {
       return res.status(200).json({
         error: 'no_transcript',
-        message: 'Transcript is too short — captions may still be processing. Try again later.',
+        message: `Found episode "${videoTitle}", but the extracted transcript is too short or incomplete. Captions may still be processing.`,
         videoId,
         videoTitle,
+        episodeDate,
       });
     }
 
@@ -148,15 +108,100 @@ export default async function handler(req, res) {
    No API key needed, no OAuth required.
    ════════════════════════════════════════════════════════════════ */
 
+async function findLatestMarketCallVideo(youtubeKey) {
+  /* Strategy 1: Check BNN Bloomberg's Uploads playlist directly (UU... instead of UC...).
+     Uploads playlist has 0 indexing delay and only uses 1 quota unit. */
+  try {
+    const uploadsPlaylistId = BNN_CHANNEL_ID.replace(/^UC/, 'UU');
+    const playlistUrl = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+    playlistUrl.searchParams.set('part', 'snippet');
+    playlistUrl.searchParams.set('playlistId', uploadsPlaylistId);
+    playlistUrl.searchParams.set('maxResults', '20');
+    playlistUrl.searchParams.set('key', youtubeKey);
+
+    const res = await fetch(playlistUrl.toString(), { signal: AbortSignal.timeout(8000) });
+    if (res.ok) {
+      const data = await res.json();
+      const items = data.items || [];
+      const match = items.find((item) => {
+        const title = (item.snippet?.title || '').toLowerCase();
+        const desc = (item.snippet?.description || '').toLowerCase();
+        return title.includes('market call') || title.includes('marketcall') || desc.includes('market call') || desc.includes('marketcall');
+      });
+      if (match && match.snippet?.resourceId?.videoId) {
+        return {
+          videoId: match.snippet.resourceId.videoId,
+          videoTitle: match.snippet.title || '',
+          episodeDate: match.snippet.publishedAt ? match.snippet.publishedAt.split('T')[0] : '',
+        };
+      }
+    } else if (res.status === 403 || res.status === 401) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(`YouTube API key rejected: ${errBody.error?.message || res.statusText}`);
+    }
+  } catch (err) {
+    if (err.message && err.message.includes('rejected')) throw err;
+    console.warn('Uploads playlist lookup failed or had no MarketCall, trying search fallback:', err.message);
+  }
+
+  /* Strategy 2: Global YouTube search ordered by date (no channelId filter to bypass channel-search indexing lag). */
+  const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+  searchUrl.searchParams.set('part', 'snippet');
+  searchUrl.searchParams.set('q', 'BNN Bloomberg Market Call');
+  searchUrl.searchParams.set('type', 'video');
+  searchUrl.searchParams.set('order', 'date');
+  searchUrl.searchParams.set('maxResults', '15');
+  searchUrl.searchParams.set('key', youtubeKey);
+
+  const searchRes = await fetch(searchUrl.toString(), { signal: AbortSignal.timeout(10000) });
+  if (!searchRes.ok) {
+    const errBody = await searchRes.json().catch(() => ({}));
+    const detail = errBody.error?.message || searchRes.statusText;
+    if (searchRes.status === 403 || searchRes.status === 401) {
+      throw new Error(`YouTube API key rejected: ${detail}`);
+    }
+    throw new Error(`YouTube search failed: ${detail}`);
+  }
+
+  const searchData = await searchRes.json();
+  const videos = searchData.items || [];
+  const marketCallVideo = videos.find((v) => {
+    const title = (v.snippet?.title || '').toLowerCase();
+    const desc = (v.snippet?.description || '').toLowerCase();
+    const channel = (v.snippet?.channelTitle || '').toLowerCase();
+    const isBnnOrRelevant = channel.includes('bnn') || channel.includes('bloomberg') || channel.includes('market call') || channel.includes('marketcall');
+    const hasMarketCall = title.includes('market call') || title.includes('marketcall') || desc.includes('market call') || desc.includes('marketcall');
+    return isBnnOrRelevant && hasMarketCall;
+  });
+
+  if (!marketCallVideo || !marketCallVideo.id?.videoId) return null;
+  return {
+    videoId: marketCallVideo.id.videoId,
+    videoTitle: marketCallVideo.snippet?.title || '',
+    episodeDate: marketCallVideo.snippet?.publishedAt ? marketCallVideo.snippet.publishedAt.split('T')[0] : '',
+  };
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Transcript fetching — uses YouTube's internal timedtext endpoint
+   No API key needed, no OAuth required.
+   ════════════════════════════════════════════════════════════════ */
+
+const YOUTUBE_BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-Dest': 'document',
+};
+
 async function fetchTranscript(videoId) {
   try {
     /* First, fetch the video page to extract the captions track URL */
     const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const pageRes = await fetch(pageUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
+      headers: YOUTUBE_BROWSER_HEADERS,
       signal: AbortSignal.timeout(10000),
     });
 
@@ -175,7 +220,6 @@ async function fetchTranscript(videoId) {
 
     let captionsData;
     try {
-      /* The match may include trailing content — find the balanced JSON */
       const jsonStr = extractBalancedJSON(captionsMatch[1]);
       captionsData = JSON.parse(jsonStr);
     } catch {
@@ -198,9 +242,10 @@ async function fetchTranscript(videoId) {
       return await fetchTimedText(videoId);
     }
 
-    /* Fetch the transcript XML */
+    /* Fetch the transcript JSON */
     const captionUrl = track.baseUrl + '&fmt=json3';
     const captionRes = await fetch(captionUrl, {
+      headers: YOUTUBE_BROWSER_HEADERS,
       signal: AbortSignal.timeout(10000),
     });
 
@@ -229,48 +274,65 @@ async function fetchTranscript(videoId) {
 }
 
 /**
- * Fallback: hit timedtext endpoint directly
+ * Fallback: hit timedtext endpoints directly (checking both ASR and manual en tracks)
  */
 async function fetchTimedText(videoId) {
-  const url = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=json3`;
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    },
-    signal: AbortSignal.timeout(10000),
-  });
+  const urls = [
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=json3`,
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`,
+  ];
 
-  if (!res.ok) {
-    /* Try XML format */
-    const xmlUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr`;
-    const xmlRes = await fetch(xmlUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!xmlRes.ok) return '';
-
-    const xmlText = await xmlRes.text();
-    /* Parse XML transcript: <text start="1.23" dur="2.34">caption text</text> */
-    const textMatches = xmlText.match(/<text[^>]*>([\s\S]*?)<\/text>/gi);
-    if (!textMatches) return '';
-
-    return textMatches
-      .map((m) => m.replace(/<[^>]+>/g, '').trim())
-      .filter(Boolean)
-      .join(' ');
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: YOUTUBE_BROWSER_HEADERS,
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data && data.events) {
+          const text = data.events
+            .filter((e) => e.segs)
+            .map((e) => e.segs.map((s) => s.utf8 || '').join(''))
+            .filter((t) => t.trim())
+            .join(' ');
+          if (text.length > 100) return text;
+        }
+      }
+    } catch {
+      /* continue to next url */
+    }
   }
 
-  const data = await res.json();
-  const events = data?.events || [];
+  /* Try XML formats if json3 didn't yield text */
+  const xmlUrls = [
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr`,
+    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en`,
+  ];
 
-  return events
-    .filter((e) => e.segs)
-    .map((e) => e.segs.map((s) => s.utf8 || '').join(''))
-    .filter((t) => t.trim())
-    .join(' ');
+  for (const xmlUrl of xmlUrls) {
+    try {
+      const xmlRes = await fetch(xmlUrl, {
+        headers: YOUTUBE_BROWSER_HEADERS,
+        signal: AbortSignal.timeout(8000),
+      });
+      if (xmlRes.ok) {
+        const xmlText = await xmlRes.text();
+        const textMatches = xmlText.match(/<text[^>]*>([\s\S]*?)<\/text>/gi);
+        if (textMatches) {
+          const text = textMatches
+            .map((m) => m.replace(/<[^>]+>/g, '').trim())
+            .filter(Boolean)
+            .join(' ');
+          if (text.length > 100) return text;
+        }
+      }
+    } catch {
+      /* continue */
+    }
+  }
+
+  return '';
 }
 
 /**
