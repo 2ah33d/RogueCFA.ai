@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     /* Alpha Vantage returns a "Note" field when rate limited */
     if (overview.Note || overview['Information']) {
       return res.status(429).json({
-        error: 'Alpha Vantage rate limit reached (25/day or 5/min). Wait and retry.',
+        error: '[DIAGNOSTIC: Alpha Vantage API Rate Limit Reached (25 req/day or 5 req/min on Free Tier).] REMEDIATION: Alpha Vantage fundamental ratios will degrade gracefully until the rate window resets.',
       });
     }
 
@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     return res.status(500).json({
-      error: `Failed to fetch Alpha Vantage data: ${error.message}`,
+      error: `[DIAGNOSTIC: Alpha Vantage Proxy Error — ${error.message}] REMEDIATION: Verify Vercel serverless function connectivity or check API key syntax.`,
     });
   }
 }

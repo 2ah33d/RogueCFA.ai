@@ -176,6 +176,29 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     );
   }
 
+  /* Helper to format diagnostic error notes */
+  const renderDiagnostic = (message) => {
+    if (!message) return null;
+    const diagMatch = message.match(/\[DIAGNOSTIC:\s*([\s\S]*?)\]/i);
+    if (!diagMatch) {
+      return <p className="text-sm text-dim leading-relaxed mb-4 max-w-md mx-auto">{message}</p>;
+    }
+    const cleanMsg = message.replace(/\[DIAGNOSTIC:\s*[\s\S]*?\]/i, '').trim();
+    const diagText = diagMatch[1].trim();
+
+    return (
+      <div className="space-y-3 mb-5 max-w-lg mx-auto text-left">
+        {cleanMsg && <p className="text-sm text-dim leading-relaxed text-center">{cleanMsg}</p>}
+        <div className="bg-surface-elevated border border-accent/40 rounded-xl p-4 shadow-inner">
+          <div className="flex items-center gap-2 font-mono text-xs font-bold text-accent mb-1.5">
+            <span>🩺 DIAGNOSTIC TRACE &amp; REMEDIATION</span>
+          </div>
+          <p className="font-mono text-xs text-prime leading-relaxed">{diagText}</p>
+        </div>
+      </div>
+    );
+  };
+
   /* ── Error / empty states ── */
   if (error && !digest) {
     return (
@@ -188,9 +211,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
                 <span className="text-2xl">🔑</span>
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">YouTube API Key Required</h3>
-              <p className="text-sm text-dim leading-relaxed mb-4 max-w-md mx-auto">
-                {error.message}
-              </p>
+              {renderDiagnostic(error.message)}
               <button
                 type="button"
                 onClick={onOpenSettings}
@@ -221,9 +242,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
                 <span className="text-2xl">📺</span>
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">No Recent Episode Found</h3>
-              <p className="text-sm text-dim leading-relaxed max-w-md mx-auto">
-                {error.message}
-              </p>
+              {renderDiagnostic(error.message)}
             </>
           ) : error.type === 'no_transcript' ? (
             <>
@@ -232,23 +251,33 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
                 <span className="text-2xl">⏳</span>
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">Transcript Not Ready</h3>
-              <p className="text-sm text-dim leading-relaxed mb-4 max-w-md mx-auto">
-                {error.message}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setHasAttempted(false);
-                  setError(null);
-                }}
-                className="inline-flex items-center gap-2 px-5 py-2.5
-                           bg-surface-elevated border border-edge
-                           text-prime text-sm font-semibold rounded-lg
-                           hover:border-accent/50 hover:text-accent
-                           transition-all"
-              >
-                Try Again
-              </button>
+              {renderDiagnostic(error.message)}
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasAttempted(false);
+                    setError(null);
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5
+                             bg-surface-elevated border border-edge
+                             text-prime text-sm font-semibold rounded-lg
+                             hover:border-accent/50 hover:text-accent
+                             transition-all"
+                >
+                  Try Again
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="inline-flex items-center gap-2 px-5 py-2.5
+                             bg-accent/10 border border-accent/30
+                             text-accent text-sm font-semibold rounded-lg
+                             hover:bg-accent/20 transition-all"
+                >
+                  ⚙️ Open Settings (Add Groq Key)
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -256,24 +285,34 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
                               flex items-center justify-center">
                 <span className="text-2xl">⚠️</span>
               </div>
-              <h3 className="text-lg font-bold text-prime mb-2">Something Went Wrong</h3>
-              <p className="text-sm text-dim leading-relaxed mb-4 max-w-md mx-auto">
-                {error.message}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setHasAttempted(false);
-                  setError(null);
-                }}
-                className="inline-flex items-center gap-2 px-5 py-2.5
-                           bg-surface-elevated border border-edge
-                           text-prime text-sm font-semibold rounded-lg
-                           hover:border-accent/50 hover:text-accent
-                           transition-all"
-              >
-                Retry
-              </button>
+              <h3 className="text-lg font-bold text-prime mb-2">Diagnostic Trace — API Error</h3>
+              {renderDiagnostic(error.message)}
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasAttempted(false);
+                    setError(null);
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5
+                             bg-surface-elevated border border-edge
+                             text-prime text-sm font-semibold rounded-lg
+                             hover:border-accent/50 hover:text-accent
+                             transition-all"
+                >
+                  Try Again
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="inline-flex items-center gap-2 px-5 py-2.5
+                             bg-accent/10 border border-accent/30
+                             text-accent text-sm font-semibold rounded-lg
+                             hover:bg-accent/20 transition-all"
+                >
+                  ⚙️ Open Settings
+                </button>
+              </div>
             </>
           )}
         </div>

@@ -68,16 +68,16 @@ export default async function handler(req, res) {
             ? 'Claude'
             : 'OpenAI';
       return res.status(401).json({
-        error: `Your ${label} key was rejected. Check it in Settings.`,
+        error: `[DIAGNOSTIC: Your ${label} API Key was rejected (HTTP ${error.status || 401}).] REMEDIATION: Open Settings (gear icon at top right) and verify that your ${label} key is valid, active, and has sufficient billing credits enabled.`,
       });
     }
     if (error.status === 429) {
       return res.status(429).json({
-        error: `${provider} rate limit reached. Wait a moment and retry.`,
+        error: `[DIAGNOSTIC: ${provider.toUpperCase()} Rate Limit Exceeded (HTTP 429).] REMEDIATION: You have exceeded the requests-per-minute threshold on your ${provider} API tier. Please wait 30-60 seconds before scoring another ticker, or switch providers in Settings.`,
       });
     }
     return res.status(500).json({
-      error: `Scoring failed: ${error.message}`,
+      error: `[DIAGNOSTIC: AI Scoring Engine Failure — ${error.message || 'Unknown internal error'}] REMEDIATION: Verify your LLM API Key in Settings or check if the target ticker has sufficient market data for evaluation.`,
     });
   }
 }
@@ -169,7 +169,7 @@ async function callClaude(key, systemPrompt, userPrompt) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-5',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],

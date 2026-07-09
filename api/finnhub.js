@@ -38,12 +38,12 @@ export default async function handler(req, res) {
     /* ── Auth / rate-limit errors (check first response as proxy) ── */
     if (profileRes.status === 401 || profileRes.status === 403) {
       return res.status(401).json({
-        error: 'Invalid Finnhub API key. Check your key in Settings.',
+        error: '[DIAGNOSTIC: Invalid or Unauthorized Finnhub API Key (HTTP 401/403).] REMEDIATION: Open Settings (gear icon at top right) and verify your Finnhub API key string.',
       });
     }
     if (profileRes.status === 429) {
       return res.status(429).json({
-        error: 'Finnhub rate limit hit. Wait 60 seconds and retry.',
+        error: '[DIAGNOSTIC: Finnhub API Rate Limit Exceeded (HTTP 429).] REMEDIATION: Finnhub free tier allows 60 requests per minute. Please wait 30-60 seconds before scoring more tickers.',
       });
     }
 
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     /* ── Validate ticker exists ── */
     if (!profile || !profile.ticker) {
       return res.status(404).json({
-        error: `Ticker "${symbol}" not recognized. Try the exchange-qualified symbol (e.g., SHOP for NYSE, SHOP.TO for TSX).`,
+        error: `[DIAGNOSTIC: Ticker "${symbol}" returned no profile from Finnhub.] REMEDIATION: Verify the ticker symbol spelling. If searching a Canadian asset, toggle the 'TSX-First (.TO)' checkbox or explicitly append .TO / .V.`,
       });
     }
 
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     return res.status(500).json({
-      error: `Failed to fetch Finnhub data: ${error.message}`,
+      error: `[DIAGNOSTIC: Finnhub Proxy Network Error — ${error.message}] REMEDIATION: Check your network connection or verify Vercel serverless function connectivity.`,
     });
   }
 }
