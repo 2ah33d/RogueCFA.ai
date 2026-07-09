@@ -632,7 +632,7 @@ async function fetchRssPodcastFallback(groqKey = '') {
                       method: 'POST',
                       headers: { 'Authorization': `Bearer ${groqKey}` },
                       body: formData,
-                      signal: AbortSignal.timeout(30000),
+                      signal: AbortSignal.timeout(45000),
                     });
                   }
 
