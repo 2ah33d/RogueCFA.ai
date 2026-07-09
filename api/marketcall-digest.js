@@ -15,13 +15,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { youtubeKey, llmKey, provider } = req.body || {};
+  const {
+    youtubeKey, llmKey, provider,
+    /* Client-provided transcript (from Chrome extension) */
+    transcript: clientTranscript,
+    videoId: clientVideoId,
+    videoTitle: clientVideoTitle,
+    episodeDate: clientEpisodeDate,
+  } = req.body || {};
 
-  if (!youtubeKey) {
-    return res.status(400).json({
-      error: 'YouTube API key is required. Add it in Settings to use the MarketCall Digest.',
-    });
-  }
   if (!llmKey || !provider) {
     return res.status(400).json({
       error: 'LLM key and provider are required.',
@@ -29,6 +31,48 @@ export default async function handler(req, res) {
   }
 
   try {
+    /* ══════════════════════════════════════════
+       Fast path: Client-provided transcript
+       (Chrome extension extracted it from the user's browser)
+       ══════════════════════════════════════════ */
+    if (clientTranscript && clientTranscript.length >= 200) {
+      const cleanedTranscript = cleanRawTranscript(clientTranscript);
+      if (cleanedTranscript.length < 200) {
+        return res.status(200).json({
+          error: 'no_transcript',
+          message: 'The transcript provided by the extension was too short after cleaning. Try a different episode.',
+        });
+      }
+
+      const { systemPrompt, userPrompt } = buildDigestPrompt(cleanedTranscript, clientVideoTitle || '');
+      const rawLLMResponse = await callLLM(provider, llmKey, systemPrompt, userPrompt);
+      const digest = extractJSON(rawLLMResponse);
+
+      if (!digest || !digest.guest) {
+        return res.status(422).json({
+          error: 'LLM returned an unparseable digest. Try again.',
+        });
+      }
+
+      return res.status(200).json({
+        digest,
+        videoId: clientVideoId || '',
+        videoTitle: clientVideoTitle || '',
+        episodeDate: clientEpisodeDate || '',
+        generatedAt: new Date().toISOString(),
+        source: 'extension',
+      });
+    }
+
+    /* ══════════════════════════════════════════
+       Standard path: Server-side YouTube search → transcript
+       ══════════════════════════════════════════ */
+    if (!youtubeKey) {
+      return res.status(400).json({
+        error: 'YouTube API key is required. Add it in Settings, or use the Chrome extension to provide transcripts directly.',
+      });
+    }
+
     /* ──────────────────────────────────────────
        Step 1: Find recent MarketCall videos
        (Multi-strategy: Uploads playlist first, then global search)
@@ -47,7 +91,6 @@ export default async function handler(req, res) {
        episode whose auto-captions are ready & complete
        ────────────────────────────────────────── */
     let selectedVideo = null;
-    let transcript = null;
     let cleanedTranscript = null;
 
     for (const candidate of candidateVideos) {
@@ -56,27 +99,38 @@ export default async function handler(req, res) {
         const cleaned = cleanRawTranscript(raw);
         if (cleaned && cleaned.length >= 200) {
           selectedVideo = candidate;
-          transcript = raw;
           cleanedTranscript = cleaned;
           break;
         }
       }
     }
 
-    /* ──────────────────────────────────────────
-       Step 4: Build prompt & call LLM
-       If raw transcript scraping was blocked or still processing across all candidates,
-       synthesize from episode notes & BNN data so the user always gets their actionable digest!
-       ────────────────────────────────────────── */
-    let systemPrompt, userPrompt;
-
-    if (selectedVideo && cleanedTranscript) {
-      ({ systemPrompt, userPrompt } = buildDigestPrompt(cleanedTranscript, selectedVideo.videoTitle));
-    } else {
-      selectedVideo = candidateVideos[0] || {};
-      ({ systemPrompt, userPrompt } = buildDigestPromptFromMetadata(selectedVideo));
+    if (!selectedVideo || !cleanedTranscript) {
+      /* Task 3: Check public RSS/podcast syndication feeds before returning error */
+      const rssText = await fetchRssPodcastFallback();
+      if (rssText && rssText.length >= 250) {
+        selectedVideo = candidateVideos[0] || {
+          videoId: '',
+          videoTitle: 'BNN Bloomberg MarketCall (RSS Feed)',
+          episodeDate: new Date().toISOString().split('T')[0],
+        };
+        cleanedTranscript = cleanRawTranscript(rssText);
+      } else {
+        const newest = candidateVideos[0] || {};
+        return res.status(200).json({
+          error: 'no_transcript',
+          message: `Found "${newest.videoTitle || 'Market Call'}" (${newest.episodeDate ? 'aired ' + newest.episodeDate : 'recent'}), but auto-captions aren't available yet from the server. Use the RogueCFA Chrome extension to extract the transcript directly from your browser.`,
+          videoId: newest.videoId,
+          videoTitle: newest.videoTitle,
+          episodeDate: newest.episodeDate,
+        });
+      }
     }
 
+    /* ──────────────────────────────────────────
+       Step 4: Build prompt & call LLM
+       ────────────────────────────────────────── */
+    const { systemPrompt, userPrompt } = buildDigestPrompt(cleanedTranscript, selectedVideo.videoTitle);
     const rawLLMResponse = await callLLM(provider, llmKey, systemPrompt, userPrompt);
     const digest = extractJSON(rawLLMResponse);
 
@@ -94,6 +148,7 @@ export default async function handler(req, res) {
       videoTitle,
       episodeDate,
       generatedAt: new Date().toISOString(),
+      source: 'server',
     });
 
   } catch (error) {
@@ -375,6 +430,48 @@ async function fetchTimedText(videoId) {
 }
 
 /**
+ * Task 3: Public RSS Podcast & Syndication Feed Fallback
+ * Checks BNN Bloomberg's public syndication and podcast feeds for episode transcripts/summaries.
+ */
+async function fetchRssPodcastFallback() {
+  const rssUrls = [
+    'https://www.bnnbloomberg.ca/feed/podcast/market-call',
+    'https://www.bnnbloomberg.ca/investing/rss/',
+    'https://www.bnnbloomberg.ca/rss/',
+  ];
+
+  for (const url of rssUrls) {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0)' },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (res.ok) {
+        const xml = await res.text();
+        const items = xml.match(/<item>([\s\S]*?)<\/item>/gi) || [];
+        for (const itemXml of items) {
+          if (itemXml.toLowerCase().includes('market call') || itemXml.toLowerCase().includes('marketcall')) {
+            const contentMatches = itemXml.match(/<(?:content:encoded|description)[^>]*>([\s\S]*?)<\/(?:content:encoded|description)>/gi);
+            if (contentMatches) {
+              const text = contentMatches
+                .map((m) => m.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').trim())
+                .filter((t) => t.length > 50)
+                .join(' ');
+              if (text.length >= 250) {
+                return text;
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      /* continue */
+    }
+  }
+  return null;
+}
+
+/**
  * Extract a balanced JSON object from a string that may have trailing content.
  */
 function extractBalancedJSON(str) {
@@ -456,42 +553,6 @@ Produce the structured digest following the exact JSON format specified. Remembe
   return { systemPrompt, userPrompt };
 }
 
-function buildDigestPromptFromMetadata(videoInfo) {
-  const systemPrompt = `You are a financial research assistant that synthesizes BNN Bloomberg MarketCall executive digests.
-Your job is to produce a structured JSON digest from the provided MarketCall episode title and show notes/description.
-
-STRICT RULES:
-1. Extract the exact guest name and their firm/title from the episode title and show notes description.
-2. Formulate a clear, high-value 100-150 word Market Outlook summary based on the episode focus and description details.
-3. Extract any specific stocks, sectors, or top picks mentioned in the show notes or title, alongside clear analytical reasoning based on the episode context.
-4. If explicit individual stock tickers aren't listed in the brief summary, provide top sector/asset picks relevant to the guest's stated specialty with logical growth/valuation drivers.
-
-OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
-{
-  "guest": "Full Name",
-  "firm": "Firm/Title",
-  "episodeFocus": "Stated theme of the episode, e.g. North American Large Caps",
-  "marketOutlook": "100-150 word executive summary of the guest's overall market view and thesis.",
-  "picks": [
-    {
-      "ticker": "TICKER",
-      "company": "Company Name",
-      "reasoning": "80-150 words detailing the analytical thesis and growth drivers for this pick based on the guest's outlook."
-    }
-  ],
-  "closingNotes": "Optional 50-100 words. Key risk caveats or portfolio considerations. Empty string if none."
-}`;
-
-  const userPrompt = `Here is the episode metadata for today's BNN Bloomberg MarketCall:
-Title: ${videoInfo.videoTitle}
-Date: ${videoInfo.episodeDate}
-Show Notes / Description:
-${videoInfo.description || 'Standard daily MarketCall interview.'}
-
-Produce the structured executive digest following the exact JSON format specified above.`;
-
-  return { systemPrompt, userPrompt };
-}
 
 /* ════════════════════════════════════════════════════════════════
    LLM routing — mirrors api/score.js patterns
