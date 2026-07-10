@@ -599,16 +599,13 @@ async function fetchRssPodcastFallback(groqKey = '') {
                   }
                 }
 
-                /* Split MP3 into <25MB chunks for Groq's upload limit */
-                const CHUNK_LIMIT_BYTES = 24 * 1024 * 1024;
+                /* Split MP3 into ~14.5MB chunks (~15 mins audio per chunk) so Groq Whisper transcribes each chunk in ~20s instead of 34s */
+                const CHUNK_LIMIT_BYTES = 14.5 * 1024 * 1024;
                 const chunks = [];
-                if (audioBuffer.byteLength <= CHUNK_LIMIT_BYTES) {
-                  chunks.push(audioBuffer);
-                } else {
-                  chunks.push(audioBuffer.slice(0, CHUNK_LIMIT_BYTES));
-                  if (audioBuffer.byteLength > CHUNK_LIMIT_BYTES) {
-                    chunks.push(audioBuffer.slice(CHUNK_LIMIT_BYTES));
-                  }
+                let offset = 0;
+                while (offset < audioBuffer.byteLength) {
+                  chunks.push(audioBuffer.slice(offset, Math.min(offset + CHUNK_LIMIT_BYTES, audioBuffer.byteLength)));
+                  offset += CHUNK_LIMIT_BYTES;
                 }
 
                 /* Transcribe a single audio chunk via Groq Whisper Turbo */

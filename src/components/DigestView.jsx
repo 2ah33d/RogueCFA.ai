@@ -76,7 +76,15 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        if (res.status === 504 || res.status === 500) {
+          throw new Error(`Vercel Serverless Timeout (${res.status}): The audio transcription took slightly longer than Vercel's 60-second limit. We have optimized chunking to ~20s—please click Check Newer / Try Again.`);
+        }
+        throw new Error(`API returned non-JSON response (${res.status}): ${parseErr.message}`);
+      }
 
       if (data.error === 'no_episode') {
         setError({
