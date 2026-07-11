@@ -592,59 +592,122 @@ The Automated Data Pipeline executes weekly via Vercel Cron without IP blocking 
 
 ---
 
-### Tier 1: Daily MarketCall Digest
+### Tier 1: Daily MarketCall Digest + Caller-Mention Extraction
 **Priority:** P1  
-**Status:** Planned
+**Status:** Architecture Specified / In Production & Extension  
+**Core Objective:** Replace the 45-minute BNN Bloomberg MarketCall broadcast with a ~2-minute daily digest that extracts both the analyst's formal Top Picks and live caller Q&A stock mentions (`caller_mentions`) inside a single Claude Sonnet call ($0.00 marginal LLM spend).
 
-**What it does**
-Automatically fetches that day's BNN MarketCall episode transcript and produces a condensed, readable digest (500–1000 words) covering the guest's background, market outlook, and every stock pick with their full stated reasoning. Fully replaces the need to watch the episode.
-
-**User flow**
-1. User opens RogueCFA and navigates to the "Today's Picks" tab.
-2. If today's digest hasn't been generated yet, app fetches it on-demand (or shows cached digest if already generated today).
-3. App displays: guest name + firm, their stated market outlook/theme for the episode, and each pick with reasoning.
-4. Each pick shown as an expandable card with a "Score This" button that pre-fills the ticker into the main scoring flow.
-5. User reads the full digest in under 2 minutes instead of watching a 45-minute broadcast.
-
-**Data requirements**
-- **YouTube Data API (free tier, 10,000 units/day):** Fetches BNN Bloomberg's MarketCall video ID and auto-generated transcript for the current day's episode.
-- **Claude API (Sonnet):** Condenses raw transcript into structured digest — this is a summarization/cleanup task, not open-ended research, so hallucination risk is low when the full transcript is provided as grounding context.
-
-**Output structure (500–1000 words total):**
-```
-GUEST: [name], [firm/title]
-EPISODE FOCUS: [stated theme, e.g. "Energy Sector Outlook"]
-MARKET OUTLOOK (100-150 words):
-[Guest's overall market view/thesis for the episode, condensed from their opening remarks]
-
-TOP PICKS:
-[TICKER] — [Company Name]
-"[Condensed reasoning in guest's own logic, 80-150 words per pick — WHY they like it,
-any stated price target or timeframe, any specific catalyst or metric they referenced]"
-[Repeat per pick — typically 3-8 picks per episode]
-
-CLOSING NOTES (optional, 50-100 words):
-[Any caller Q&A insights or risk caveats the guest mentioned]
+**Updated Output JSON Structure (`api/marketcall-digest.js`):**
+```json
+{
+  "market_outlook": "string — the guest's stated view on markets/sector, in their specific language, with metrics/catalysts/dates as stated",
+  "top_picks": [
+    {
+      "ticker": "string",
+      "company_name": "string",
+      "rationale_summary": "string — the guest's actual stated reasoning, not a generic summary",
+      "disclosure_personal": "boolean | null",
+      "disclosure_family": "boolean | null",
+      "disclosure_portfolio": "boolean | null"
+    }
+  ],
+  "caller_mentions": [
+    {
+      "ticker": "string | null",
+      "company_name": "string",
+      "analyst_stance": "buy | hold | sell | avoid | trim | no_clear_stance",
+      "context_summary": "string — one sentence, max ~20 words, guest's actual reasoning"
+    }
+  ],
+  "closing_notes": "string — caller Q&A color not captured in caller_mentions above"
+}
 ```
 
 > [!NOTE]
-> **Estimated cost:** ~9,000 input tokens (transcript) + ~2,000 output tokens (digest) per generation using Claude Sonnet ≈ $0.038/day, or under $1/month at 20 trading days. Negligible relative to the 45 minutes/day of user time saved.
+> **Cost Guardrail:** Feature 1 rides inside the existing daily Sonnet call — expect a small increase in output tokens only (a few hundred tokens/day), not a second LLM call.
 
-**Technical notes**
-- New Vercel function `/api/marketcall-digest.js`: fetches today's MarketCall video ID (search YouTube Data API for "BNN Bloomberg Market Call" uploaded today), retrieves auto-generated transcript via YouTube transcript endpoint.
-- New file `src/lib/digestBuilder.js`: constructs the summarization prompt, enforces the 500–1000 word output range, and enforces "only reference what the guest actually said — do not add outside analysis or opinion" as a strict rule.
-- Digest generation prompt must instruct Claude to preserve the guest's specific language and reasoning rather than generic boilerplate (e.g. not "the guest is bullish" but the actual stated logic).
-- Cache the digest in localStorage per date (`marketcall_digest_YYYY-MM-DD`) so it is generated once per day, not on every page load.
-- New component `src/components/DigestView.jsx`: renders the digest with expandable pick cards.
-- New component `src/components/DigestPickCard.jsx`: individual pick card with "Score This" button that navigates to main ScoreForm with ticker pre-filled.
+---
 
-**Out of scope for v1 of this feature**
-- Historical digest archive/search across past episodes.
-- Multi-guest digests (MarketCall features one guest per episode).
-- Automatic scheduled generation without user action (v1 is on-demand, generated when user opens the tab).
+### Task 3.5: Weekly Caller-Signal Detection + Analyst Track Record ($0.00 Marginal LLM Cost)
+**Priority:** P1  
+**Status:** Architecture Specified / Planned  
+**Core Objective:** Add relational persistence in Supabase, deterministic 5-day rolling golden-pick/warning-sell scoring (`0 LLM tokens burned`), and zero-LLM historical analyst track record scraping (`pure DOM parsing with Cheerio`).
 
-**Success metric**
-Digest generation completes in under 15 seconds and produces a 500–1000 word summary where every stock pick includes the guest's actual stated reasoning, verified by spot-checking 5 digests against manually watching the corresponding episode.
+#### Feature 1: Caller-Mention Extraction (See Tier 1 above)
+- Extracted in the single daily prompt call (`caller_mentions`).
+- If a ticker cannot be confidently resolved from the audio (company name only, ambiguous), emit `ticker: null` and let downstream logic reconcile it against a lookup table rather than dropping it.
+- Dedup by *distinct episode*, not raw mention count (`happens at the aggregation layer in Feature 3`).
+
+#### Feature 2: Supabase Relational Schema
+```sql
+create table episodes (
+  id uuid primary key default gen_random_uuid(),
+  air_date date not null,          -- actual broadcast date, single source of truth
+  analyst_name text not null,
+  analyst_firm text,
+  focus_topic text,
+  youtube_url text,
+  created_at timestamptz default now(),
+  unique(air_date, analyst_name)
+);
+
+create table top_picks (
+  id uuid primary key default gen_random_uuid(),
+  episode_id uuid references episodes(id) on delete cascade,
+  ticker text not null,
+  company_name text,
+  rationale_summary text,
+  disclosure_personal boolean,
+  disclosure_family boolean,
+  disclosure_portfolio boolean
+);
+
+create table caller_mentions (
+  id uuid primary key default gen_random_uuid(),
+  episode_id uuid references episodes(id) on delete cascade,
+  ticker text,
+  company_name text not null,
+  analyst_stance text check (analyst_stance in ('buy','hold','sell','avoid','trim','no_clear_stance')),
+  context_summary text
+);
+
+create table analyst_track_record (
+  id uuid primary key default gen_random_uuid(),
+  analyst_name text not null,
+  source_article_url text not null,
+  pick_publish_date date not null,
+  ticker text not null,
+  then_price numeric,
+  now_price numeric,
+  return_pct numeric,
+  total_return_pct numeric,
+  scraped_at timestamptz default now(),
+  unique (analyst_name, ticker, pick_publish_date)
+);
+```
+
+#### Feature 3: Weekly Golden-Pick & Warning-Sell Scoring (Deterministic, $0.00 LLM Cost)
+- **Window:** 5-day rolling window (`episodes.air_date >= today - 5 days`).
+- **Signal Components (Configurable Constants):**
+  1. *Caller frequency component:* count of distinct episodes within the window where a ticker was raised (`w_frequency = 1.0` for `buy/hold`, penalty `-2.0` for `sell/avoid`).
+  2. *Convergence bonus (`w_convergence = 4.5`):* fixed bonus if a ticker mentioned by a caller is later named as a formal Top Pick by a *different* analyst within the window.
+- **Outputs:**
+  - **Golden Picks (`top 1-2 positive scores`)**: Tickers showing highest independent multi-analyst convergence and caller validation.
+  - **Warning Sells (`negative_episodes >= 2`)**: Alert flag when multiple distinct episodes feature `sell` or `avoid` analyst stances on the same caller-pitched ticker.
+
+#### Feature 4: Analyst Track-Record Scraper & Credibility Scoring Engine (Zero-LLM HTML DOM Parsing)
+- Parses BNN Bloomberg published "Top Picks" articles (`e.g. bnnbloomberg.ca/markets/2026/...`) using lightweight Cheerio/HTML DOM parsing (`0 LLM tokens burned`).
+- Extracts `Then Price`, `Now Price`, `Return %`, and `Total Return %` across 3 to 4 historical appearances per analyst (`≈ 9–15 individual picks`).
+- **Benchmark-Adjusted Alpha & Bayesian Shrinkage Scoring Model (Pure Deterministic Math, $0.00 LLM Cost):**
+  1. *Total Return % as Single Return Metric:* Given the income-stock-heavy analyst pool (`e.g., Rebecca Teltscher covering CNQ/BCE, Darren Sissons covering Munich Re/Franco-Nevada`), `Total Return %` (`which includes dividend yield/distributions`) is the sole return metric used in the scoring math (`Return %` is dropped from scoring math, though displayed for transparency).
+  2. *Benchmark-Adjusted Alpha (`alpha_i`):* True alpha is calculated against the matched index return (`S&P/TSX Composite Total Return Index ^GSPTSE for Canadian names, S&P 500 ^GSPC for US names`) over the exact same holding period (`using our existing Finnhub/Alpha Vantage integrations at $0.00 cost`):
+     $$\alpha_i = \text{clip}(\text{total\_return}_i - \text{benchmark\_return}_i, -50\%, +50\%)$$
+     *(Outlier clipping at $\pm 50\text{pp}$ ensures one 400% Franco-Nevada boom or bust does not distort an analyst's entire reputation).*
+  3. *Strict Hit Rate (`hit_rate`):* Defined as the percentage of picks where $\alpha_i > 0$ (`beat the benchmark, not just positive return`).
+  4. *Alpha-Dominant Flipped Weighting (`raw_score`):* Because hit rate alone can be passively gamed by holding conservative dividend aristocrats during bull markets, normalized average alpha carries $60\%$ of the weight:
+     $$\text{raw\_score} = 0.40 \times \text{normalize}(\text{hit\_rate}) + 0.60 \times \text{normalize}(\text{avg\_alpha})$$
+  5. *Bayesian Shrinkage (`credibility`):* With small sample sizes (`3–4 articles / 9–15 picks`), apply shrinkage toward the cross-analyst pool average (`k = 6 picks tunable constant`):
+     $$\text{credibility} = \frac{n_{\text{picks}}}{n_{\text{picks}} + k} \times \text{raw\_score} + \frac{k}{n_{\text{picks}} + k} \times \text{all\_analyst\_avg\_score}$$
 
 ---
 
