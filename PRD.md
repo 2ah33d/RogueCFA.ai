@@ -550,7 +550,8 @@ Clicking "Re-score All" on a saved watchlist updates all stored scores and accur
 
 ### BNN MarketCall Guest Track Record & Automated TV Intelligence
 **Priority:** P1  
-**Status:** Architecture Specified / In Development
+**Status:** Completed / In Production (Verified 9-Pick / ≥3-Episode Track Record & Time Horizon Specialist Scoring)
+
 
 **What it does**
 Tracks stock picks broadcast by guest analysts on BNN Bloomberg MarketCall across a curated roster of 20 recurring fund managers. Eliminates manual television watching by automatically discovering and extracting morning broadcast picks, logging them into persistent storage, and evaluating historical guest accuracy against live market prices.

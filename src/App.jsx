@@ -156,7 +156,8 @@ export default function App() {
 
           /* 4. Build prompt (passes math score + all data to LLM) */
           const { systemPrompt, userPrompt, limitedData, companyName } =
-            buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticker);
+            buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticker, guestName || prefilledGuest || null);
+
 
           /* 5. LLM LAYER: Get narrative explanation */
           const result = await scoreWithLLM(

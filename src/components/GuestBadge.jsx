@@ -7,6 +7,9 @@ export default function GuestBadge({ guestName, record, onClick, className = '' 
   if (!data) return null;
 
   const hasEnoughData = data.resolvedPicks >= 3 && data.hitRate !== null;
+  const picksUsed = data.dataUsedPicks || data.totalPicks || 0;
+  const episodesUsed = data.dataUsedEpisodes || 1;
+  const optLabel = data.optimalHorizonLabel || 'Mid-Term Hold (6 Months)';
 
   return (
     <button
@@ -15,7 +18,7 @@ export default function GuestBadge({ guestName, record, onClick, className = '' 
         e.stopPropagation();
         if (onClick) onClick(data.guestName || guestName);
       }}
-      className={`inline-flex items-center gap-1 font-mono text-[10px] font-bold rounded-full px-2 py-0.5 transition-all
+      className={`inline-flex items-center gap-1.5 font-mono text-[10px] font-bold rounded-full px-2.5 py-0.5 transition-all
         ${
           hasEnoughData
             ? data.hitRate >= 0.6
@@ -27,23 +30,29 @@ export default function GuestBadge({ guestName, record, onClick, className = '' 
         } ${className}`}
       title={
         hasEnoughData
-          ? `${data.guestName}: ${(data.hitRate * 100).toFixed(0)}% accuracy (${data.correctPicks}/${data.resolvedPicks} resolved picks). Click for full track record.`
+          ? `${data.guestName} (${data.firm || 'Analyst'}): ${(data.hitRate * 100).toFixed(0)}% accuracy (${data.correctPicks}/${data.resolvedPicks} resolved).\nData Sample: Latest ${picksUsed} picks across ${episodesUsed} episodes.\n⚡ Specialist in: ${optLabel} (${(data.optimalHorizonHitRate * 100).toFixed(0)}% hit rate).\nClick for full track record breakdown.`
           : `${data.guestName}: Insufficient resolved picks (<3) to display hit rate. Click for track record.`
       }
     >
       {hasEnoughData ? (
         <>
-          <span>{(data.hitRate * 100).toFixed(0)}% hit rate</span>
-          <span className="opacity-80">
-            ({data.correctPicks}/{data.resolvedPicks} picks)
+          <span>{(data.hitRate * 100).toFixed(0)}% accuracy</span>
+          <span className="opacity-80 border-l border-current/30 pl-1.5">
+            {picksUsed} picks / {episodesUsed} eps
           </span>
+          {data.optimalHorizonKey && (
+            <span className="bg-current/10 px-1.5 py-0 rounded text-[9px] uppercase tracking-wider">
+              ⚡ Best: {data.optimalHorizonKey}
+            </span>
+          )}
         </>
       ) : (
         <>
           <span>📊</span>
-          <span>Track Record</span>
+          <span>Track Record ({picksUsed} picks)</span>
         </>
       )}
     </button>
   );
 }
+

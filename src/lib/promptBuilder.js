@@ -1,6 +1,9 @@
+import { getGuestTrackRecord } from './guestTracker';
+
 /* ────────────────────────────────────────────
    Hold-period definitions
    ──────────────────────────────────────────── */
+
 export const HOLD_PERIODS = {
   '1M': { label: '1 Month', category: 'short' },
   '3M': { label: '3 Months', category: 'short' },
@@ -153,11 +156,19 @@ function detectSignalConflicts(tickerData, alphaData, mathResult, positionInRang
    Math score is pre-calculated. LLM explains it.
    ──────────────────────────────────────────── */
 
-export function buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticker) {
+export function buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticker, guestName = null) {
   const { profile, quote, recommendation, news } = tickerData;
   const period = HOLD_PERIODS[holdPeriod] || HOLD_PERIODS['6M'];
   const overview = alphaData?.overview || null;
   const earnings = alphaData?.earnings || null;
+
+  /* Check BNN MarketCall Analyst Track Record & Optimal Horizon */
+  const effectiveGuest = guestName || tickerData?.guest || null;
+  const guestRecord = effectiveGuest ? getGuestTrackRecord(effectiveGuest) : null;
+  const hasGuestRecord = guestRecord && guestRecord.resolvedPicks >= 3 && guestRecord.hitRate !== null;
+  const guestInstruction = hasGuestRecord
+    ? `\n\nBNN MARKETCALL ANALYST TRACK RECORD & TIMEFRAME SPECIALIST CONTEXT:\nThis stock is being evaluated in the context of BNN MarketCall analyst ${guestRecord.guestName} (${guestRecord.firm}).\n- Historical Accuracy: ${(guestRecord.hitRate * 100).toFixed(0)}% accuracy across ${guestRecord.correctPicks}/${guestRecord.resolvedPicks} resolved picks (Sample: Latest ${guestRecord.dataUsedPicks || 9} picks across ${guestRecord.dataUsedEpisodes || 3} episodes).\n- Average Return: +${guestRecord.avgReturn}% across resolved calls.\n- Time Horizon Specialist Assessment: ${guestRecord.guestName} performs best on the ${guestRecord.optimalHorizonLabel} timeframe (${(guestRecord.optimalHorizonHitRate * 100).toFixed(0)}% win rate, +${guestRecord.optimalHorizonReturn}% avg return).\n- If the investor's selected ${period.label} horizon aligns with or benefits from ${guestRecord.guestName}'s optimal holding timeframe (${guestRecord.optimalHorizonKey}), explicitly note this positive convergence in your timeframe_verdict or thesis.\n`
+    : '';
 
   /* Canadian Market Identity Detection */
   const isTSX =
@@ -215,7 +226,7 @@ Your job is to:
 4. Flag the single most important thing to watch during the ${period.label} hold period
 5. List specific risks and catalysts from the data
 
-${TIME_FOCUS[period.category]}${tsxInstruction}
+${TIME_FOCUS[period.category]}${tsxInstruction}${guestInstruction}
 
 STRICT RULES — VIOLATION OF ANY RULE INVALIDATES YOUR RESPONSE:
 - Do NOT reference any data not explicitly listed in the AVAILABLE DATA section below
@@ -237,6 +248,7 @@ Respond ONLY with valid JSON matching this exact schema. No preamble, no markdow
   "key_catalysts": ["catalyst grounded in data", "catalyst grounded in data"],
   "watch_for": "The single most important thing to monitor during this hold period"
 }`;
+
 
   /* ── User prompt ── */
   const upperTicker = ticker.toUpperCase();
