@@ -599,21 +599,13 @@ async function fetchRssPodcastFallback(groqKey = '') {
                   }
                 }
 
-                /*
-                 * Ultra-Fast ~4.5MB (~5-minute) Audio Slicing + 150KB Byte Overlap + 3-Chunk Concurrency Batcher
-                 * Why: Transcribing a ~4.5MB slice takes Groq Whisper just ~3 to 5 seconds.
-                 * Overlap (~150KB) ensures mid-word cut boundaries (e.g. stock tickers CNQ/CVE) are never lost.
-                 * Batching 3 concurrent chunks at a time completes in ~8-12s while preventing Groq burst/concurrency rate limits.
-                 */
-                const CHUNK_LIMIT_BYTES = Math.floor(4.5 * 1024 * 1024);
-                const OVERLAP_BYTES = 150 * 1024;
+                /* Split MP3 into ~14.5MB chunks (~15 mins audio per chunk) so Groq Whisper transcribes each chunk in ~20s instead of 34s */
+                const CHUNK_LIMIT_BYTES = 14.5 * 1024 * 1024;
                 const chunks = [];
                 let offset = 0;
                 while (offset < audioBuffer.byteLength) {
-                  const end = Math.min(offset + CHUNK_LIMIT_BYTES, audioBuffer.byteLength);
-                  chunks.push(audioBuffer.slice(offset, end));
-                  if (end >= audioBuffer.byteLength) break;
-                  offset = end - OVERLAP_BYTES;
+                  chunks.push(audioBuffer.slice(offset, Math.min(offset + CHUNK_LIMIT_BYTES, audioBuffer.byteLength)));
+                  offset += CHUNK_LIMIT_BYTES;
                 }
 
                 /* Transcribe a single audio chunk via Groq Whisper Turbo */
@@ -627,7 +619,7 @@ async function fetchRssPodcastFallback(groqKey = '') {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${groqKey}` },
                     body: formData,
-                    signal: AbortSignal.timeout(25000),
+                    signal: AbortSignal.timeout(45000),
                   });
 
                   if (!res.ok && res.status === 400) {
@@ -637,7 +629,7 @@ async function fetchRssPodcastFallback(groqKey = '') {
                       method: 'POST',
                       headers: { 'Authorization': `Bearer ${groqKey}` },
                       body: formData,
-                      signal: AbortSignal.timeout(25000),
+                      signal: AbortSignal.timeout(45000),
                     });
                   }
 
@@ -649,17 +641,8 @@ async function fetchRssPodcastFallback(groqKey = '') {
                   return { text: '', error: `Groq API error (${res.status} chunk ${idx}): ${errData.error?.message || res.statusText}` };
                 };
 
-                /* Execute chunk transcriptions in controlled concurrent batches of 3 to prevent burst rate limits */
-                const results = [];
-                const CONCURRENT_BATCH_SIZE = 3;
-                for (let i = 0; i < chunks.length; i += CONCURRENT_BATCH_SIZE) {
-                  const batchPromises = chunks.slice(i, i + CONCURRENT_BATCH_SIZE).map((buf, batchIdx) =>
-                    transcribeChunk(buf, i + batchIdx + 1)
-                  );
-                  const batchResults = await Promise.all(batchPromises);
-                  results.push(...batchResults);
-                }
-
+                /* Execute chunk transcriptions concurrently (Promise.all completes both halves in ~1 sec) */
+                const results = await Promise.all(chunks.map((buf, i) => transcribeChunk(buf, i + 1)));
                 const firstError = results.find(r => r.error);
                 if (firstError && !results.some(r => r.text && r.text.length >= 200)) {
                   return { text: '', groqDiagnostic: firstError.error };
