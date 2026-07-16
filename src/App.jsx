@@ -30,30 +30,30 @@ import DigestView from './components/DigestView';
 const THEME = `
 :root {
   /* ——— Surfaces ——— */
-  --c-surface:          6 6 14;        /* #06060e  — page background        */
-  --c-surface-card:     13 13 31;      /* #0d0d1f  — card / panel fill      */
-  --c-surface-elevated: 22 22 51;      /* #161633  — elevated elements      */
+  --c-surface:          250 252 255;   /* #FAFCFF  — clean institutional ice white */
+  --c-surface-card:     255 255 255;   /* #FFFFFF  — pure white card fill      */
+  --c-surface-elevated: 240 244 255;   /* #F0F4FF  — soft blue elevated pill/nav   */
 
   /* ——— Borders ——— */
-  --c-edge:             37 37 71;      /* #252547                           */
+  --c-edge:             220 230 248;   /* #DCE6F8  — crisp blue-gray border    */
 
   /* ——— Text ——— */
-  --c-prime:            228 228 237;   /* #e4e4ed  — primary text           */
-  --c-dim:              152 152 184;   /* #9898b8  — secondary text         */
-  --c-faint:            90 90 122;     /* #5a5a7a  — muted / placeholder    */
+  --c-prime:            10 25 70;      /* #0A1946  — rich institutional navy-blue  */
+  --c-dim:              75 90 125;     /* #4B5A7D  — medium slate blue         */
+  --c-faint:            135 150 185;   /* #8796B9  — subtle muted blue-gray    */
 
-  /* ——— Accent (Indigo) ——— */
-  --c-accent:           99 102 241;    /* #6366f1                           */
-  --c-accent-hover:     129 140 248;   /* #818cf8                           */
-  --c-accent-muted:     79 70 229;     /* #4f46e5                           */
+  /* ——— Accent (Exact Royal Blue matching logo #0000FF) ——— */
+  --c-accent:           0 0 255;       /* #0000ff  — electric institutional blue */
+  --c-accent-hover:     40 60 255;     /* #283cff  — bright hover              */
+  --c-accent-muted:     0 0 200;       /* #0000c8  — deep cobalt border/shadow */
 
   /* ——— Signal colours ——— */
-  --c-signal-buy:       52 211 153;    /* #34d399  — green (BUY_SIGNAL)     */
-  --c-signal-watch:     251 191 36;    /* #fbbf24  — yellow (WATCH)         */
-  --c-signal-avoid:     248 113 113;   /* #f87171  — red (AVOID)            */
+  --c-signal-buy:       16 185 129;    /* #10b981  — crisp emerald green       */
+  --c-signal-watch:     245 158 11;    /* #f59e0b  — rich amber                */
+  --c-signal-avoid:     239 68 68;     /* #ef4444  — bright ruby red           */
 
   /* ——— Danger ——— */
-  --c-danger:           239 68 68;     /* #ef4444                           */
+  --c-danger:           225 29 72;     /* #e11d48  — crimson                   */
 }
 `;
 
@@ -235,15 +235,16 @@ export default function App() {
                       backdrop-blur-md sticky top-0 z-30"
         >
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent
-                            to-accent-muted flex items-center justify-center
-                            shadow-lg shadow-accent/20"
-              >
-                <span className="text-white font-bold text-sm">R</span>
-              </div>
-              <span className="text-lg font-bold text-prime">
+            <div
+              className="flex items-center gap-3 cursor-pointer select-none group"
+              onClick={() => setActiveTab('score')}
+            >
+              <img
+                src="/logo.png"
+                alt="RogueCFA Logo"
+                className="w-9 h-9 object-contain rounded-lg shadow-sm group-hover:scale-105 transition-transform duration-300"
+              />
+              <span className="text-xl font-extrabold tracking-tight text-prime">
                 RogueCFA<span className="text-accent">.ai</span>
               </span>
             </div>
