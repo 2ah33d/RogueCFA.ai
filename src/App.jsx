@@ -30,22 +30,22 @@ import DigestView from './components/DigestView';
 const THEME = `
 :root {
   /* ——— Surfaces ——— */
-  --c-surface:          250 252 255;   /* #FAFCFF  — clean institutional ice white */
+  --c-surface:          248 250 252;   /* #F8FAFC  — clean institutional slate white */
   --c-surface-card:     255 255 255;   /* #FFFFFF  — pure white card fill      */
-  --c-surface-elevated: 240 244 255;   /* #F0F4FF  — soft blue elevated pill/nav   */
+  --c-surface-elevated: 241 245 249;   /* #F1F5F9  — soft slate elevated pill/nav */
 
   /* ——— Borders ——— */
-  --c-edge:             220 230 248;   /* #DCE6F8  — crisp blue-gray border    */
+  --c-edge:             226 232 240;   /* #E2E8F0  — crisp slate-gray border   */
 
   /* ——— Text ——— */
-  --c-prime:            10 25 70;      /* #0A1946  — rich institutional navy-blue  */
-  --c-dim:              75 90 125;     /* #4B5A7D  — medium slate blue         */
-  --c-faint:            135 150 185;   /* #8796B9  — subtle muted blue-gray    */
+  --c-prime:            15 23 42;      /* #0F172A  — rich institutional deep slate/black */
+  --c-dim:              71 85 105;     /* #475569  — secondary slate text      */
+  --c-faint:            148 163 184;   /* #94A3B8  — muted slate-gray          */
 
-  /* ——— Accent (Exact Royal Blue matching logo #0000FF) ——— */
-  --c-accent:           0 0 255;       /* #0000ff  — electric institutional blue */
-  --c-accent-hover:     40 60 255;     /* #283cff  — bright hover              */
-  --c-accent-muted:     0 0 200;       /* #0000c8  — deep cobalt border/shadow */
+  /* ——— Accent (Exact Robot/Bars Logo Steel Blue #166392) ——— */
+  --c-accent:           22 99 146;     /* #166392  — muted mid-tone steel blue */
+  --c-accent-hover:     32 126 184;    /* #207eb8  — bright steel blue hover   */
+  --c-accent-muted:     16 74 110;     /* #104a6e  — deep steel blue border/shadow */
 
   /* ——— Signal colours ——— */
   --c-signal-buy:       16 185 129;    /* #10b981  — crisp emerald green       */
