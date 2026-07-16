@@ -456,6 +456,35 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         </div>
       )}
 
+      {/* Caller Mentions (Q&A) */}
+      {(Array.isArray(digest.callerMentions) && digest.callerMentions.length > 0 ? digest.callerMentions : Array.isArray(digest.caller_mentions) && digest.caller_mentions.length > 0 ? digest.caller_mentions : null) && (
+        <div>
+          <h3 className="text-xs font-bold font-mono text-faint uppercase tracking-wider mb-3 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+              Caller Mentions (Q&amp;A)
+            </span>
+            <span className="text-[10px] font-normal text-dim">
+              {(digest.callerMentions || digest.caller_mentions).length} mention{(digest.callerMentions || digest.caller_mentions).length !== 1 ? 's' : ''} • Click to expand
+            </span>
+          </h3>
+          <div className="space-y-3">
+            {(digest.callerMentions || digest.caller_mentions).map((pick, idx) => (
+              <DigestPickCard
+                key={`caller-${pick.ticker}-${idx}`}
+                ticker={pick.ticker}
+                company={pick.company}
+                reasoning={pick.reasoning}
+                guestName={digest.guest}
+                onScoreTicker={onScoreTicker}
+                index={idx}
+                isCallerMention={true}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Closing Notes */}
       {digest.closingNotes && (
         <div className="bg-surface-card/60 border border-edge rounded-xl p-5">

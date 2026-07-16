@@ -65,22 +65,31 @@ STRICT RULES:
 3. Every stock pick MUST include the guest's stated reasoning (WHY they like it). A bare ticker list is worthless.
 4. Output 500–1000 words total.
 5. If the guest mentions a price target, timeframe, or specific catalyst, include it.
-6. If there are caller Q&A segments, capture any meaningful insights in the closing notes.
+6. CRITICAL DISTINCTION FOR PICKS VS CALLER Q&A:
+   - "picks": MUST contain EXACTLY the guest's official featured Top Picks (typically 3 stocks) introduced by the guest/host at the start or during the official Top Picks segment.
+   - "callerMentions": MUST contain any additional stocks discussed by the guest when answering caller questions or viewer emails during the Q&A segment. DO NOT mix caller Q&A stocks into "picks".
 
 OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 {
   "guest": "Full Name",
   "firm": "Firm/Title",
-  "episodeFocus": "Stated theme of the episode, e.g. Energy Sector Outlook",
+  "episodeFocus": "Stated theme of the episode, e.g. Technical Analysis / Energy Sector Outlook",
   "marketOutlook": "100-150 word summary of the guest's overall market view/thesis, condensed from their opening remarks. Use their actual stated logic.",
   "picks": [
     {
       "ticker": "TICKER",
       "company": "Company Name",
-      "reasoning": "80-150 words condensing the guest's own logic for this pick — WHY they like it, any stated price target or timeframe, any specific catalyst or metric they referenced."
+      "reasoning": "80-150 words condensing the guest's own logic for this official top pick — WHY they like it, any stated price target or timeframe, any specific catalyst or metric they referenced."
     }
   ],
-  "closingNotes": "Optional 50-100 words. Any caller Q&A insights or risk caveats the guest mentioned. Empty string if none."
+  "callerMentions": [
+    {
+      "ticker": "TICKER",
+      "company": "Company Name",
+      "reasoning": "60-120 words condensing what the guest said about this stock when answering a caller question (buy/sell/hold stance, technicals/fundamentals, risks or valuation concerns)."
+    }
+  ],
+  "closingNotes": "Optional 50-100 words. Any general macro risks or concluding thoughts the guest mentioned. Empty string if none."
 }`;
 
   const userPrompt = `Here is the transcript from today's BNN Bloomberg MarketCall episode${videoTitle ? ` titled "${videoTitle}"` : ''}:
@@ -89,7 +98,7 @@ OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 ${transcript}
 ---END TRANSCRIPT---
 
-Produce the structured digest following the exact JSON format specified. Remember: preserve the guest's actual reasoning per pick, not generic summaries.`;
+Produce the structured digest following the exact JSON format specified. Remember: "picks" must ONLY contain the official featured Top Picks (usually 3), while all caller Q&A stock discussions belong in "callerMentions".`;
 
   return { systemPrompt, userPrompt };
 }

@@ -20,6 +20,7 @@ export default function DigestPickCard({
   guestName,
   onScoreTicker,
   index = 0,
+  isCallerMention = false,
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -32,9 +33,9 @@ export default function DigestPickCard({
 
   return (
     <div
-      className="group bg-surface-card border border-edge hover:border-accent/30
-                 rounded-xl overflow-hidden transition-all duration-300
-                 shadow-sm hover:shadow-md hover:shadow-accent/5 animate-slide-up"
+      className={`group bg-surface-card border ${
+        isCallerMention ? 'border-purple-500/20 hover:border-purple-500/40' : 'border-edge hover:border-accent/30'
+      } rounded-xl overflow-hidden transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-accent/5 animate-slide-up`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
       {/* Clickable header */}
@@ -45,19 +46,26 @@ export default function DigestPickCard({
       >
         {/* Ticker badge */}
         <div className="flex-shrink-0 mt-0.5">
-          <span className="inline-flex items-center font-mono font-bold text-sm text-accent
-                           bg-accent/10 border border-accent/25 px-2.5 py-1 rounded-lg
-                           group-hover:bg-accent/15 transition-colors">
+          <span className={`inline-flex items-center font-mono font-bold text-sm ${
+            isCallerMention
+              ? 'text-purple-400 bg-purple-500/10 border border-purple-500/25 group-hover:bg-purple-500/15'
+              : 'text-accent bg-accent/10 border border-accent/25 group-hover:bg-accent/15'
+          } px-2.5 py-1 rounded-lg transition-colors`}>
             {ticker}
           </span>
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h4 className="text-sm font-semibold text-prime truncate">
               {company || ticker}
             </h4>
+            {isCallerMention && (
+              <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/30 text-purple-300">
+                Caller Q&amp;A
+              </span>
+            )}
           </div>
           {!expanded && (
             <p className="text-xs text-dim leading-relaxed line-clamp-2">
