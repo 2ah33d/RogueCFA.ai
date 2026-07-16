@@ -11,7 +11,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.warn(
-    '⚠️ [Supabase] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables. Database operations will fail.'
+    '[Supabase] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables. Database operations will fail.'
   );
 }
 

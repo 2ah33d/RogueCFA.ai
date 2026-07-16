@@ -52,7 +52,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
           <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-surface-elevated/70 border border-edge rounded-xl font-mono text-xs text-dim">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent/20 text-accent font-bold text-xs">
-                ℹ️
+                i
               </span>
               <span>
                 <strong className="text-prime">Data Depth:</strong> {record.dataSummaryText || `Based on latest ${record.totalPicks || 9} past picks across ${record.dataUsedEpisodes || 3} episodes`}
@@ -69,7 +69,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                 <div>
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-accent block">
-                    ⚡ Time Horizon Specialist Assessment
+                    Time Horizon Specialist Assessment
                   </span>
                   <h4 className="text-base font-mono font-bold text-prime mt-0.5">
                     Performs Best With: <span className="text-signal-buy underline decoration-signal-buy/50">{record.optimalHorizonLabel}</span>
@@ -213,19 +213,19 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                       if (pick.outcome === 'CORRECT') {
                         outcomeBadge = (
                           <span className="inline-flex items-center text-[10px] font-mono font-bold text-signal-buy bg-signal-buy/15 border border-signal-buy/40 px-2 py-0.5 rounded-full">
-                            ✅ CORRECT
+                            CORRECT
                           </span>
                         );
                       } else if (pick.outcome === 'INCORRECT') {
                         outcomeBadge = (
                           <span className="inline-flex items-center text-[10px] font-mono font-bold text-signal-avoid bg-signal-avoid/15 border border-signal-avoid/40 px-2 py-0.5 rounded-full">
-                            ❌ INCORRECT
+                            INCORRECT
                           </span>
                         );
                       } else if (pick.outcome === 'NEUTRAL') {
                         outcomeBadge = (
                           <span className="inline-flex items-center text-[10px] font-mono font-medium text-signal-watch bg-signal-watch/15 border border-signal-watch/40 px-2 py-0.5 rounded-full">
-                            ℹ️ NEUTRAL
+                            NEUTRAL
                           </span>
                         );
                       }

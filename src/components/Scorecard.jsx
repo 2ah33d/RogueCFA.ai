@@ -173,7 +173,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
                             text-red-400 bg-red-500/15 border border-red-500/40 px-2.5 py-0.5 rounded-full shadow-sm"
                 title="Toronto Stock Exchange / Canadian Asset"
               >
-                🇨A TSX
+                TSX
               </span>
             )}
             {guest && (
@@ -186,7 +186,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
                 className="inline-flex items-center gap-1 text-xs font-bold font-mono text-accent bg-accent/10 border border-accent/30 px-2.5 py-0.5 rounded-full hover:bg-accent/20 transition-colors cursor-pointer"
                 title={`BNN MarketCall pick by ${guest}. Click for track record.`}
               >
-                📺 BNN Pick: {guest}
+                BNN Pick: {guest}
               </button>
             )}
           </div>
@@ -199,7 +199,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
                 className="inline-flex items-center gap-1 text-xs font-mono
                             text-red-300 bg-red-950/40 border border-red-800/50 px-2 py-0.5 rounded-full"
               >
-                🇨A CAD Currency & TSX Peer Framing
+                CAD Currency &amp; TSX Peer Framing
               </span>
             )}
             {limitedData && (
@@ -208,7 +208,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
                             text-signal-watch bg-signal-watch/10
                             border border-signal-watch/20 px-2 py-0.5 rounded-full"
               >
-                ⚠ Limited Data
+                Limited Data
               </span>
             )}
             {coverageDepth != null && coverageDepth <= 10 && (
@@ -218,7 +218,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
                             border border-signal-watch/20 px-2 py-0.5 rounded-full"
                 title={`Analyst consensus weighted at ${(coverageModifier * 100).toFixed(0)}% due to low coverage depth (${coverageDepth} analysts)`}
               >
-                📉 Low Coverage ({coverageDepth} Analysts — {(coverageModifier * 100).toFixed(0)}% Wt)
+                Low Coverage ({coverageDepth} Analysts — {(coverageModifier * 100).toFixed(0)}% Wt)
               </span>
             )}
             {hasAlphaVantage === false && (

@@ -12,7 +12,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-edge pb-5">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-xs font-bold uppercase tracking-wider mb-2">
-            ⚖️ Head-to-Head Analysis
+            Head-to-Head Analysis
           </div>
           <h3 className="text-2xl font-bold text-prime font-mono">
             Comparative Matrix ({scorecards.length} Assets)
@@ -59,7 +59,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
                       {isWinner && <span className="text-xs text-signal-buy">★</span>}
                       {isTSX && (
                         <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-1 py-0 rounded">
-                          🇨A
+                          TSX
                         </span>
                       )}
                     </div>

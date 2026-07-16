@@ -197,7 +197,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         {cleanMsg && <p className="text-sm text-dim leading-relaxed text-center">{cleanMsg}</p>}
         <div className="bg-surface-elevated border border-accent/40 rounded-xl p-4 shadow-inner">
           <div className="flex items-center gap-2 font-mono text-xs font-bold text-accent mb-1.5">
-            <span>🩺 DIAGNOSTIC TRACE &amp; REMEDIATION</span>
+            <span>DIAGNOSTIC TRACE &amp; REMEDIATION</span>
           </div>
           <p className="font-mono text-xs text-prime leading-relaxed">{diagText}</p>
         </div>
@@ -213,8 +213,8 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           {error.type === 'no_key' ? (
             <>
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-signal-watch/10 border border-signal-watch/30
-                              flex items-center justify-center">
-                <span className="text-2xl">🔑</span>
+                              flex items-center justify-center font-mono font-bold text-lg text-signal-watch">
+                KEY
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">YouTube API Key Required</h3>
               {renderDiagnostic(error.message)}
@@ -244,8 +244,8 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           ) : error.type === 'no_episode' ? (
             <>
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-surface-elevated border border-edge
-                              flex items-center justify-center">
-                <span className="text-2xl">📺</span>
+                              flex items-center justify-center font-mono font-bold text-lg text-faint">
+                BNN
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">No Recent Episode Found</h3>
               {renderDiagnostic(error.message)}
@@ -253,8 +253,8 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           ) : error.type === 'no_transcript' ? (
             <>
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-signal-watch/10 border border-signal-watch/30
-                              flex items-center justify-center">
-                <span className="text-2xl">⏳</span>
+                              flex items-center justify-center font-mono font-bold text-lg text-signal-watch">
+                ...
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">Transcript Not Ready</h3>
               {renderDiagnostic(error.message)}
@@ -281,15 +281,15 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
                              text-accent text-sm font-semibold rounded-lg
                              hover:bg-accent/20 transition-all"
                 >
-                  ⚙️ Open Settings {getGroqKey() ? '' : '(Add Groq Key)'}
+                  Open Settings {getGroqKey() ? '' : '(Add Groq Key)'}
                 </button>
               </div>
             </>
           ) : (
             <>
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-danger/10 border border-danger/30
-                              flex items-center justify-center">
-                <span className="text-2xl">⚠️</span>
+                              flex items-center justify-center font-mono font-bold text-lg text-danger">
+                !
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">Diagnostic Trace — API Error</h3>
               {renderDiagnostic(error.message)}
@@ -316,7 +316,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
                              text-accent text-sm font-semibold rounded-lg
                              hover:bg-accent/20 transition-all"
                 >
-                  ⚙️ Open Settings
+                  Open Settings
                 </button>
               </div>
             </>
@@ -331,8 +331,8 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     return (
       <div className="w-full max-w-3xl mx-auto animate-fade-in">
         <div className="bg-surface-card border border-edge rounded-2xl p-8 text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center">
-            <span className="text-3xl">📡</span>
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center font-mono font-bold text-xl text-accent">
+            AI
           </div>
           <div>
             <h3 className="text-xl font-bold text-prime">BNN Bloomberg MarketCall Digest</h3>
@@ -349,7 +349,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
                          shadow-lg shadow-accent/20 hover:bg-accent-hover hover:scale-[1.02]
                          active:scale-[0.98] transition-all"
             >
-              🔄 Check Newer / Generate Today's Digest
+              Check Newer / Generate Today's Digest
             </button>
             <button
               type="button"
@@ -359,7 +359,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
                          text-prime text-sm font-semibold rounded-xl
                          hover:border-accent/50 hover:text-accent transition-all"
             >
-              ⚙️ Open Settings
+              Open Settings
             </button>
           </div>
         </div>
@@ -386,7 +386,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             className="text-[10px] text-accent hover:text-accent-hover font-mono px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 transition-colors flex items-center gap-1"
             title="Check YouTube for a newer episode"
           >
-            🔄 Check Newer
+            Check Newer
           </button>
         </div>
         {videoInfo?.videoId && (
@@ -501,7 +501,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       {/* Footer — cost / time saved callout */}
       <div className="text-center pt-2 pb-4">
         <p className="text-[10px] text-faint font-mono">
-          ⚡ 2-minute read replacing 45-minute broadcast • ~$0.04 per digest
+          2-minute read replacing 45-minute broadcast • ~$0.04 per digest
         </p>
       </div>
     </div>

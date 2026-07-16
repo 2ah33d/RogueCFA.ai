@@ -268,7 +268,7 @@ export default function App() {
                     : 'text-dim hover:text-prime'
                 }`}
               >
-                📺 Latest Picks
+                Latest Picks
               </button>
               <button
                 onClick={() => setActiveTab('history')}
@@ -278,7 +278,7 @@ export default function App() {
                     : 'text-dim hover:text-prime'
                 }`}
               >
-                📊 Score History
+                Score History
               </button>
             </nav>
 

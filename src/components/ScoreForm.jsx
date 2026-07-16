@@ -89,7 +89,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
                   disabled={loading}
                   className="rounded border-edge bg-surface text-accent focus:ring-accent/30 w-3.5 h-3.5 cursor-pointer"
                 />
-                <span>🇨A TSX-First (Auto-append <code className="text-accent font-mono">.TO</code>)</span>
+                <span>TSX-First (Auto-append <code className="text-accent font-mono">.TO</code>)</span>
               </label>
             </div>
           </div>

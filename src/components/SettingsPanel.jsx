@@ -134,7 +134,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                   onClick={() => setIsEditingKeys(true)}
                   className="text-xs font-semibold text-accent hover:text-accent-hover transition-colors"
                 >
-                  ✏️ Edit / Add Keys
+                  Edit / Add Keys
                 </button>
               )}
             </div>
@@ -332,7 +332,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
         {/* Footer */}
         <div className="p-6 border-t border-edge">
           <p className="text-xs text-faint text-center leading-relaxed">
-            🔒 Keys are stored in your browser only. Clearing keys will require
+            Note: Keys are stored in your browser only. Clearing keys will require
             re-entry on next use.
           </p>
         </div>

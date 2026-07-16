@@ -30,7 +30,7 @@ export default function GuestBadge({ guestName, record, onClick, className = '' 
         } ${className}`}
       title={
         hasEnoughData
-          ? `${data.guestName} (${data.firm || 'Analyst'}): ${(data.hitRate * 100).toFixed(0)}% accuracy (${data.correctPicks}/${data.resolvedPicks} resolved).\nData Sample: Latest ${picksUsed} picks across ${episodesUsed} episodes.\n⚡ Specialist in: ${optLabel} (${(data.optimalHorizonHitRate * 100).toFixed(0)}% hit rate).\nClick for full track record breakdown.`
+          ? `${data.guestName} (${data.firm || 'Analyst'}): ${(data.hitRate * 100).toFixed(0)}% accuracy (${data.correctPicks}/${data.resolvedPicks} resolved).\nData Sample: Latest ${picksUsed} picks across ${episodesUsed} episodes.\nSpecialist in: ${optLabel} (${(data.optimalHorizonHitRate * 100).toFixed(0)}% hit rate).\nClick for full track record breakdown.`
           : `${data.guestName}: Insufficient resolved picks (<3) to display hit rate. Click for track record.`
       }
     >
@@ -42,13 +42,13 @@ export default function GuestBadge({ guestName, record, onClick, className = '' 
           </span>
           {data.optimalHorizonKey && (
             <span className="bg-current/10 px-1.5 py-0 rounded text-[9px] uppercase tracking-wider">
-              ⚡ Best: {data.optimalHorizonKey}
+              Best: {data.optimalHorizonKey}
             </span>
           )}
         </>
       ) : (
         <>
-          <span>📊</span>
+          <span className="font-bold">TR</span>
           <span>Track Record ({picksUsed} picks)</span>
         </>
       )}

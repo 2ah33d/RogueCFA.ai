@@ -73,7 +73,7 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                 Fetching Prices...
               </>
             ) : (
-              '🔄 Update Outcomes'
+              'Update Outcomes'
             )}
           </button>
           <button
@@ -133,13 +133,13 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                   if (returnPct >= 0) {
                     outcomeBadge = (
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-signal-buy bg-signal-buy/10 border border-signal-buy/30 px-2.5 py-1 rounded-full">
-                        ✅ HIT ({pctStr})
+                        HIT ({pctStr})
                       </span>
                     );
                   } else {
                     outcomeBadge = (
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-signal-avoid bg-signal-avoid/10 border border-signal-avoid/30 px-2.5 py-1 rounded-full">
-                        ❌ MISS ({pctStr})
+                        MISS ({pctStr})
                       </span>
                     );
                   }
@@ -147,20 +147,20 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                   if (returnPct <= 0) {
                     outcomeBadge = (
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-signal-buy bg-signal-buy/10 border border-signal-buy/30 px-2.5 py-1 rounded-full">
-                        ✅ HIT (Avoided {pctStr})
+                        HIT (Avoided {pctStr})
                       </span>
                     );
                   } else {
                     outcomeBadge = (
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-signal-avoid bg-signal-avoid/10 border border-signal-avoid/30 px-2.5 py-1 rounded-full">
-                        ❌ MISS (Up {pctStr})
+                        MISS (Up {pctStr})
                       </span>
                     );
                   }
                 } else {
                   outcomeBadge = (
                     <span className="inline-flex items-center gap-1 text-xs font-medium text-signal-watch bg-signal-watch/10 border border-signal-watch/30 px-2.5 py-1 rounded-full">
-                      ℹ️ WATCH ({pctStr})
+                      WATCH ({pctStr})
                     </span>
                   );
                 }
@@ -191,7 +191,7 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                       )}
                       {isTSX && (
                         <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-1 py-0 rounded">
-                          🇨A
+                          TSX
                         </span>
                       )}
                     </div>

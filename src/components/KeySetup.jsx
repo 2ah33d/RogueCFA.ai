@@ -223,7 +223,7 @@ export default function KeySetup({ onComplete, className = '' }) {
           </button>
 
           <p className="text-xs text-faint text-center leading-relaxed">
-            🔒 Keys are stored in your browser's localStorage only. They are
+            Note: Keys are stored in your browser's localStorage only. They are
             never sent to any server except the API provider during scoring.
           </p>
         </form>

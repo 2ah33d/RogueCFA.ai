@@ -66,7 +66,7 @@ export default function AnalystBubble({
             {episodeFocus && (
               <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-mono font-semibold
                              text-accent bg-accent/10 border border-accent/25 px-2 py-0.5 rounded-full">
-                📺 {episodeFocus}
+                {episodeFocus}
               </span>
             )}
           </div>
@@ -113,7 +113,7 @@ export default function AnalystBubble({
             <div className="space-y-1">
               <span className="inline-flex items-center gap-1 text-[10px] font-mono text-dim
                              bg-surface-elevated border border-edge px-2 py-0.5 rounded-full">
-                📊 View Track Record
+                View Track Record
               </span>
             </div>
           )}

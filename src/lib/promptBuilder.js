@@ -312,7 +312,7 @@ Score Breakdown:
 ${formatBreakdown(mathResult.breakdown)}${conflicts.length > 0 ? `\n\nDETECTED SIGNAL CONFLICTS TO RESOLVE:\n${conflicts.map((c, i) => `${i + 1}. ${c}`).join('\n')}` : ''}
 ${
   consensus.count < 3
-    ? '\n⚠ NOTE: Fewer than 3 analyst ratings available. Score reliability may be reduced.'
+    ? '\nNOTE: Fewer than 3 analyst ratings available. Score reliability may be reduced.'
     : ''
 }
 

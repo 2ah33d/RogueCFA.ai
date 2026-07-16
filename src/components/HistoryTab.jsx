@@ -47,7 +47,7 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
   if (totalScored === 0) {
     return (
       <div className={`w-full max-w-5xl mx-auto p-12 text-center bg-surface-card border border-edge rounded-2xl shadow-xl animate-fade-in ${className}`}>
-        <div className="text-4xl mb-3">📊</div>
+        <div className="text-xl font-mono font-bold text-faint mb-3">HISTORICAL EVALUATIONS</div>
         <h3 className="text-xl font-bold text-prime font-mono mb-2">No scoring history yet.</h3>
         <p className="text-sm text-dim max-w-md mx-auto">
           Score a ticker on the main scorecard view to get started. Every evaluation will be logged here automatically with price outcome tracking.
@@ -61,8 +61,8 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
       {/* Summary Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-surface-card border border-edge rounded-2xl shadow-lg">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-accent/10 border border-accent/20 rounded-xl text-accent text-2xl">
-            📈
+          <div className="p-3 bg-accent/10 border border-accent/20 rounded-xl text-accent font-mono font-bold text-lg">
+            SUM
           </div>
           <div>
             <span className="text-xs font-mono text-faint uppercase block">Total Scored</span>
@@ -72,8 +72,8 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
         </div>
 
         <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-edge pt-4 md:pt-0 md:pl-6">
-          <div className="p-3 bg-signal-buy/10 border border-signal-buy/20 rounded-xl text-signal-buy text-2xl">
-            🎯
+          <div className="p-3 bg-signal-buy/10 border border-signal-buy/20 rounded-xl text-signal-buy font-mono font-bold text-lg">
+            ACC
           </div>
           <div>
             <span className="text-xs font-mono text-faint uppercase block">Correct %</span>
@@ -132,7 +132,7 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
               onClick={handleClear}
               className="px-3.5 py-1.5 text-xs font-mono text-dim hover:text-red-400 bg-surface-card hover:bg-red-950/20 border border-edge hover:border-red-800/40 rounded-lg transition-all"
             >
-              🗑️ Clear History
+              Clear History
             </button>
           )}
         </div>
@@ -170,19 +170,19 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                 if (entry.outcome === 'CORRECT') {
                   outcomeBadge = (
                     <span className="inline-flex items-center gap-1 font-mono font-bold text-[11px] text-signal-buy bg-signal-buy/15 border border-signal-buy/40 px-2.5 py-1 rounded-full shadow-sm">
-                      ✅ CORRECT
+                      CORRECT
                     </span>
                   );
                 } else if (entry.outcome === 'INCORRECT') {
                   outcomeBadge = (
                     <span className="inline-flex items-center gap-1 font-mono font-bold text-[11px] text-signal-avoid bg-signal-avoid/15 border border-signal-avoid/40 px-2.5 py-1 rounded-full shadow-sm">
-                      ❌ INCORRECT
+                      INCORRECT
                     </span>
                   );
                 } else if (entry.outcome === 'NEUTRAL') {
                   outcomeBadge = (
                     <span className="inline-flex items-center gap-1 font-mono font-medium text-[11px] text-signal-watch bg-signal-watch/15 border border-signal-watch/40 px-2.5 py-1 rounded-full shadow-sm">
-                      ℹ️ NEUTRAL
+                      NEUTRAL
                     </span>
                   );
                 } else {
@@ -192,9 +192,9 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                     const diffTime = new Date(entry.targetDate).getTime() - new Date().getTime();
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                     if (diffDays > 0) {
-                      countdownText = `⏳ Pending (${diffDays}d left)`;
+                      countdownText = `Pending (${diffDays}d left)`;
                     } else {
-                      countdownText = `⏳ Resolving...`;
+                      countdownText = `Resolving...`;
                     }
                   }
                   outcomeBadge = (
