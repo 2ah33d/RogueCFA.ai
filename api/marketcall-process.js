@@ -8,6 +8,7 @@
    response and polls /api/marketcall-status for completion.
    ════════════════════════════════════════════════════════════════ */
 
+import { waitUntil } from '@vercel/functions';
 import { supabase } from './supabaseClient.js';
 import {
   createTimer,
@@ -102,34 +103,11 @@ export default async function handler(req, res) {
   const processingPromise = runPipeline({ youtubeKey, llmKey, provider, groqKey, jobId, todayStr });
 
   /* Vercel waitUntil: keeps the function alive after res.end() for up to maxDuration */
-  if (typeof globalThis.waitUntil === 'function') {
-    globalThis.waitUntil(processingPromise);
-  } else if (req.context?.waitUntil) {
-    req.context.waitUntil(processingPromise);
-  } else {
-    /* Fallback: if waitUntil is not available, we must await inline.
-       This means the client blocks, but it still works with maxDuration: 300. */
-    console.warn('[marketcall-process] waitUntil not available — running inline');
+  try {
+    waitUntil(processingPromise);
+  } catch (err) {
+    console.warn('[marketcall-process] waitUntil failed, running inline fallback', err);
     await processingPromise;
-    
-    /* Re-read the result and return it directly */
-    try {
-      const { data: completed } = await supabase
-        .from('digest_jobs')
-        .select('status, result, error_message')
-        .eq('id', jobId)
-        .maybeSingle();
-
-      if (completed?.status === 'complete') {
-        return res.status(200).json({ jobId, status: 'complete', result: completed.result });
-      }
-      if (completed?.status === 'error') {
-        return res.status(200).json({ jobId, status: 'error', error: completed.error_message });
-      }
-    } catch {
-      /* fall through */
-    }
-    return res.status(200).json({ jobId, status: 'processing' });
   }
 
   return res.status(202).json({ jobId, status: 'processing' });
