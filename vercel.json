@@ -12,6 +12,12 @@
     },
     "api/marketcall-digest.js": {
       "maxDuration": 60
+    },
+    "api/marketcall-process.js": {
+      "maxDuration": 300
+    },
+    "api/marketcall-status.js": {
+      "maxDuration": 10
     }
   },
   "rewrites": [

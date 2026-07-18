@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getKeys, getYoutubeKey, getGroqKey, getProvider, getDigestCache, saveDigestCache } from '../lib/storage';
 import { getGuestTrackRecord } from '../lib/guestTracker';
 import AnalystBubble from './AnalystBubble';
@@ -19,6 +19,11 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasAttempted, setHasAttempted] = useState(false);
+  /* Async polling state */
+  const [activeJobId, setActiveJobId] = useState(null);
+  const [pollingElapsed, setPollingElapsed] = useState(0);
+  const pollingRef = useRef(null);
+  const elapsedRef = useRef(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -81,9 +86,17 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         data = await res.json();
       } catch (parseErr) {
         if (res.status === 504 || res.status === 500) {
-          throw new Error(`Vercel Serverless Timeout (${res.status}): The audio transcription took slightly longer than Vercel's 60-second limit. We have optimized chunking to ~20s—please click Check Newer / Try Again.`);
+          throw new Error(`Server timeout (${res.status}). Please try again.`);
         }
         throw new Error(`API returned non-JSON response (${res.status}): ${parseErr.message}`);
+      }
+
+      /* ── New async flow: API returned a job ID for background processing ── */
+      if (data.status === 'processing' && data.jobId) {
+        setActiveJobId(data.jobId);
+        setPollingElapsed(0);
+        /* Loading stays true, polling useEffect will take over */
+        return;
       }
 
       if (data.error === 'no_episode') {
@@ -105,23 +118,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           message: data.error,
         });
       } else if (data.digest) {
-        setDigest(data.digest);
-        const epDate = data.episodeDate || todayStr;
-        setVideoInfo({
-          videoId: data.videoId,
-          videoTitle: data.videoTitle,
-          episodeDate: epDate,
-        });
-        /* Cache for latest and specific date */
-        const cacheData = {
-          digest: data.digest,
-          videoId: data.videoId,
-          videoTitle: data.videoTitle,
-          episodeDate: epDate,
-          generatedAt: data.generatedAt,
-        };
-        saveDigestCache('latest_marketcall', cacheData);
-        saveDigestCache(epDate, cacheData);
+        handleDigestReceived(data);
       }
     } catch (err) {
       setError({
@@ -129,21 +126,126 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         message: `Failed to fetch digest: ${err.message}`,
       });
     } finally {
-      setLoading(false);
-      setHasAttempted(true);
+      if (!activeJobId) {
+        setLoading(false);
+        setHasAttempted(true);
+      }
     }
   }, [todayStr]);
+
+  /** Shared handler for when a digest is received (from direct response or polling) */
+  const handleDigestReceived = useCallback((data) => {
+    const digestData = data.digest || data;
+    setDigest(digestData);
+    const epDate = data.episodeDate || todayStr;
+    setVideoInfo({
+      videoId: data.videoId,
+      videoTitle: data.videoTitle,
+      episodeDate: epDate,
+    });
+    const cacheData = {
+      digest: digestData,
+      videoId: data.videoId,
+      videoTitle: data.videoTitle,
+      episodeDate: epDate,
+      generatedAt: data.generatedAt,
+    };
+    saveDigestCache('latest_marketcall', cacheData);
+    saveDigestCache(epDate, cacheData);
+  }, [todayStr]);
+
+  /* ══════════════════════════════════════════
+     Polling effect: when activeJobId is set,
+     poll /api/marketcall-status every 5 seconds
+     ══════════════════════════════════════════ */
+  useEffect(() => {
+    if (!activeJobId) return;
+
+    /* Start elapsed counter */
+    const startTime = Date.now();
+    elapsedRef.current = setInterval(() => {
+      setPollingElapsed(Math.round((Date.now() - startTime) / 1000));
+    }, 1000);
+
+    /* Poll for status */
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/marketcall-status?jobId=${encodeURIComponent(activeJobId)}`);
+        const data = await res.json();
+
+        if (data.status === 'complete' && data.result) {
+          /* Success — render the digest */
+          handleDigestReceived(data.result);
+          stopPolling();
+          return;
+        }
+
+        if (data.status === 'error') {
+          setError({
+            type: data.error?.includes('no_transcript') ? 'no_transcript' : 'api_error',
+            message: data.error || 'Processing failed. Please try again.',
+          });
+          stopPolling();
+          return;
+        }
+
+        /* Still processing — update elapsed from server if available */
+        if (data.elapsedSeconds) {
+          setPollingElapsed(data.elapsedSeconds);
+        }
+      } catch (err) {
+        console.warn('Status poll failed:', err.message);
+        /* Don't stop polling on network glitch — it'll retry */
+      }
+    };
+
+    /* Initial poll after a short delay, then every 5s */
+    const initialTimeout = setTimeout(poll, 2000);
+    pollingRef.current = setInterval(poll, 5000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(pollingRef.current);
+      clearInterval(elapsedRef.current);
+    };
+  }, [activeJobId, handleDigestReceived]);
+
+  const stopPolling = () => {
+    setActiveJobId(null);
+    setLoading(false);
+    setHasAttempted(true);
+    setPollingElapsed(0);
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    if (elapsedRef.current) clearInterval(elapsedRef.current);
+  };
 
   /* Auto-fetch disabled per user request: only connect when user explicitly clicks Check Newer / Generate */
   useEffect(() => {
     /* Manual trigger only via buttons */
   }, [digest, hasAttempted, loading, fetchDigest]);
 
+  /** Cancel polling on unmount or refresh */
+  const handleRefreshFull = () => {
+    stopPolling();
+    handleRefresh();
+  };
+
   /* Try to get track record for the guest */
   const trackRecord = digest?.guest ? getGuestTrackRecord(digest.guest) : null;
 
-  /* ── Loading state ── */
+  /* ── Loading state (includes async polling progress) ── */
   if (loading) {
+    const isPolling = !!activeJobId;
+    const progressMessage = isPolling
+      ? pollingElapsed < 10
+        ? 'Downloading podcast audio stream…'
+        : pollingElapsed < 30
+        ? 'Transcribing audio with Groq Whisper AI…'
+        : pollingElapsed < 60
+        ? 'Synthesizing caller Q&A digest…'
+        : 'Almost there — finalizing digest…'
+      : 'Generating latest MarketCall digest…';
+
     return (
       <div className="w-full max-w-3xl mx-auto space-y-6 animate-pulse">
         <div className="text-center mb-2">
@@ -152,11 +254,26 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <span className="font-mono text-xs">Generating latest MarketCall digest…</span>
+            <span className="font-mono text-xs">{progressMessage}</span>
           </div>
-          <p className="text-[10px] text-faint mt-1">
-            Fetching transcript &amp; summarizing with AI — this takes 10-15 seconds
-          </p>
+          {isPolling ? (
+            <div className="mt-2 space-y-1.5">
+              <p className="text-[10px] text-faint font-mono">
+                Elapsed: {pollingElapsed}s — audio transcription typically takes 30–60 seconds
+              </p>
+              {/* Progress bar */}
+              <div className="max-w-xs mx-auto h-1 bg-surface-elevated rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-accent to-accent-muted rounded-full transition-all duration-1000 ease-out"
+                  style={{ width: `${Math.min(95, (pollingElapsed / 70) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="text-[10px] text-faint mt-1">
+              Fetching transcript &amp; summarizing with AI — this takes 10-15 seconds
+            </p>
+          )}
         </div>
 
         {/* Skeleton cards */}
@@ -382,7 +499,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           </span>
           <button
             type="button"
-            onClick={handleRefresh}
+            onClick={handleRefreshFull}
             className="text-[10px] text-accent hover:text-accent-hover font-mono px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 transition-colors flex items-center gap-1"
             title="Check YouTube for a newer episode"
           >
