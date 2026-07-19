@@ -74,6 +74,8 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     setLoading(true);
     setError(null);
 
+    let isPollingTrans = false;
+
     try {
       const res = await fetch('/api/marketcall-digest', {
         method: 'POST',
@@ -95,6 +97,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       if (data.status === 'processing' && data.jobId) {
         setActiveJobId(data.jobId);
         setPollingElapsed(0);
+        isPollingTrans = true;
         /* Loading stays true, polling useEffect will take over */
         return;
       }
@@ -126,7 +129,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         message: `Failed to fetch digest: ${err.message}`,
       });
     } finally {
-      if (!activeJobId) {
+      if (!isPollingTrans) {
         setLoading(false);
         setHasAttempted(true);
       }
