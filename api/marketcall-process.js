@@ -1,14 +1,16 @@
 /* ════════════════════════════════════════════════════════════════
    /api/marketcall-process.js
-   Heavy processing endpoint: kicks off the full digest pipeline
-   (RSS → MP3 → Groq Whisper → LLM) as a background task via
-   waitUntil, writing results to Supabase digest_jobs table.
+   Heavy processing endpoint: runs the full digest pipeline
+   (RSS → MP3 → Groq Whisper → LLM) INLINE, writing results to
+   Supabase digest_jobs table.
    
-   The client gets an immediate { jobId, status: 'processing' }
-   response and polls /api/marketcall-status for completion.
+   Called directly by the client as fire-and-forget. The client
+   does NOT wait for this response — it polls /api/marketcall-status
+   for completion instead. This function runs for up to 300s.
+   
+   No waitUntil, no background task magic — just inline execution.
    ════════════════════════════════════════════════════════════════ */
 
-import { waitUntil } from '@vercel/functions';
 import { supabase } from './supabaseClient.js';
 import {
   createTimer,
@@ -24,15 +26,11 @@ import {
 export const config = { maxDuration: 300 };
 
 /**
- * Generate a deterministic job ID for today's episode.
- * Format: mc-YYYY-MM-DD-<4-char hash>
- * The hash incorporates a timestamp window so retries within the same
- * 10-minute window reuse the same job ID (dedup), but a retry 10+ min
- * later gets a fresh job.
+ * Generate a deterministic job ID (same logic as digest route).
  */
 function generateJobId(episodeDate) {
   const dateStr = episodeDate || new Date().toISOString().split('T')[0];
-  const windowKey = Math.floor(Date.now() / 600000); // 10-minute windows
+  const windowKey = Math.floor(Date.now() / 600000);
   const hash = (windowKey * 2654435761 >>> 0).toString(36).slice(0, 4);
   return `mc-${dateStr}-${hash}`;
 }
@@ -58,32 +56,35 @@ export default async function handler(req, res) {
   const todayStr = new Date().toISOString().split('T')[0];
   const jobId = generateJobId(todayStr);
 
-  /* ── Check if this job is already running or completed ── */
+  /* ── Check if this job is already completed ── */
   try {
     const { data: existing } = await supabase
       .from('digest_jobs')
-      .select('id, status, result, error_message')
+      .select('id, status, result')
       .eq('id', jobId)
       .maybeSingle();
 
-    if (existing) {
-      if (existing.status === 'complete' && existing.result) {
-        return res.status(200).json({
-          jobId,
-          status: 'complete',
-          result: existing.result,
-        });
-      }
-      if (existing.status === 'processing') {
+    if (existing?.status === 'complete' && existing.result) {
+      return res.status(200).json({
+        jobId,
+        status: 'complete',
+        result: existing.result,
+      });
+    }
+    /* If 'processing' by another invocation, also return early —
+       don't run duplicate pipelines */
+    if (existing?.status === 'processing') {
+      const age = Date.now() - new Date(existing.created_at || 0).getTime();
+      if (age < 4 * 60 * 1000) {
         return res.status(200).json({ jobId, status: 'processing' });
       }
-      /* If status is 'error', allow re-processing by falling through */
+      /* If > 4 min old, it's stale — allow re-processing */
     }
   } catch (dbErr) {
-    console.warn('[marketcall-process] Supabase check failed, proceeding anyway:', dbErr.message);
+    console.warn('[marketcall-process] Supabase check failed:', dbErr.message);
   }
 
-  /* ── Create/upsert the job row as 'processing' ── */
+  /* ── Ensure the job row exists as 'processing' ── */
   try {
     await supabase
       .from('digest_jobs')
@@ -99,25 +100,12 @@ export default async function handler(req, res) {
     console.warn('[marketcall-process] Failed to write job row:', dbErr.message);
   }
 
-  /* ── Return immediately, then process in the background via waitUntil ── */
-  const processingPromise = runPipeline({ youtubeKey, llmKey, provider, groqKey, jobId, todayStr });
-
-  /* Vercel waitUntil: keeps the function alive after res.end() for up to maxDuration */
-  try {
-    waitUntil(processingPromise);
-  } catch (err) {
-    console.warn('[marketcall-process] waitUntil failed, running inline fallback', err);
-    await processingPromise;
-  }
-
-  return res.status(202).json({ jobId, status: 'processing' });
-}
-
-/* ════════════════════════════════════════════════════════════════
-   Full pipeline execution — runs in background via waitUntil
-   ════════════════════════════════════════════════════════════════ */
-
-async function runPipeline({ youtubeKey, llmKey, provider, groqKey, jobId, todayStr }) {
+  /* ══════════════════════════════════════════════════════════════
+     Run the full pipeline INLINE — no waitUntil needed.
+     This function has maxDuration: 300, so the pipeline has
+     the full budget. The client doesn't wait for this response;
+     it polls /api/marketcall-status independently.
+     ══════════════════════════════════════════════════════════════ */
   const timer = createTimer();
 
   try {
@@ -125,7 +113,7 @@ async function runPipeline({ youtubeKey, llmKey, provider, groqKey, jobId, today
     let cleanedTranscript = null;
     let groqDiagnosticMsg = '';
 
-    /* ── Step 1: Find candidate videos (only if youtubeKey provided) ── */
+    /* ── Step 1: Find candidate videos ── */
     let candidateVideos = [];
     if (youtubeKey) {
       candidateVideos = await findRecentMarketCallVideos(youtubeKey, timer);
@@ -209,7 +197,7 @@ async function runPipeline({ youtubeKey, llmKey, provider, groqKey, jobId, today
       const errorMsg = `Found "${newest.videoTitle || 'Market Call'}" (${newest.episodeDate ? 'aired ' + newest.episodeDate : 'recent'}), but full audio/captions are not ready yet.${missingGroqMsg}`;
 
       await updateJob(jobId, 'error', null, errorMsg, newest.videoId, newest.videoTitle);
-      return;
+      return res.status(200).json({ jobId, status: 'error', error: errorMsg });
     }
 
     /* ── Step 6: Build prompt & call LLM ── */
@@ -218,11 +206,12 @@ async function runPipeline({ youtubeKey, llmKey, provider, groqKey, jobId, today
     const digest = extractJSON(rawLLMResponse);
 
     if (!digest || !digest.guest) {
-      await updateJob(jobId, 'error', null, `LLM returned an unparseable digest.${groqDiagnosticMsg}`);
-      return;
+      const errMsg = `LLM returned an unparseable digest.${groqDiagnosticMsg}`;
+      await updateJob(jobId, 'error', null, errMsg);
+      return res.status(200).json({ jobId, status: 'error', error: errMsg });
     }
 
-    /* ── Success — write result ── */
+    /* ── Success ── */
     const result = {
       digest,
       videoId: selectedVideo.videoId,
@@ -235,10 +224,13 @@ async function runPipeline({ youtubeKey, llmKey, provider, groqKey, jobId, today
 
     await updateJob(jobId, 'complete', result, null, selectedVideo.videoId, selectedVideo.videoTitle);
     console.log('[marketcall-process] Pipeline complete:', JSON.stringify(timer.report()));
+    return res.status(200).json({ jobId, status: 'complete', result });
 
   } catch (error) {
     console.error('[marketcall-process] Pipeline error:', error);
-    await updateJob(jobId, 'error', null, `Pipeline failed: ${error.message}`);
+    const errMsg = `Pipeline failed: ${error.message}`;
+    await updateJob(jobId, 'error', null, errMsg);
+    return res.status(200).json({ jobId, status: 'error', error: errMsg });
   }
 }
 

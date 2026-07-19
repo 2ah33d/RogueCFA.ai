@@ -1,10 +1,11 @@
 /* ════════════════════════════════════════════════════════════════
    /api/marketcall-digest.js
    Smart router: handles extension-provided transcripts inline,
-   checks Supabase cache for today's digest, and delegates heavy
-   processing to /api/marketcall-process.js for async execution.
+   checks Supabase cache for today's digest, and returns a job ID
+   for the client to kick off /api/marketcall-process independently.
    
-   This route now responds in < 2s for all cases — no more 504s.
+   This route always responds in < 2s. No internal server-to-server
+   fetch, no waitUntil — pure routing.
    ════════════════════════════════════════════════════════════════ */
 
 import { supabase } from './supabaseClient.js';
@@ -16,9 +17,18 @@ import {
   extractJSON,
 } from './_pipeline.js';
 
-/* This route is now lightweight — 60s is more than enough for
-   the extension fast path (transcript already provided, just LLM call) */
 export const config = { maxDuration: 60 };
+
+/**
+ * Generate a deterministic job ID for today's episode.
+ * 10-minute windows for dedup: retries in the same window reuse the same job.
+ */
+function generateJobId(episodeDate) {
+  const dateStr = episodeDate || new Date().toISOString().split('T')[0];
+  const windowKey = Math.floor(Date.now() / 600000);
+  const hash = (windowKey * 2654435761 >>> 0).toString(36).slice(0, 4);
+  return `mc-${dateStr}-${hash}`;
+}
 
 export default async function handler(req, res) {
   /* ── CORS ── */
@@ -98,17 +108,16 @@ export default async function handler(req, res) {
         .maybeSingle();
 
       if (cached && cached.result) {
-        /* Return the cached digest — instant response */
         return res.status(200).json(cached.result);
       }
     } catch (cacheErr) {
-      console.warn('[marketcall-digest] Cache check failed, proceeding to process:', cacheErr.message);
+      console.warn('[marketcall-digest] Cache check failed:', cacheErr.message);
     }
 
     /* ══════════════════════════════════════════
-       Standard path: Kick off async processing
-       — delegates to /api/marketcall-process.js
-       — returns { status: 'processing', jobId } immediately
+       Standard path: Create job row and return jobId.
+       The CLIENT will fire /api/marketcall-process separately.
+       No server-to-server fetch, no waitUntil.
        ══════════════════════════════════════════ */
     if (!youtubeKey && (!groqKey || !groqKey.startsWith('gsk_'))) {
       return res.status(400).json({
@@ -116,63 +125,67 @@ export default async function handler(req, res) {
       });
     }
 
-    /* Check if there's already a job processing for today */
+    const jobId = generateJobId(todayStr);
+
+    /* Check if there's already a job for today */
     try {
       const { data: existingJob } = await supabase
         .from('digest_jobs')
         .select('id, status, error_message, created_at')
         .eq('episode_date', todayStr)
-        .eq('status', 'processing')
+        .in('status', ['processing', 'complete'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (existingJob) {
-        /* If the job has been "processing" for > 5 min, it's dead — mark it and move on */
+        if (existingJob.status === 'complete') {
+          /* Shouldn't reach here (Fast path B handles it), but just in case */
+          return res.status(200).json({ status: 'complete', jobId: existingJob.id });
+        }
+        /* If processing, check for staleness */
         const jobAge = Date.now() - new Date(existingJob.created_at).getTime();
         if (jobAge > 5 * 60 * 1000) {
-          console.warn(`[marketcall-digest] Stale job ${existingJob.id} (${Math.round(jobAge / 1000)}s old) — marking as error`);
+          console.warn(`[marketcall-digest] Stale job ${existingJob.id} — marking as error`);
           await supabase
             .from('digest_jobs')
-            .update({ status: 'error', error_message: 'Job timed out (stale processing)', updated_at: new Date().toISOString() })
+            .update({ status: 'error', error_message: 'Job timed out', updated_at: new Date().toISOString() })
             .eq('id', existingJob.id);
-          /* Fall through to kick off a fresh job */
+          /* Fall through to create fresh job */
         } else {
+          /* Active job — tell client to poll it AND kick off process (idempotent) */
           return res.status(200).json({
             status: 'processing',
             jobId: existingJob.id,
-            message: 'Digest is being generated. Polling for completion...',
+            message: 'Digest is being generated.',
           });
         }
       }
     } catch {
-      /* proceed to kick off new processing */
+      /* proceed */
     }
 
-    /* Fire the processing endpoint internally via fetch.
-       On Vercel, this creates a separate function invocation with its own
-       300s maxDuration budget, completely independent of this request. */
-    const processUrl = `https://${req.headers.host}/api/marketcall-process`;
-
-    const processRes = await fetch(processUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey }),
-      signal: AbortSignal.timeout(10000), /* Only wait 10s for the initial response */
-    });
-
-    const processData = await processRes.json().catch(() => ({}));
-
-    if (processData.status === 'complete' && processData.result) {
-      /* Processing was instant (cached or already done) */
-      return res.status(200).json(processData.result);
+    /* Create fresh job row */
+    try {
+      await supabase
+        .from('digest_jobs')
+        .upsert({
+          id: jobId,
+          episode_date: todayStr,
+          status: 'processing',
+          result: null,
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+    } catch (dbErr) {
+      console.warn('[marketcall-digest] Failed to create job row:', dbErr.message);
     }
 
-    /* Return the job ID for the client to poll */
+    /* Return immediately — client will fire /api/marketcall-process */
     return res.status(200).json({
-      status: processData.status || 'processing',
-      jobId: processData.jobId || '',
-      message: 'Digest generation started. Audio transcription typically takes 30-60 seconds.',
+      status: 'processing',
+      jobId,
+      message: 'Job created. Starting processing...',
     });
 
   } catch (error) {

@@ -93,12 +93,25 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         throw new Error(`API returned non-JSON response (${res.status}): ${parseErr.message}`);
       }
 
-      /* ── New async flow: API returned a job ID for background processing ── */
+      /* ── Async flow: API returned a job ID — kick off the processor ── */
       if (data.status === 'processing' && data.jobId) {
         setActiveJobId(data.jobId);
         setPollingElapsed(0);
         isPollingTrans = true;
-        /* Loading stays true, polling useEffect will take over */
+
+        /* Fire-and-forget: kick off the heavy processing endpoint.
+           We don't await this — the client polls /api/marketcall-status
+           independently. The process function runs inline for up to 300s
+           on the server, updating Supabase when done. */
+        fetch('/api/marketcall-process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey }),
+        }).catch(() => {
+          /* Ignore — if this fails, the polling will detect 'not_found' or timeout */
+        });
+
+        /* Loading stays true, polling useEffect takes over */
         return;
       }
 
