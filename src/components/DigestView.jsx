@@ -159,15 +159,28 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
   /* ══════════════════════════════════════════
      Polling effect: when activeJobId is set,
-     poll /api/marketcall-status every 5 seconds
+     poll /api/marketcall-status every 5 seconds.
+     Bails out after 180s to prevent infinite spinning.
      ══════════════════════════════════════════ */
+  const MAX_POLL_SECONDS = 180;
+
   useEffect(() => {
     if (!activeJobId) return;
 
     /* Start elapsed counter */
     const startTime = Date.now();
     elapsedRef.current = setInterval(() => {
-      setPollingElapsed(Math.round((Date.now() - startTime) / 1000));
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
+      setPollingElapsed(elapsed);
+
+      /* Bail out if we've been waiting too long */
+      if (elapsed > MAX_POLL_SECONDS) {
+        setError({
+          type: 'api_error',
+          message: `Background processing timed out after ${MAX_POLL_SECONDS}s. The server may have crashed. Please try again.`,
+        });
+        stopPolling();
+      }
     }, 1000);
 
     /* Poll for status */
@@ -192,9 +205,13 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           return;
         }
 
-        /* Still processing — update elapsed from server if available */
-        if (data.elapsedSeconds) {
-          setPollingElapsed(data.elapsedSeconds);
+        if (data.status === 'not_found') {
+          setError({
+            type: 'api_error',
+            message: 'Job not found — the server may not have started processing. Please try again.',
+          });
+          stopPolling();
+          return;
         }
       } catch (err) {
         console.warn('Status poll failed:', err.message);
@@ -203,7 +220,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     };
 
     /* Initial poll after a short delay, then every 5s */
-    const initialTimeout = setTimeout(poll, 2000);
+    const initialTimeout = setTimeout(poll, 3000);
     pollingRef.current = setInterval(poll, 5000);
 
     return () => {

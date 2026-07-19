@@ -120,7 +120,7 @@ export default async function handler(req, res) {
     try {
       const { data: existingJob } = await supabase
         .from('digest_jobs')
-        .select('id, status, error_message')
+        .select('id, status, error_message, created_at')
         .eq('episode_date', todayStr)
         .eq('status', 'processing')
         .order('created_at', { ascending: false })
@@ -128,11 +128,22 @@ export default async function handler(req, res) {
         .maybeSingle();
 
       if (existingJob) {
-        return res.status(200).json({
-          status: 'processing',
-          jobId: existingJob.id,
-          message: 'Digest is being generated. Polling for completion...',
-        });
+        /* If the job has been "processing" for > 5 min, it's dead — mark it and move on */
+        const jobAge = Date.now() - new Date(existingJob.created_at).getTime();
+        if (jobAge > 5 * 60 * 1000) {
+          console.warn(`[marketcall-digest] Stale job ${existingJob.id} (${Math.round(jobAge / 1000)}s old) — marking as error`);
+          await supabase
+            .from('digest_jobs')
+            .update({ status: 'error', error_message: 'Job timed out (stale processing)', updated_at: new Date().toISOString() })
+            .eq('id', existingJob.id);
+          /* Fall through to kick off a fresh job */
+        } else {
+          return res.status(200).json({
+            status: 'processing',
+            jobId: existingJob.id,
+            message: 'Digest is being generated. Polling for completion...',
+          });
+        }
       }
     } catch {
       /* proceed to kick off new processing */
