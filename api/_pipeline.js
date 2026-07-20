@@ -380,22 +380,20 @@ export async function fetchRssPodcastFallback(groqKey = '', timer) {
                 }
 
                 /*
-                 * Ultra-Fast ~4.5MB (~5-minute) Audio Slicing + 150KB Byte Overlap + 3-Chunk Concurrency Batcher
-                 * Why: Transcribing a ~4.5MB slice takes Groq Whisper just ~3 to 5 seconds.
-                 * Overlap (~150KB) ensures mid-word cut boundaries (e.g. stock tickers CNQ/CVE) are never lost.
-                 * Batching 3 concurrent chunks at a time completes in ~8-12s while preventing Groq burst/concurrency rate limits.
+                 * Split MP3 into 21MB chunks to comply with Groq's 25MB limit.
+                 * A 43MB episode yields 2-3 chunks, all transcribed concurrently
+                 * via Promise.all — typically completes in ~15-20s total.
+                 * The Xing/Info header nullification above prevents Groq 502 hangs.
                  */
-                const CHUNK_LIMIT_BYTES = Math.floor(4.5 * 1024 * 1024);
-                const OVERLAP_BYTES = 150 * 1024;
+                const CHUNK_LIMIT_BYTES = 21 * 1024 * 1024;
                 const chunks = [];
                 let offset = 0;
                 while (offset < audioBuffer.byteLength) {
                   const end = Math.min(offset + CHUNK_LIMIT_BYTES, audioBuffer.byteLength);
                   chunks.push(audioBuffer.slice(offset, end));
-                  if (end >= audioBuffer.byteLength) break;
-                  offset = end - OVERLAP_BYTES;
+                  offset = end;
                 }
-                console.log(`[TIMING] Audio split into ${chunks.length} chunks`);
+                console.log(`[TIMING] Audio split into ${chunks.length} chunks (${(audioBuffer.byteLength / 1024 / 1024).toFixed(1)}MB total)`);
 
                 /* Transcribe a single audio chunk via Groq Whisper Turbo */
                 const transcribeChunk = async (chunkBuf, idx) => {
@@ -408,7 +406,7 @@ export async function fetchRssPodcastFallback(groqKey = '', timer) {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${groqKey}` },
                     body: formData,
-                    signal: AbortSignal.timeout(25000),
+                    signal: AbortSignal.timeout(45000),
                   });
 
                   if (!res.ok && res.status === 400) {
@@ -418,7 +416,7 @@ export async function fetchRssPodcastFallback(groqKey = '', timer) {
                       method: 'POST',
                       headers: { 'Authorization': `Bearer ${groqKey}` },
                       body: formData,
-                      signal: AbortSignal.timeout(25000),
+                      signal: AbortSignal.timeout(45000),
                     });
                   }
 
@@ -430,19 +428,10 @@ export async function fetchRssPodcastFallback(groqKey = '', timer) {
                   return { text: '', error: `Groq API error (${res.status} chunk ${idx}): ${errData.error?.message || res.statusText}` };
                 };
 
-                /* Execute chunk transcriptions in controlled concurrent batches of 3 to prevent burst rate limits */
-                const results = [];
-                const CONCURRENT_BATCH_SIZE = 3;
-                for (let i = 0; i < chunks.length; i += CONCURRENT_BATCH_SIZE) {
-                  const batchNum = Math.floor(i / CONCURRENT_BATCH_SIZE) + 1;
-                  timer?.start(`Whisper batch ${batchNum}`);
-                  const batchPromises = chunks.slice(i, i + CONCURRENT_BATCH_SIZE).map((buf, batchIdx) =>
-                    transcribeChunk(buf, i + batchIdx + 1)
-                  );
-                  const batchResults = await Promise.all(batchPromises);
-                  results.push(...batchResults);
-                  timer?.end(`Whisper batch ${batchNum}`);
-                }
+                /* Transcribe ALL chunks concurrently — with 2-3 chunks this completes in ~15-20s */
+                timer?.start('Whisper transcription');
+                const results = await Promise.all(chunks.map((buf, i) => transcribeChunk(buf, i + 1)));
+                timer?.end('Whisper transcription');
 
                 const firstError = results.find(r => r.error);
                 if (firstError && !results.some(r => r.text && r.text.length >= 200)) {
@@ -597,6 +586,7 @@ async function callGemini(key, systemPrompt, userPrompt) {
       contents: [{ parts: [{ text: userPrompt }] }],
       generationConfig: { responseMimeType: 'application/json' },
     }),
+    signal: AbortSignal.timeout(30000),
   });
 
   if (!response.ok) {
@@ -637,6 +627,7 @@ async function callClaude(key, systemPrompt, userPrompt) {
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
       }),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (response.ok) {
@@ -676,6 +667,7 @@ async function callOpenAI(key, systemPrompt, userPrompt) {
         { role: 'user', content: userPrompt },
       ],
     }),
+    signal: AbortSignal.timeout(30000),
   });
 
   if (!response.ok) {

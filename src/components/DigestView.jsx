@@ -173,9 +173,9 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   /* ══════════════════════════════════════════
      Polling effect: when activeJobId is set,
      poll /api/marketcall-status every 5 seconds.
-     Bails out after 180s to prevent infinite spinning.
+     Bails out after 270s to prevent infinite spinning.
      ══════════════════════════════════════════ */
-  const MAX_POLL_SECONDS = 180;
+  const MAX_POLL_SECONDS = 270;
 
   useEffect(() => {
     if (!activeJobId) return;
