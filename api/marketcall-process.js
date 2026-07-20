@@ -157,7 +157,13 @@ export default async function handler(req, res) {
     /* ── Step 4: Priority 3 — Try older candidates ── */
     if (!selectedVideo || !cleanedTranscript) {
       if (!groqKey || !groqKey.startsWith('gsk_')) {
-        for (let i = 1; i < candidateVideos.length; i++) {
+        const maxCandidates = Math.min(candidateVideos.length, 3);
+        for (let i = 1; i < maxCandidates; i++) {
+          /* Fail fast if approaching 300s Vercel limit */
+          if (timer.report().totalMs > 240000) {
+            groqDiagnosticMsg += ' [DIAGNOSTIC: Fallback loop aborted to prevent Vercel 300s hard timeout.]';
+            break;
+          }
           const candidate = candidateVideos[i];
           const raw = await fetchTranscript(candidate.videoId);
           if (raw && raw.length >= 100) {
@@ -175,14 +181,18 @@ export default async function handler(req, res) {
     /* ── Step 5: Final RSS text fallback ── */
     if (!selectedVideo || !cleanedTranscript) {
       if (!groqKey || !groqKey.startsWith('gsk_')) {
-        const rssFallback = await fetchRssPodcastFallback('', timer);
-        if (rssFallback && rssFallback.text && rssFallback.text.length >= 150) {
-          selectedVideo = candidateVideos[0] || {
-            videoId: '',
-            videoTitle: 'BNN Bloomberg MarketCall (Audio/RSS Feed)',
-            episodeDate: todayStr,
-          };
-          cleanedTranscript = cleanRawTranscript(rssFallback.text);
+        if (timer.report().totalMs <= 240000) {
+          const rssFallback = await fetchRssPodcastFallback('', timer);
+          if (rssFallback && rssFallback.text && rssFallback.text.length >= 150) {
+            selectedVideo = candidateVideos[0] || {
+              videoId: '',
+              videoTitle: 'BNN Bloomberg MarketCall (Audio/RSS Feed)',
+              episodeDate: todayStr,
+            };
+            cleanedTranscript = cleanRawTranscript(rssFallback.text);
+          }
+        } else {
+          groqDiagnosticMsg += ' [DIAGNOSTIC: Skipped RSS fallback to prevent Vercel 300s hard timeout.]';
         }
       }
     }

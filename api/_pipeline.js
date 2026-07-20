@@ -239,62 +239,52 @@ export async function fetchTranscript(videoId) {
  * Fallback: hit timedtext endpoints directly (checking both ASR and manual en tracks)
  */
 async function fetchTimedText(videoId) {
-  const urls = [
-    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=json3`,
-    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`,
-  ];
-
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, {
-        headers: YOUTUBE_BROWSER_HEADERS,
-        signal: AbortSignal.timeout(8000),
-      });
-      if (res.ok) {
-        const data = await res.json().catch(() => null);
-        if (data && data.events) {
-          const text = data.events
-            .filter((e) => e.segs)
-            .map((e) => e.segs.map((s) => s.utf8 || '').join(''))
-            .filter((t) => t.trim())
-            .join(' ');
-          if (text.length >= 200) return text;
-        }
-      }
-    } catch {
-      /* continue to next url */
+  const fetchJson = async (url) => {
+    const res = await fetch(url, {
+      headers: YOUTUBE_BROWSER_HEADERS,
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data && data.events) {
+      const text = data.events
+        .filter((e) => e.segs)
+        .map((e) => e.segs.map((s) => s.utf8 || '').join(''))
+        .filter((t) => t.trim())
+        .join(' ');
+      if (text.length >= 200) return text;
     }
-  }
+    throw new Error('Insufficient length');
+  };
 
-  /* Try XML formats if json3 didn't yield text */
-  const xmlUrls = [
-    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr`,
-    `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en`,
-  ];
-
-  for (const xmlUrl of xmlUrls) {
-    try {
-      const xmlRes = await fetch(xmlUrl, {
-        headers: YOUTUBE_BROWSER_HEADERS,
-        signal: AbortSignal.timeout(8000),
-      });
-      if (xmlRes.ok) {
-        const xmlText = await xmlRes.text();
-        const textMatches = xmlText.match(/<text[^>]*>([\s\S]*?)<\/text>/gi);
-        if (textMatches) {
-          const text = textMatches
-            .map((m) => m.replace(/<[^>]+>/g, '').trim())
-            .filter(Boolean)
-            .join(' ');
-          if (text.length >= 200) return text;
-        }
-      }
-    } catch {
-      /* continue */
+  const fetchXml = async (url) => {
+    const res = await fetch(url, {
+      headers: YOUTUBE_BROWSER_HEADERS,
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const xmlText = await res.text();
+    const textMatches = xmlText.match(/<text[^>]*>([\s\S]*?)<\/text>/gi);
+    if (textMatches) {
+      const text = textMatches
+        .map((m) => m.replace(/<[^>]+>/g, '').trim())
+        .filter(Boolean)
+        .join(' ');
+      if (text.length >= 200) return text;
     }
-  }
+    throw new Error('Insufficient length');
+  };
 
-  return '';
+  try {
+    return await Promise.any([
+      fetchJson(`https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=json3`),
+      fetchJson(`https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`),
+      fetchXml(`https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr`),
+      fetchXml(`https://www.youtube.com/api/timedtext?v=${videoId}&lang=en`)
+    ]);
+  } catch {
+    return '';
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════
