@@ -103,6 +103,7 @@ export default async function handler(req, res) {
         .select('id, status, result, error_message, video_id, video_title')
         .eq('episode_date', todayStr)
         .eq('status', 'complete')
+        .eq('is_debug', false)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -133,6 +134,7 @@ export default async function handler(req, res) {
         .from('digest_jobs')
         .select('id, status, error_message, created_at')
         .eq('episode_date', todayStr)
+        .eq('is_debug', false)
         .in('status', ['processing', 'complete'])
         .order('created_at', { ascending: false })
         .limit(1)
@@ -175,6 +177,7 @@ export default async function handler(req, res) {
           status: 'processing',
           result: null,
           error_message: null,
+          is_debug: false,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'id' });
     } catch (dbErr) {

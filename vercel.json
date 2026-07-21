@@ -20,6 +20,12 @@
       "maxDuration": 10
     }
   },
+  "crons": [
+    {
+      "path": "/api/marketcall-process",
+      "schedule": "0 19 * * 1-5"
+    }
+  ],
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]

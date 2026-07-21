@@ -35,6 +35,32 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
   const [isEditingKeys, setIsEditingKeys] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  /* Debug Mode */
+  const debugMatch = window.location.search.match(/debug=([^&]+)/);
+  const debugSecret = debugMatch ? debugMatch[1] : null;
+  const [debugLoading, setDebugLoading] = useState(false);
+  const [debugResult, setDebugResult] = useState(null);
+
+  const handleDebugRun = async () => {
+    setDebugLoading(true);
+    setDebugResult(null);
+    try {
+      const res = await fetch('/api/marketcall-process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          youtubeKey, llmKey, provider, groqKey, debugSecret
+        })
+      });
+      const data = await res.json();
+      setDebugResult(data);
+    } catch (err) {
+      setDebugResult({ error: err.message });
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
   const handleProviderChange = (val) => {
     setProvider(val);
     saveProvider(val);
@@ -304,6 +330,29 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
 
           {/* Danger zone */}
           <section className="border-t border-edge pt-6 space-y-3">
+            {debugSecret && (
+              <div className="bg-surface rounded-lg border border-accent p-3 mb-4 animate-fade-in shadow-[0_0_15px_rgba(var(--color-accent),0.15)]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-black tracking-widest text-accent uppercase flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
+                    Debug Mode Active
+                  </span>
+                </div>
+                <button
+                  onClick={handleDebugRun}
+                  disabled={debugLoading}
+                  className="w-full py-2.5 bg-accent/10 border border-accent/20 text-accent rounded-lg text-xs font-bold hover:bg-accent/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {debugLoading ? 'Running Pipeline (~40-90s)...' : 'Force Regenerate (Isolated)'}
+                </button>
+                {debugResult && (
+                  <pre className="mt-3 text-[10px] bg-[#0a0a0a] border border-edge p-2.5 rounded-lg text-faint overflow-x-auto max-h-48 font-mono leading-relaxed">
+                    {JSON.stringify(debugResult, null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
+
             <button
               onClick={handleClearHistory}
               className="w-full py-2.5 px-4 bg-surface border border-edge rounded-lg

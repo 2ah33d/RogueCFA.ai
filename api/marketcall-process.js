@@ -38,50 +38,72 @@ function generateJobId(episodeDate) {
 export default async function handler(req, res) {
   /* ── CORS ── */
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') {
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const {
-    youtubeKey, llmKey, provider, groqKey,
-  } = req.body || {};
+  let youtubeKey, llmKey, provider, groqKey;
+  let isDebug = false;
+
+  if (req.method === 'GET') {
+    /* ── Cron Invocation ── */
+    const auth = req.headers.authorization || '';
+    if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+      return res.status(401).json({ error: 'Unauthorized cron trigger' });
+    }
+    youtubeKey = process.env.CRON_YOUTUBE_KEY;
+    llmKey = process.env.CRON_LLM_KEY;
+    provider = process.env.CRON_LLM_PROVIDER || 'gemini';
+    groqKey = process.env.CRON_GROQ_KEY;
+  } else {
+    /* ── Standard or Debug Client Invocation (POST) ── */
+    const body = req.body || {};
+    youtubeKey = body.youtubeKey;
+    llmKey = body.llmKey;
+    provider = body.provider;
+    groqKey = body.groqKey;
+
+    if (body.debugSecret && body.debugSecret === process.env.DEBUG_SECRET) {
+      isDebug = true;
+    }
+  }
 
   if (!llmKey || !provider) {
     return res.status(400).json({ error: 'LLM key and provider are required.' });
   }
 
   const todayStr = new Date().toISOString().split('T')[0];
-  const jobId = generateJobId(todayStr);
+  const jobId = isDebug ? `debug-${Date.now()}` : generateJobId(todayStr);
 
-  /* ── Check if this job is already completed ── */
-  try {
-    const { data: existing } = await supabase
-      .from('digest_jobs')
-      .select('id, status, result')
-      .eq('id', jobId)
-      .maybeSingle();
+  /* ── Check if this job is already completed (skip if debug) ── */
+  if (!isDebug) {
+    try {
+      const { data: existing } = await supabase
+        .from('digest_jobs')
+        .select('id, status, result')
+        .eq('id', jobId)
+        .maybeSingle();
 
-    if (existing?.status === 'complete' && existing.result) {
-      return res.status(200).json({
-        jobId,
-        status: 'complete',
-        result: existing.result,
-      });
-    }
-    /* If 'processing' by another invocation, also return early —
-       don't run duplicate pipelines */
-    if (existing?.status === 'processing') {
-      const age = Date.now() - new Date(existing.created_at || 0).getTime();
-      if (age < 4 * 60 * 1000) {
-        return res.status(200).json({ jobId, status: 'processing' });
+      if (existing?.status === 'complete' && existing.result) {
+        return res.status(200).json({
+          jobId,
+          status: 'complete',
+          result: existing.result,
+        });
       }
-      /* If > 4 min old, it's stale — allow re-processing */
+      /* If 'processing' by another invocation, also return early */
+      if (existing?.status === 'processing') {
+        const age = Date.now() - new Date(existing.created_at || 0).getTime();
+        if (age < 4 * 60 * 1000) {
+          return res.status(200).json({ jobId, status: 'processing' });
+        }
+      }
+    } catch (dbErr) {
+      console.warn('[marketcall-process] Supabase check failed:', dbErr.message);
     }
-  } catch (dbErr) {
-    console.warn('[marketcall-process] Supabase check failed:', dbErr.message);
   }
 
   /* ── Ensure the job row exists as 'processing' ── */
@@ -94,6 +116,7 @@ export default async function handler(req, res) {
         status: 'processing',
         result: null,
         error_message: null,
+        is_debug: isDebug,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' });
   } catch (dbErr) {
