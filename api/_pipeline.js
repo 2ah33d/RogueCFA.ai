@@ -508,7 +508,7 @@ STRICT RULES:
 6. CRITICAL DISTINCTION FOR PICKS VS CALLER Q&A:
    - "picks": MUST contain EXACTLY the guest's official featured Top Picks (typically 3 stocks) introduced by the guest/host at the start or during the official Top Picks segment.
    - "callerMentions": MUST contain any additional stocks discussed by the guest when answering caller questions or viewer emails during the Q&A segment. DO NOT mix caller Q&A stocks into "picks".
-7. CRITICAL JSON ESCAPING: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings. Escape all quotes as \\" (e.g., "The guest said \\"buy\\"").
+7. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
 
 OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 {
@@ -693,14 +693,28 @@ export function extractJSON(text) {
       try {
         return JSON.parse(match[0]);
       } catch {
-        /* Attempt repair for trailing commas */
+        /* Attempt repair 1: trailing commas */
         try {
-          const repaired = match[0].replace(/,\s*([}\]])/g, '$1');
-          return JSON.parse(repaired);
-        } catch (err) {
-          const parseErr = new Error(`JSON malformed: ${err.message}`);
-          parseErr.rawText = match[0];
-          throw parseErr;
+          const repairedCommas = match[0].replace(/,\s*([}\]])/g, '$1');
+          return JSON.parse(repairedCommas);
+        } catch {
+          /* Attempt repair 2: missing array closing bracket at end of JSON (e.g. }\n}) */
+          try {
+            const repairedBrackets = match[0].replace(/\}\s*\}$/, '}\n  ]\n}');
+            return JSON.parse(repairedBrackets);
+          } catch {
+            /* Attempt repair 3: combined trailing comma + missing bracket */
+            try {
+              const repairedBoth = match[0]
+                .replace(/,\s*([}\]])/g, '$1')
+                .replace(/\}\s*\}$/, '}\n  ]\n}');
+              return JSON.parse(repairedBoth);
+            } catch (err) {
+              const parseErr = new Error(`JSON malformed: ${err.message}`);
+              parseErr.rawText = match[0];
+              throw parseErr;
+            }
+          }
         }
       }
     }
