@@ -108,7 +108,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         fetch('/api/marketcall-process', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey }),
+          body: JSON.stringify({ jobId: data.jobId, youtubeKey, llmKey, provider, groqKey }),
         }).catch(() => {
           /* Ignore — if this fails, the polling will detect 'not_found' or timeout */
         });
