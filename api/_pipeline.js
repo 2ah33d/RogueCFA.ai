@@ -19,7 +19,7 @@ const BNN_CHANNEL_ID = 'UCo7DCnBKIHEtJNSQbFXFJnA';
  *   timer.end('MP3 download');   // logs: [TIMING] MP3 download: 12345ms
  *   const report = timer.report(); // returns { stages: [...], totalMs }
  */
-export function createTimer() {
+export function createTimer(onProgress) {
   const stages = [];
   const active = new Map();
   const t0 = Date.now();
@@ -27,6 +27,7 @@ export function createTimer() {
   return {
     start(label) {
       active.set(label, Date.now());
+      if (onProgress) onProgress(label);
     },
     end(label) {
       const started = active.get(label);

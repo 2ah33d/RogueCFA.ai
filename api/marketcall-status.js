@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   try {
     const { data, error } = await supabase
       .from('digest_jobs')
-      .select('id, status, result, error_message, episode_date, video_id, video_title, created_at, updated_at')
+      .select('id, status, result, error_message, current_stage, episode_date, video_id, video_title, created_at, updated_at')
       .eq('id', jobId)
       .maybeSingle();
 
@@ -47,6 +47,7 @@ export default async function handler(req, res) {
       jobId: data.id,
       status: data.status,
       episodeDate: data.episode_date,
+      currentStage: data.current_stage || 'Initializing...',
     };
 
     if (data.status === 'complete' && data.result) {

@@ -22,8 +22,10 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   /* Async polling state */
   const [activeJobId, setActiveJobId] = useState(null);
   const [pollingElapsed, setPollingElapsed] = useState(0);
+  const [lastKnownStage, setLastKnownStage] = useState('Initializing pipeline...');
   const pollingRef = useRef(null);
   const elapsedRef = useRef(null);
+  const stageRef = useRef('Initializing pipeline...');
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -190,7 +192,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       if (elapsed > MAX_POLL_SECONDS) {
         setError({
           type: 'api_error',
-          message: `Background processing timed out after ${MAX_POLL_SECONDS}s. The server may have crashed. Please try again.`,
+          message: `Background processing timed out after ${MAX_POLL_SECONDS}s while stuck at: "${stageRef.current}". The server may have crashed. Please try again.`,
         });
         stopPolling();
       }
@@ -201,6 +203,11 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       try {
         const res = await fetch(`/api/marketcall-status?jobId=${encodeURIComponent(activeJobId)}`);
         const data = await res.json();
+        
+        if (data.currentStage) {
+          setLastKnownStage(data.currentStage);
+          stageRef.current = data.currentStage;
+        }
 
         if (data.status === 'complete' && data.result) {
           /* Success — render the digest */
@@ -270,13 +277,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   if (loading) {
     const isPolling = !!activeJobId;
     const progressMessage = isPolling
-      ? pollingElapsed < 10
-        ? 'Downloading podcast audio stream…'
-        : pollingElapsed < 30
-        ? 'Transcribing audio with Groq Whisper AI…'
-        : pollingElapsed < 60
-        ? 'Synthesizing caller Q&A digest…'
-        : 'Almost there — finalizing digest…'
+      ? lastKnownStage
       : 'Generating latest MarketCall digest…';
 
     return (

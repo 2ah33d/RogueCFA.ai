@@ -129,7 +129,9 @@ export default async function handler(req, res) {
      the full budget. The client doesn't wait for this response;
      it polls /api/marketcall-status independently.
      ══════════════════════════════════════════════════════════════ */
-  const timer = createTimer();
+  const timer = createTimer((stage) => {
+    supabase.from('digest_jobs').update({ current_stage: stage }).eq('id', jobId).catch(() => {});
+  });
 
   try {
     let selectedVideo = null;
