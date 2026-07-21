@@ -130,7 +130,10 @@ export default async function handler(req, res) {
      it polls /api/marketcall-status independently.
      ══════════════════════════════════════════════════════════════ */
   const timer = createTimer((stage) => {
-    supabase.from('digest_jobs').update({ current_stage: stage }).eq('id', jobId).catch(() => {});
+    supabase.from('digest_jobs').update({ current_stage: stage }).eq('id', jobId)
+      .then(({ error }) => {
+        if (error) console.warn('[marketcall-process] stage update failed:', error.message);
+      });
   });
 
   try {
