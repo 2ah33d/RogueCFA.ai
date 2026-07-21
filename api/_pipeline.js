@@ -508,6 +508,7 @@ STRICT RULES:
 6. CRITICAL DISTINCTION FOR PICKS VS CALLER Q&A:
    - "picks": MUST contain EXACTLY the guest's official featured Top Picks (typically 3 stocks) introduced by the guest/host at the start or during the official Top Picks segment.
    - "callerMentions": MUST contain any additional stocks discussed by the guest when answering caller questions or viewer emails during the Q&A segment. DO NOT mix caller Q&A stocks into "picks".
+7. CRITICAL JSON ESCAPING: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings. Escape all quotes as \\" (e.g., "The guest said \\"buy\\"").
 
 OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 {
@@ -697,11 +698,15 @@ export function extractJSON(text) {
           const repaired = match[0].replace(/,\s*([}\]])/g, '$1');
           return JSON.parse(repaired);
         } catch (err) {
-          throw new Error(`JSON malformed: ${err.message}`);
+          const parseErr = new Error(`JSON malformed: ${err.message}`);
+          parseErr.rawText = match[0];
+          throw parseErr;
         }
       }
     }
-    throw new Error(`No JSON found in LLM response.`);
+    const noJsonErr = new Error(`No JSON found in LLM response.`);
+    noJsonErr.rawText = stripped;
+    throw noJsonErr;
   }
 }
 

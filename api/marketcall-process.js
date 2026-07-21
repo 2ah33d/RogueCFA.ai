@@ -268,7 +268,7 @@ export default async function handler(req, res) {
     console.error('[marketcall-process] Pipeline error:', error);
     const errMsg = `Pipeline failed: ${error.message}`;
     await updateJob(jobId, 'error', null, errMsg);
-    return res.status(200).json({ jobId, status: 'error', error: errMsg });
+    return res.status(200).json({ jobId, status: 'error', error: errMsg, rawResponse: error.rawText });
   }
 }
 
