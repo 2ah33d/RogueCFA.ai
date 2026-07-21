@@ -576,7 +576,7 @@ async function callGemini(key, systemPrompt, userPrompt) {
       contents: [{ parts: [{ text: userPrompt }] }],
       generationConfig: { responseMimeType: 'application/json' },
     }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(150000),
   });
 
   if (!response.ok) {
@@ -617,7 +617,7 @@ async function callClaude(key, systemPrompt, userPrompt) {
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
       }),
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(150000),
     });
 
     if (response.ok) {
@@ -657,7 +657,7 @@ async function callOpenAI(key, systemPrompt, userPrompt) {
         { role: 'user', content: userPrompt },
       ],
     }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(150000),
   });
 
   if (!response.ok) {
