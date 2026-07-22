@@ -680,47 +680,89 @@ async function callOpenAI(key, systemPrompt, userPrompt) {
 
 export function extractJSON(text) {
   if (!text) throw new Error('LLM returned an empty response.');
-  const stripped = text
+  let str = text
     .replace(/```json/gi, '')
     .replace(/```/g, '')
     .trim();
 
+  const firstBrace = str.indexOf('{');
+  const lastBrace = str.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    str = str.slice(firstBrace, lastBrace + 1);
+  }
+
+  /* Step 1: Direct JSON parse */
   try {
-    return JSON.parse(stripped);
-  } catch {
-    const match = stripped.match(/\{[\s\S]*\}/);
-    if (match) {
-      try {
-        return JSON.parse(match[0]);
-      } catch {
-        /* Attempt repair 1: trailing commas */
-        try {
-          const repairedCommas = match[0].replace(/,\s*([}\]])/g, '$1');
-          return JSON.parse(repairedCommas);
-        } catch {
-          /* Attempt repair 2: missing array closing bracket at end of JSON (e.g. }\n}) */
-          try {
-            const repairedBrackets = match[0].replace(/\}\s*\}$/, '}\n  ]\n}');
-            return JSON.parse(repairedBrackets);
-          } catch {
-            /* Attempt repair 3: combined trailing comma + missing bracket */
-            try {
-              const repairedBoth = match[0]
-                .replace(/,\s*([}\]])/g, '$1')
-                .replace(/\}\s*\}$/, '}\n  ]\n}');
-              return JSON.parse(repairedBoth);
-            } catch (err) {
-              const parseErr = new Error(`JSON malformed: ${err.message}`);
-              parseErr.rawText = match[0];
-              throw parseErr;
-            }
+    return JSON.parse(str);
+  } catch {}
+
+  /* Step 2: Trailing comma cleanup */
+  let repaired = str.replace(/,\s*([}\]])/g, '$1');
+  try {
+    return JSON.parse(repaired);
+  } catch {}
+
+  /* Step 3: Fast regex missing bracket repair (}\n}) */
+  let repairedBracket = repaired.replace(/\}\s*\}$/, '}\n  ]\n}');
+  try {
+    return JSON.parse(repairedBracket);
+  } catch {}
+
+  /* Step 4: Full character scanner & stack auto-balancer */
+  let out = '';
+  let inString = false;
+  let isEscaped = false;
+  let stack = [];
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (inString) {
+      if (char === '\n') { out += '\\n'; continue; }
+      if (char === '\r') { out += '\\r'; continue; }
+      if (char === '\t') { out += '\\t'; continue; }
+      if (char === '\\') { isEscaped = !isEscaped; out += char; }
+      else if (char === '"') {
+        if (isEscaped) { out += char; isEscaped = false; }
+        else {
+          const rest = str.slice(i + 1).trimStart();
+          const nextChar = rest[0];
+          if (!nextChar || [',', '}', ']', ':'].includes(nextChar)) {
+            inString = false;
+            out += char;
+          } else {
+            out += '\\"';
           }
         }
-      }
+      } else { isEscaped = false; out += char; }
+    } else {
+      if (char === '"') { inString = true; out += char; }
+      else if (char === '{' || char === '[') { stack.push(char === '{' ? '}' : ']'); out += char; }
+      else if (char === ']') {
+        if (stack.length > 0 && stack[stack.length - 1] === ']') stack.pop();
+        out += char;
+      } else if (char === '}') {
+        if (stack.length > 0 && stack[stack.length - 1] === ']') {
+          stack.pop();
+          out += '\n  ]\n';
+        }
+        if (stack.length > 0 && stack[stack.length - 1] === '}') {
+          stack.pop();
+        }
+        out += char;
+      } else { out += char; }
     }
-    const noJsonErr = new Error(`No JSON found in LLM response.`);
-    noJsonErr.rawText = stripped;
-    throw noJsonErr;
+  }
+  if (inString) out += '"';
+  out = out.replace(/,\s*$/, '');
+  while (stack.length > 0) { out += '\n' + stack.pop(); }
+  out = out.replace(/,\s*([}\]])/g, '$1');
+
+  try {
+    return JSON.parse(out);
+  } catch (err) {
+    const parseErr = new Error(`JSON malformed: ${err.message}`);
+    parseErr.rawText = out || str;
+    throw parseErr;
   }
 }
 
