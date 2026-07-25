@@ -3,6 +3,7 @@ import { getKeys, getYoutubeKey, getGroqKey, getProvider, getDigestCache, saveDi
 import { getGuestTrackRecord } from '../lib/guestTracker';
 import AnalystBubble from './AnalystBubble';
 import DigestPickCard from './DigestPickCard';
+import HistoryBrowser from './HistoryBrowser';
 
 /**
  * DigestView — Main "Today's Picks" tab content.
@@ -108,7 +109,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         fetch('/api/marketcall-process', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobId: data.jobId, youtubeKey, llmKey, provider, groqKey }),
+          body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey }),
         }).catch(() => {
           /* Ignore — if this fails, the polling will detect 'not_found' or timeout */
         });
@@ -203,7 +204,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       try {
         const res = await fetch(`/api/marketcall-status?jobId=${encodeURIComponent(activeJobId)}`);
         const data = await res.json();
-        
+
         if (data.currentStage) {
           setLastKnownStage(data.currentStage);
           stageRef.current = data.currentStage;
@@ -518,23 +519,35 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     );
   }
 
+  const handleSelectHistoricalDigest = (historicalItem) => {
+    if (historicalItem && historicalItem.digest) {
+      setDigest(historicalItem.digest);
+      setVideoInfo({
+        videoId: historicalItem.videoId,
+        videoTitle: historicalItem.videoTitle,
+        episodeDate: historicalItem.episodeDate,
+      });
+    }
+  };
+
   /* ── Digest loaded ── */
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6 animate-fade-in">
       {/* Header bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-elevated/40 border border-edge p-3 rounded-2xl">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center justify-center w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           <h2 className="text-xs font-bold uppercase tracking-wider text-prime font-mono">
-            Latest MarketCall Digest
+            MarketCall Digest
           </h2>
-          <span className="text-[10px] text-faint font-mono bg-surface-elevated px-1.5 py-0.5 rounded border border-edge">
-            {videoInfo?.episodeDate || todayStr}
-          </span>
+          <HistoryBrowser
+            selectedDate={videoInfo?.episodeDate}
+            onSelectDigest={handleSelectHistoricalDigest}
+          />
           <button
             type="button"
             onClick={handleRefreshFull}
-            className="text-[10px] text-accent hover:text-accent-hover font-mono px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 transition-colors flex items-center gap-1"
+            className="text-[10px] text-accent hover:text-accent-hover font-mono px-2 py-1 rounded bg-accent/10 border border-accent/20 transition-colors flex items-center gap-1"
             title="Check YouTube for a newer episode"
           >
             Check Newer

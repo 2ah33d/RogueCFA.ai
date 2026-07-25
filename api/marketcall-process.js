@@ -262,6 +262,54 @@ export default async function handler(req, res) {
 
     await updateJob(jobId, 'complete', result, null, selectedVideo.videoId, selectedVideo.videoTitle);
     console.log('[marketcall-process] Pipeline complete:', JSON.stringify(timer.report()));
+
+    /* ── Step 7: Track Record Processing (Passive & Cold-Start) ── */
+    if (digest.guest) {
+      /* Fire-and-forget background processing so digest response is never delayed */
+      (async () => {
+        try {
+          const { normalizeAnalystName, parseBnnPastPicksArticle } = await import('./_bnnScraper.js');
+          const cleanGuest = normalizeAnalystName(digest.guest);
+
+          /* 1. Passive Capture: check if today's transcript contains a past picks block */
+          if (cleanedTranscript && /PAST\s+PICKS:/i.test(cleanedTranscript)) {
+            const rows = parseBnnPastPicksArticle(cleanedTranscript, `https://www.bnnbloomberg.ca/markets/`, cleanGuest);
+            if (rows && rows.length > 0) {
+              await supabase.from('analyst_track_record').upsert(rows, {
+                onConflict: 'analyst_name, ticker, pick_publish_date',
+                ignoreDuplicates: true,
+              });
+              console.log(`[marketcall-process] Passive capture inserted ${rows.length} rows for ${cleanGuest}`);
+            }
+          }
+
+          /* 2. Cold-Start Capture: Check if analyst has 0 existing track record rows */
+          const { count: existingCount } = await supabase
+            .from('analyst_track_record')
+            .select('id', { count: 'exact', head: true })
+            .ilike('analyst_name', `%${cleanGuest}%`);
+
+          if (!existingCount || existingCount === 0) {
+            console.log(`[marketcall-process] Cold-start triggered for analyst "${cleanGuest}"`);
+            const protocol = req.headers['x-forwarded-proto'] || 'http';
+            const host = req.headers.host || 'localhost:3000';
+            const coldstartUrl = `${protocol}://${host}/api/analyst-coldstart`;
+
+            fetch(coldstartUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ analyst: cleanGuest }),
+              signal: AbortSignal.timeout(15000),
+            }).catch((csErr) => {
+              console.warn('[marketcall-process] Non-blocking cold-start fetch failed:', csErr.message);
+            });
+          }
+        } catch (trackErr) {
+          console.warn('[marketcall-process] Track record processing warning:', trackErr.message);
+        }
+      })();
+    }
+
     return res.status(200).json({ jobId, status: 'complete', result });
 
   } catch (error) {
