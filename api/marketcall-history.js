@@ -16,35 +16,47 @@ export default async function handler(req, res) {
     const limit = Math.min(parseInt(req.query.limit || '30', 10), 100);
     const offset = Math.max(parseInt(req.query.offset || '0', 10), 0);
 
-    /* Fetch complete, non-debug digests ordered by episode_date descending */
-    const { data, error, count } = await supabase
+    /* Fetch complete, non-debug digests ordered by episode_date descending, then created_at descending */
+    const { data, error } = await supabase
       .from('digest_jobs')
-      .select('id, episode_date, video_id, video_title, result, created_at, updated_at', { count: 'exact' })
+      .select('id, episode_date, video_id, video_title, result, created_at, updated_at')
       .eq('status', 'complete')
       .eq('is_debug', false)
       .not('result', 'is', null)
       .order('episode_date', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('[marketcall-history] Database error:', error.message);
       return res.status(500).json({ error: `Database error: ${error.message}` });
     }
 
-    const history = (data || []).map((row) => ({
-      id: row.id,
-      episodeDate: row.episode_date,
-      videoId: row.video_id,
-      videoTitle: row.video_title,
-      digest: row.result?.digest || null,
-      generatedAt: row.result?.generatedAt || row.updated_at || row.created_at,
-    }));
+    /* Deduplicate by episode_date so each BNN episode date appears exactly once in chronological order */
+    const seenDates = new Set();
+    const uniqueHistory = [];
+
+    for (const row of data || []) {
+      const dateKey = row.episode_date || row.result?.episodeDate || 'unknown';
+      if (!seenDates.has(dateKey)) {
+        seenDates.add(dateKey);
+        uniqueHistory.push({
+          id: row.id,
+          episodeDate: dateKey,
+          videoId: row.video_id || row.result?.videoId,
+          videoTitle: row.video_title || row.result?.videoTitle,
+          digest: row.result?.digest || null,
+          generatedAt: row.result?.generatedAt || row.updated_at || row.created_at,
+        });
+      }
+    }
+
+    const paginated = uniqueHistory.slice(offset, offset + limit);
 
     return res.status(200).json({
-      count: count || history.length,
+      count: uniqueHistory.length,
       limit,
       offset,
-      history,
+      history: paginated,
     });
   } catch (err) {
     console.error('[marketcall-history] Handler exception:', err);

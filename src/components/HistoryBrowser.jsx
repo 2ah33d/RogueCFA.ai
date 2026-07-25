@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 /**
  * HistoryBrowser.jsx — Component for browsing past completed MarketCall digests.
- * Google Minimal aesthetic: flat grey badges, 8px radius, quiet borders.
+ * Displays deduplicated episode dates strictly ordered by air date.
  */
 export default function HistoryBrowser({ selectedDate, onSelectDigest, className = '' }) {
   const [history, setHistory] = useState([]);
@@ -78,10 +78,15 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
               <div className="px-3 py-2 bg-surface-elevated text-[10px] uppercase font-semibold text-dim tracking-wider">
                 Select Episode Date (Last 30 Days)
               </div>
-              {history.map((item) => {
-                const isSelected = item.episodeDate === selectedDate || (!selectedDate && item === history[0]);
+              {history.map((item, idx) => {
+                const isSelected = item.episodeDate === selectedDate || (!selectedDate && idx === 0);
                 const guestName = item.digest?.guest || 'MarketCall Analyst';
-                const pickCount = Array.isArray(item.digest?.top_picks) ? item.digest.top_picks.length : 0;
+                const picksList = Array.isArray(item.digest?.picks)
+                  ? item.digest.picks
+                  : Array.isArray(item.digest?.top_picks)
+                    ? item.digest.top_picks
+                    : [];
+                const pickCount = picksList.length;
 
                 return (
                   <button
