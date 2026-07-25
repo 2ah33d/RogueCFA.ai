@@ -15,10 +15,17 @@ const KEYS = {
 /* ── API keys ── */
 
 export function getKeys() {
+  const finnhubKey = localStorage.getItem(KEYS.FINNHUB) || '';
+  const llmKey = localStorage.getItem(KEYS.LLM) || '';
+  const alphaVantageKey = localStorage.getItem(KEYS.ALPHAVANTAGE) || '';
   return {
-    finnhubKey: localStorage.getItem(KEYS.FINNHUB) || '',
-    llmKey: localStorage.getItem(KEYS.LLM) || '',
-    alphaVantageKey: localStorage.getItem(KEYS.ALPHAVANTAGE) || '',
+    finnhubKey,
+    llmKey,
+    alphaVantageKey,
+    /* Property aliases for compatibility across all callers */
+    finnhub: finnhubKey,
+    llm: llmKey,
+    alphavantage: alphaVantageKey,
   };
 }
 

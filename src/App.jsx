@@ -97,8 +97,11 @@ export default function App() {
     async (tickers, holdPeriod, analystGuest = null) => {
       const keys = getKeys();
       const provider = getProvider();
+      const finnhubKey = keys.finnhubKey || keys.finnhub;
+      const llmApiKey = keys.llmKey || keys.llm || keys[provider];
+      const alphaVantageKey = keys.alphaVantageKey || keys.alphavantage;
 
-      if (!keys.finnhub) {
+      if (!finnhubKey) {
         addToast('Finnhub API Key is required to score tickers.');
         setShowSettings(true);
         return;
@@ -117,11 +120,11 @@ export default function App() {
 
       for (const ticker of tickers) {
         try {
-          const finnhubData = await fetchTickerData(ticker, keys.finnhub);
+          const finnhubData = await fetchTickerData(ticker, finnhubKey);
           let alphaData = null;
-          if (keys.alphavantage) {
+          if (alphaVantageKey) {
             try {
-              alphaData = await fetchAlphaVantageData(ticker, keys.alphavantage);
+              alphaData = await fetchAlphaVantageData(ticker, alphaVantageKey);
             } catch (err) {
               console.warn(`[App] AlphaVantage failed for ${ticker}, continuing with Finnhub data:`, err.message);
             }
@@ -129,7 +132,7 @@ export default function App() {
 
           const calc = calculateScore(finnhubData, alphaData, holdPeriod);
           const { systemPrompt, userPrompt } = buildPrompt(finnhubData, alphaData, calc, holdPeriod);
-          const llmResult = await scoreWithLLM(provider, keys[provider] || keys.llm, systemPrompt, userPrompt);
+          const llmResult = await scoreWithLLM(provider, llmApiKey, systemPrompt, userPrompt);
 
           const scorecardData = {
             ...calc,
@@ -155,7 +158,7 @@ export default function App() {
       if (results.length > 1) {
         try {
           const { systemPrompt, userPrompt } = buildComparisonPrompt(results, holdPeriod);
-          const rawComp = await scoreWithLLM(provider, keys[provider] || keys.llm, systemPrompt, userPrompt);
+          const rawComp = await scoreWithLLM(provider, llmApiKey, systemPrompt, userPrompt);
           setComparisonResult(rawComp);
         } catch (err) {
           console.warn('[App] Comparative evaluation failed:', err.message);
