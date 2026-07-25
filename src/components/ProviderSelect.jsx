@@ -8,14 +8,14 @@ const PROVIDERS = [
   {
     id: 'claude',
     label: 'Anthropic Claude',
-    model: 'claude-sonnet-5',
-    tag: 'Paid',
+    model: 'claude-sonnet-3.5',
+    tag: 'Paid API key',
   },
   {
     id: 'openai',
     label: 'OpenAI',
     model: 'gpt-4o-mini',
-    tag: 'Paid',
+    tag: 'Paid API key',
   },
 ];
 
@@ -25,18 +25,18 @@ export default function ProviderSelect({ value, onChange, className = '' }) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-2.5 bg-surface border border-edge rounded-lg
-                   text-prime appearance-none cursor-pointer
-                   focus:outline-none focus:border-accent focus:ring-1
-                   focus:ring-accent/30 transition-colors"
+        className="w-full px-4 py-3 bg-surface-elevated rounded-xl
+                   text-prime text-sm appearance-none cursor-pointer
+                   focus:outline-none focus:ring-1 focus:ring-accent/50
+                   transition-all shadow-inner font-sans"
       >
         {PROVIDERS.map((p) => (
-          <option key={p.id} value={p.id}>
+          <option key={p.id} value={p.id} className="bg-surface-elevated text-prime">
             {p.label} — {p.model} ({p.tag})
           </option>
         ))}
       </select>
-      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+      <div className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center">
         <svg
           className="w-4 h-4 text-dim"
           fill="none"
