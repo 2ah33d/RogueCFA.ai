@@ -29,31 +29,31 @@ import DigestView from './components/DigestView';
    ════════════════════════════════════════════════════════════════ */
 const THEME = `
 :root {
-  /* ——— Surfaces (Google Minimal) ——— */
-  --c-surface:          241 243 244;   /* #F1F3F4  — Google neutral grey page background */
-  --c-surface-card:     255 255 255;   /* #FFFFFF  — pure white card background      */
-  --c-surface-elevated: 241 243 244;   /* #F1F3F4  — flat grey chip/tag background   */
+  /* ——— Surfaces (Discord / VSCode Dark Aesthetic) ——— */
+  --c-surface:          30 31 34;      /* #1E1F22  — Deep dark grey background */
+  --c-surface-card:     43 45 49;      /* #2B2D31  — Dark card surface fill    */
+  --c-surface-elevated: 49 51 56;      /* #313338  — Secondary dark tag/chip   */
 
   /* ——— Borders ——— */
-  --c-edge:             218 220 224;   /* #DADCE0  — 1px solid #DADCE0 border   */
+  --c-edge:             60 63 69;      /* #3C3F45  — Subtle dark border        */
 
   /* ——— Text ——— */
-  --c-prime:            32 33 36;      /* #202124  — primary text */
-  --c-dim:              95 99 104;     /* #5F6368  — secondary text */
-  --c-faint:            128 134 139;   /* #80868B  — muted text */
+  --c-prime:            242 243 245;   /* #F2F3F5  — Crisp light text          */
+  --c-dim:              181 186 193;   /* #B5BAC1  — Secondary grey text       */
+  --c-faint:            128 132 142;   /* #80848E  — Muted text                */
 
-  /* ——— Accent (Interactive Only — Existing Blue #166392) ——— */
-  --c-accent:           22 99 146;     /* #166392  — steel blue accent */
-  --c-accent-hover:     26 115 232;    /* #1A73E8  — hover state blue */
+  /* ——— Accent (Interactive Steel Blue #166392 / VSCode Blue) ——— */
+  --c-accent:           22 99 146;     /* #166392  — Steel blue accent         */
+  --c-accent-hover:     56 139 253;    /* #388BFD  — Bright blue hover         */
   --c-accent-muted:     22 99 146;
 
-  /* ——— Signal colours ——— */
-  --c-signal-buy:       24 128 56;     /* #188038  — Google green */
-  --c-signal-watch:     234 134 0;     /* #EA8600  — Google amber */
-  --c-signal-avoid:     217 48 37;     /* #D93025  — Google red */
+  /* ——— Signal colours (High contrast dark mode) ——— */
+  --c-signal-buy:       46 160 67;     /* #2EA043  — Emerald green             */
+  --c-signal-watch:     210 153 34;    /* #D29922  — Amber gold                */
+  --c-signal-avoid:     248 81 73;     /* #F85149  — Ruby red                  */
 
   /* ——— Danger ——— */
-  --c-danger:           217 48 37;     /* #D93025 */
+  --c-danger:           248 81 73;     /* #F85149 */
 }
 `;
 
