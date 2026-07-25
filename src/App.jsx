@@ -190,8 +190,8 @@ export default function App() {
 
         {/* ── Header ── */}
         <header
-          className="w-full border-b border-edge bg-surface-card/50
-                      backdrop-blur-md sticky top-0 z-30"
+          className="w-full border-b border-surface-card/40 bg-surface/80
+                      backdrop-blur-md sticky top-0 z-30 shadow-antigravity"
         >
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <div
@@ -208,43 +208,43 @@ export default function App() {
               </span>
             </div>
 
-            <nav className="flex items-center gap-1 bg-surface-card p-1 rounded-full border border-edge text-xs">
+            <nav className="flex items-center gap-1 bg-surface-card p-1 rounded-full shadow-inner text-xs">
               <button
                 onClick={() => setActiveTab('landing')}
-                className={`px-3.5 py-1 rounded-full transition-colors font-medium ${
+                className={`px-4 py-1.5 rounded-full transition-all font-medium ${
                   activeTab === 'landing'
-                    ? 'bg-surface-elevated text-prime border border-edge'
-                    : 'text-dim hover:text-prime border border-transparent'
+                    ? 'bg-surface-elevated text-prime font-semibold shadow-antigravity'
+                    : 'text-dim hover:text-prime'
                 }`}
               >
                 Overview
               </button>
               <button
                 onClick={() => setActiveTab('score')}
-                className={`px-3.5 py-1 rounded-full transition-colors font-medium ${
+                className={`px-4 py-1.5 rounded-full transition-all font-medium ${
                   activeTab === 'score'
-                    ? 'bg-surface-elevated text-prime border border-edge'
-                    : 'text-dim hover:text-prime border border-transparent'
+                    ? 'bg-surface-elevated text-prime font-semibold shadow-antigravity'
+                    : 'text-dim hover:text-prime'
                 }`}
               >
                 Score Ticker
               </button>
               <button
                 onClick={() => setActiveTab('digest')}
-                className={`px-3.5 py-1 rounded-full transition-colors font-medium ${
+                className={`px-4 py-1.5 rounded-full transition-all font-medium ${
                   activeTab === 'digest'
-                    ? 'bg-surface-elevated text-prime border border-edge'
-                    : 'text-dim hover:text-prime border border-transparent'
+                    ? 'bg-surface-elevated text-prime font-semibold shadow-antigravity'
+                    : 'text-dim hover:text-prime'
                 }`}
               >
                 Latest Picks
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`px-3.5 py-1 rounded-full transition-colors font-medium ${
+                className={`px-4 py-1.5 rounded-full transition-all font-medium ${
                   activeTab === 'history'
-                    ? 'bg-surface-elevated text-prime border border-edge'
-                    : 'text-dim hover:text-prime border border-transparent'
+                    ? 'bg-surface-elevated text-prime font-semibold shadow-antigravity'
+                    : 'text-dim hover:text-prime'
                 }`}
               >
                 Score History
@@ -254,8 +254,8 @@ export default function App() {
             <button
               onClick={() => setShowSettings(true)}
               className="w-8 h-8 flex items-center justify-center rounded-full
-                         text-dim hover:text-prime hover:bg-surface-elevated
-                         transition-colors border border-edge"
+                         text-dim hover:text-prime hover:bg-surface-card
+                         transition-all shadow-antigravity"
               aria-label="Open settings"
             >
               <svg
