@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { saveBnnPicks, getGuestTrackRecord } from '../lib/guestTracker';
-import GuestBadge from './GuestBadge';
 
 /**
- * MarketCallBar — Linear.app aesthetic: monochrome tiered dark, 8px card, pill chips.
+ * MarketCallBar — Tool screen strip: clean plain text with subtle dividers (no nested boxes).
  */
 export default function MarketCallBar({ onSelectTicker, onSelectGuest, className = '' }) {
   const [picks, setPicks] = useState([]);
@@ -52,64 +51,53 @@ export default function MarketCallBar({ onSelectTicker, onSelectGuest, className
 
   if (loading) {
     return (
-      <div className={`w-full max-w-4xl mx-auto mb-6 p-4 bg-surface-card border border-edge rounded-lg animate-pulse ${className}`}>
-        <div className="h-4 bg-surface-elevated rounded w-48 mb-3" />
-        <div className="flex gap-2 overflow-hidden">
-          <div className="h-7 bg-surface-elevated rounded-full w-44" />
-          <div className="h-7 bg-surface-elevated rounded-full w-52" />
-          <div className="h-7 bg-surface-elevated rounded-full w-40" />
-        </div>
+      <div className={`w-full max-w-2xl mx-auto py-2 border-b border-edge animate-pulse ${className}`}>
+        <div className="h-4 bg-surface-elevated rounded w-48" />
       </div>
     );
   }
 
   return (
-    <section className={`w-full max-w-4xl mx-auto mb-6 p-4 bg-surface-card border border-edge rounded-lg transition-shadow hover:shadow-linear-hover ${className}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-dim">
-            Today&apos;s MarketCall Picks
-          </h4>
-          <span className="text-[11px] text-faint bg-surface-elevated px-2 py-0.5 rounded-full border border-edge">
-            BNN Bloomberg
-          </span>
-        </div>
-        <span className="text-[11px] text-dim">
-          Click ticker to score • Click analyst for track record
+    <section className={`w-full max-w-2xl mx-auto py-3 border-b border-edge flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-sans ${className}`}>
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-dim">
+          BNN Picks:
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Clean text row with subtle dividers — NO nested bordered boxes! */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
         {picks.map((pick, idx) => {
           const ticker = pick.tickers[0];
           const record = getGuestTrackRecord(pick.guest, picks);
+          const winRate = record && record.hitRate !== null ? `${(record.hitRate * 100).toFixed(0)}%` : null;
 
           return (
-            <div
-              key={`${ticker}-${pick.guest}-${idx}`}
-              className="inline-flex items-center bg-surface-elevated hover:bg-surface-card border border-edge hover:border-white/20 rounded-full pl-3 pr-1.5 py-1 text-xs transition-colors"
-            >
+            <div key={`${ticker}-${pick.guest}-${idx}`} className="flex items-center gap-1.5 text-dim">
               <button
                 type="button"
                 onClick={() => onSelectTicker && onSelectTicker(ticker, pick.guest)}
-                className="flex items-center gap-1.5 font-medium text-dim hover:text-prime transition-colors text-left"
+                className="font-mono font-semibold text-prime hover:text-white transition-colors"
                 title={`Click to score ${ticker}`}
               >
-                <span className="font-mono font-semibold text-prime">
-                  {ticker}
-                </span>
-                <span className="truncate max-w-[130px] font-normal text-dim">
-                  {pick.guest}
-                </span>
+                {ticker}
               </button>
-
-              <div className="ml-2 pl-2 border-l border-edge flex items-center">
-                <GuestBadge
-                  guestName={pick.guest}
-                  record={record}
-                  onClick={() => onSelectGuest && onSelectGuest(pick.guest)}
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => onSelectGuest && onSelectGuest(pick.guest)}
+                className="hover:text-prime transition-colors truncate max-w-[110px]"
+                title={`View ${pick.guest}'s track record`}
+              >
+                {pick.guest}
+              </button>
+              {winRate && (
+                <span className="font-mono text-[10px] text-signal-buy">
+                  ({winRate})
+                </span>
+              )}
+              {idx < picks.length - 1 && (
+                <span className="text-edge ml-1">·</span>
+              )}
             </div>
           );
         })}

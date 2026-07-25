@@ -20,13 +20,9 @@ import ComparisonMatrix from './components/ComparisonMatrix';
 import MarketCallBar from './components/MarketCallBar';
 import GuestModal from './components/GuestModal';
 import DigestView from './components/DigestView';
+import LandingPage from './components/LandingPage';
 
-/* ════════════════════════════════════════════════════════════════
-   THEME — Every colour lives here as a CSS custom property.
-   Change values to restyle the entire app without touching
-   component logic. Format: space-separated RGB channels so
-   Tailwind opacity modifiers (e.g. bg-accent/20) work.
-   ════════════════════════════════════════════════════════════════ */
+/* ── Linear.app CSS System Tokens ── */
 const THEME = `
 :root {
   /* ——— Surfaces (Linear.app Tiered Dark Aesthetic) ——— */
@@ -57,155 +53,118 @@ const THEME = `
 }
 `;
 
-/* ════════════════════════════════════════════════════════════════
-   Toast notification (inline component — no extra file needed)
-   ════════════════════════════════════════════════════════════════ */
-function Toast({ message, type = 'error', onDismiss }) {
-  useEffect(() => {
-    const id = setTimeout(onDismiss, 6000);
-    return () => clearTimeout(id);
-  }, [onDismiss]);
-
-  const palette = {
-    error:   'border-danger/30 bg-danger/10 text-danger',
-    success: 'border-signal-buy/30 bg-signal-buy/10 text-signal-buy',
-    warning: 'border-signal-watch/30 bg-signal-watch/10 text-signal-watch',
-  };
-
-  return (
-    <div
-      className={`px-4 py-3 rounded-xl border text-sm shadow-lg
-                   backdrop-blur-sm animate-slide-right
-                   ${palette[type] || palette.error}`}
-    >
-      <div className="flex items-start gap-2">
-        <span className="flex-1 break-words">{message}</span>
-        <button
-          onClick={onDismiss}
-          className="opacity-60 hover:opacity-100 transition-opacity text-xs mt-0.5
-                     flex-shrink-0"
-          aria-label="Dismiss"
-        >
-          ✕
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ════════════════════════════════════════════════════════════════
-   App
-   ════════════════════════════════════════════════════════════════ */
 export default function App() {
-  const [keysReady, setKeysReady] = useState(checkHasKeys());
+  /* ── State ── */
+  const [keysReady, setKeysReady] = useState(checkHasKeys);
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState('score'); /* 'score' | 'history' | 'digest' */
+  const [activeTab, setActiveTab] = useState('landing'); /* Default root route: landing page */
+
+  const [loading, setLoading] = useState(false);
+  const [loadingTickers, setLoadingTickers] = useState([]);
   const [scorecards, setScorecards] = useState([]);
   const [comparisonResult, setComparisonResult] = useState(null);
-  const [loadingTickers, setLoadingTickers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [toasts, setToasts] = useState([]);
   const [currentHoldPeriod, setCurrentHoldPeriod] = useState('6M');
+  const [toasts, setToasts] = useState([]);
+
+  /* Prefilled inputs from BNN picks strip */
   const [prefilledTicker, setPrefilledTicker] = useState('');
   const [prefilledGuest, setPrefilledGuest] = useState(null);
+
+  /* Modal for guest analyst track record */
   const [selectedGuest, setSelectedGuest] = useState(null);
 
-  /* ── Outcome resolution on app load ── */
+  /* Resolve pending history outcomes on mount */
   useEffect(() => {
-    const { finnhubKey } = getKeys();
-    if (finnhubKey) {
-      resolveOutcomes(finnhubKey);
-    }
+    resolveOutcomes().catch(() => {});
   }, []);
 
-  /* ── Toast helpers ── */
+  /* Toast notification helper */
   const addToast = useCallback((message, type = 'error') => {
     const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 6000);
   }, []);
 
-  const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+  /* Check keys on mount / when drawer closes */
+  const refreshKeyStatus = useCallback(() => {
+    setKeysReady(checkHasKeys());
   }, []);
 
-  /* ── Core scoring pipeline (v2 architecture) ── */
+  /* ── Batch Scoring Pipeline ── */
   const handleScore = useCallback(
-    async (tickers, holdPeriod, guestName = null) => {
+    async (tickers, holdPeriod, analystGuest = null) => {
+      const keys = getKeys();
+      const provider = getProvider();
+
+      if (!keys.finnhub) {
+        addToast('Finnhub API Key is required to score tickers.');
+        setShowSettings(true);
+        return;
+      }
+
       setLoading(true);
+      setLoadingTickers(tickers);
       setScorecards([]);
       setComparisonResult(null);
       setCurrentHoldPeriod(holdPeriod);
-      setActiveTab('score');
 
-      const { finnhubKey, llmKey, alphaVantageKey } = getKeys();
-      const provider = getProvider();
-      const computedCards = [];
+      const activeGuest = analystGuest || prefilledGuest;
+
+      const results = [];
+      const failed = [];
 
       for (const ticker of tickers) {
-        setLoadingTickers((prev) => [...prev, ticker]);
-
         try {
-          /* 1. Fetch Finnhub data via proxy */
-          const tickerData = await fetchTickerData(ticker, finnhubKey);
+          const finnhubData = await fetchTickerData(ticker, keys.finnhub);
+          let alphaData = null;
+          if (keys.alphavantage) {
+            try {
+              alphaData = await fetchAlphaVantageData(ticker, keys.alphavantage);
+            } catch (err) {
+              console.warn(`[App] AlphaVantage failed for ${ticker}, continuing with Finnhub data:`, err.message);
+            }
+          }
 
-          /* 2. Fetch Alpha Vantage data (optional — silently degrades) */
-          const alphaData = await fetchAlphaVantageData(ticker, alphaVantageKey);
+          const calc = calculateScore(finnhubData, alphaData, holdPeriod);
+          const { systemPrompt, userPrompt } = buildPrompt(finnhubData, alphaData, calc, holdPeriod);
+          const llmResult = await scoreWithLLM(provider, keys[provider] || keys.llm, systemPrompt, userPrompt);
 
-          /* 3. MATH LAYER: Calculate deterministic score */
-          const mathResult = calculateScore(tickerData, alphaData, holdPeriod);
-
-          /* 4. Build prompt (passes math score + all data to LLM) */
-          const { systemPrompt, userPrompt, limitedData, companyName } =
-            buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticker, guestName || prefilledGuest || null);
-
-
-          /* 5. LLM LAYER: Get narrative explanation */
-          const result = await scoreWithLLM(
-            systemPrompt,
-            userPrompt,
-            llmKey,
-            provider,
-            { ticker: ticker.toUpperCase(), ...mathResult }
-          );
-
-          /* 6. Enrich and display */
-          const enriched = {
-            ...result,
-            entryPrice: tickerData?.quote?.c || null,
-            exchange: tickerData?.profile?.exchange || null,
-            currency: tickerData?.profile?.currency || null,
-            country: tickerData?.profile?.country || null,
-            limitedData,
-            companyName: companyName || result.ticker,
-            guest: guestName || prefilledGuest || null,
+          const scorecardData = {
+            ...calc,
+            ...llmResult,
+            ticker,
+            companyName: finnhubData.profile?.name || ticker,
+            holdPeriod,
             scoredAt: new Date().toISOString(),
+            guest: activeGuest,
           };
 
-          setScorecards((prev) => [...prev, enriched]);
-          computedCards.push(enriched);
-          saveScoreToHistory(enriched, holdPeriod);
+          results.push(scorecardData);
+          saveScoreToHistory(scorecardData, holdPeriod);
         } catch (err) {
-          addToast(`${ticker}: ${err.message}`);
-        } finally {
-          setLoadingTickers((prev) => prev.filter((t) => t !== ticker));
+          console.error(`[App] Scoring failed for ${ticker}:`, err);
+          failed.push({ ticker, reason: err.message || 'Scoring failed' });
         }
       }
 
-      /* Trigger Head-to-Head Comparative Narrative if multiple tickers succeeded */
-      if (computedCards.length > 1) {
+      setScorecards(results);
+      setLoadingTickers([]);
+
+      if (results.length > 1) {
         try {
-          const { systemPrompt, userPrompt } = buildComparisonPrompt(computedCards, holdPeriod);
-          const compRes = await scoreWithLLM(
-            systemPrompt,
-            userPrompt,
-            llmKey,
-            provider,
-            { isComparison: true, ticker: 'COMPARISON' }
-          );
-          setComparisonResult(compRes);
+          const { systemPrompt, userPrompt } = buildComparisonPrompt(results, holdPeriod);
+          const rawComp = await scoreWithLLM(provider, keys[provider] || keys.llm, systemPrompt, userPrompt);
+          setComparisonResult(rawComp);
         } catch (err) {
-          console.warn('Comparative analysis summary failed:', err.message);
+          console.warn('[App] Comparative evaluation failed:', err.message);
         }
+      }
+
+      if (failed.length > 0) {
+        const msg = failed.map((f) => `${f.ticker}: ${f.reason}`).join(' | ');
+        addToast(`Could not score some tickers — ${msg}`);
       }
 
       setLoading(false);
@@ -234,22 +193,32 @@ export default function App() {
           className="w-full border-b border-edge bg-surface-card/50
                       backdrop-blur-md sticky top-0 z-30"
         >
-          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <div
               className="flex items-center gap-3 cursor-pointer select-none group"
-              onClick={() => setActiveTab('score')}
+              onClick={() => setActiveTab('landing')}
             >
               <img
                 src="/logo.png"
                 alt="RogueCFA Logo"
-                className="w-9 h-9 object-contain rounded-lg shadow-sm group-hover:scale-105 transition-transform duration-300"
+                className="w-8 h-8 object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"
               />
-              <span className="text-xl font-extrabold tracking-tight text-prime">
+              <span className="text-lg font-bold tracking-tight text-prime">
                 RogueCFA
               </span>
             </div>
 
             <nav className="flex items-center gap-1 bg-surface-card p-1 rounded-full border border-edge text-xs">
+              <button
+                onClick={() => setActiveTab('landing')}
+                className={`px-3.5 py-1 rounded-full transition-colors font-medium ${
+                  activeTab === 'landing'
+                    ? 'bg-surface-elevated text-prime border border-edge'
+                    : 'text-dim hover:text-prime border border-transparent'
+                }`}
+              >
+                Overview
+              </button>
               <button
                 onClick={() => setActiveTab('score')}
                 className={`px-3.5 py-1 rounded-full transition-colors font-medium ${
@@ -336,25 +305,20 @@ export default function App() {
         </header>
 
         {/* ── Main content ── */}
-        <main
-          className="flex-1 w-full max-w-5xl mx-auto px-4 py-8
-                      flex flex-col items-center gap-8"
-        >
-          {activeTab === 'score' ? (
+        <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 flex flex-col items-center gap-6">
+          {activeTab === 'landing' ? (
+            <LandingPage
+              onLaunchTool={(tab = 'score') => setActiveTab(tab)}
+              onSelectTicker={(ticker, guest) => {
+                setPrefilledTicker(ticker);
+                setPrefilledGuest(guest);
+                setActiveTab('score');
+              }}
+              onSelectGuest={(guest) => setSelectedGuest(guest)}
+            />
+          ) : activeTab === 'score' ? (
             <>
-              {/* Hero (hidden once results appear) */}
-              {scorecards.length === 0 && loadingTickers.length === 0 && (
-                <div className="text-center space-y-2 animate-fade-in py-4">
-                  <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-prime">
-                    AI-Powered Stock Scoring
-                  </h2>
-                  <p className="text-dim text-sm max-w-md mx-auto leading-relaxed">
-                    Score any stock ticker against your hold period using live data and AI analysis.
-                  </p>
-                </div>
-              )}
-
-              {/* BNN MarketCall Picks Strip */}
+              {/* Tool Screen: Dense, straight into function, NO HERO TITLE */}
               <MarketCallBar
                 onSelectTicker={(ticker, guest) => {
                   setPrefilledTicker(ticker);
@@ -386,9 +350,9 @@ export default function App() {
             </>
           ) : activeTab === 'digest' ? (
             <DigestView
-              onScoreTicker={(ticker, guestName) => {
+              onScoreTicker={(ticker, guest) => {
                 setPrefilledTicker(ticker);
-                setPrefilledGuest(guestName || null);
+                setPrefilledGuest(guest);
                 setActiveTab('score');
               }}
               onSelectGuest={(guest) => setSelectedGuest(guest)}
@@ -404,40 +368,50 @@ export default function App() {
           )}
         </main>
 
-        {/* ── Disclaimer ── */}
+        {/* ── Footer ── */}
         <Disclaimer />
 
-        {/* ── Settings panel ── */}
+        {/* ── Settings Drawer ── */}
         {showSettings && (
           <SettingsPanel
-            onClose={() => setShowSettings(false)}
+            onClose={() => {
+              setShowSettings(false);
+              refreshKeyStatus();
+            }}
             onKeysCleared={handleKeysCleared}
           />
         )}
 
-        {/* ── Guest Track Record Modal ── */}
+        {/* ── Guest Analyst Modal ── */}
         {selectedGuest && (
           <GuestModal
             guestName={selectedGuest}
             onClose={() => setSelectedGuest(null)}
             onSelectTicker={(ticker, guest) => {
               setPrefilledTicker(ticker);
-              setPrefilledGuest(guest);
+              if (guest) setPrefilledGuest(guest);
               setActiveTab('score');
             }}
           />
         )}
 
-        {/* ── Toast stack ── */}
+        {/* ── Toast Notifications ── */}
         {toasts.length > 0 && (
-          <div className="fixed top-20 right-4 z-50 space-y-2 max-w-sm w-full pointer-events-none">
-            {toasts.map((toast) => (
-              <div key={toast.id} className="pointer-events-auto">
-                <Toast
-                  message={toast.message}
-                  type={toast.type}
-                  onDismiss={() => removeToast(toast.id)}
-                />
+          <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+            {toasts.map((t) => (
+              <div
+                key={t.id}
+                className="px-4 py-3 bg-surface-elevated border border-edge rounded-lg text-xs font-sans text-prime shadow-linear-hover animate-fade-in flex items-start justify-between gap-3"
+              >
+                <span>{t.message || t.msg}</span>
+                <button
+                  onClick={() =>
+                    setToasts((prev) => prev.filter((item) => item.id !== t.id))
+                  }
+                  className="text-dim hover:text-prime text-sm leading-none"
+                >
+                  ✕
+                </button>
               </div>
             ))}
           </div>
