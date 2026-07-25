@@ -38,10 +38,10 @@ const THEME = `
   --c-dim:              138 143 152;   /* #8A8F98 — Muted grey secondary text */
   --c-faint:            138 143 152 / 0.6;
 
-  /* ——— Accent (Reserve strictly for CTA / Primary Action) ——— */
-  --c-accent:           94 106 210;    /* #5E6AD2 — Linear indigo blue */
-  --c-accent-hover:     114 125 230;   /* #727DE6 — Hover state */
-  --c-accent-muted:     94 106 210 / 0.2;
+  /* ——— Accent (Our existing Steel Blue) ——— */
+  --c-accent:           22 99 146;     /* #166392 — Steel blue accent */
+  --c-accent-hover:     56 139 253;    /* #388BFD — Bright blue hover */
+  --c-accent-muted:     22 99 146 / 0.2;
 
   /* ——— Functional Status Colours (Strictly for real status meaning) ——— */
   --c-signal-buy:       46 160 67;     /* #2EA043 — Win / Buy status */
