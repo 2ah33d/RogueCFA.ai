@@ -2,6 +2,9 @@ import { useState, useCallback } from 'react';
 import { getHistory, clearHistory } from '../lib/storage';
 import { fetchTickerData } from '../lib/finnhub';
 
+/**
+ * HistoryTable — Google Antigravity aesthetic: 16px radius cards, soft elevation shadows, low-opacity status pills.
+ */
 export default function HistoryTable({ finnhubKey, onSelectTicker }) {
   const [history, setHistory] = useState(() => getHistory());
   const [currentPrices, setCurrentPrices] = useState({});
@@ -42,9 +45,9 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
 
   if (history.length === 0) {
     return (
-      <div className="bg-surface-card border border-edge rounded-2xl p-10 text-center animate-fade-in">
+      <div className="bg-surface-card rounded-2xl p-10 text-center shadow-antigravity animate-fade-in font-sans">
         <h3 className="text-xl font-bold text-prime mb-2">No Score History Found</h3>
-        <p className="text-dim text-sm max-w-md mx-auto">
+        <p className="text-dim text-xs max-w-md mx-auto">
           Every ticker you score is logged locally. Score a stock to start tracking historical accuracy and outcomes.
         </p>
       </div>
@@ -52,11 +55,11 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
   }
 
   return (
-    <div className="bg-surface-card border border-edge rounded-2xl overflow-hidden shadow-xl animate-fade-in w-full">
+    <div className="bg-surface-card rounded-2xl overflow-hidden shadow-antigravity animate-fade-in w-full font-sans">
       {/* ── Header ── */}
-      <div className="p-6 border-b border-edge flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="p-6 border-b border-surface-elevated/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-xl font-bold text-prime">Score History & Outcome Tracking</h3>
+          <h3 className="text-lg font-bold text-prime">Score History &amp; Outcome Tracking</h3>
           <p className="text-xs text-dim mt-0.5">
             Compare past AI scorecards against live market prices to verify signal accuracy.
           </p>
@@ -65,11 +68,11 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
           <button
             onClick={handleUpdateOutcomes}
             disabled={loadingOutcomes}
-            className="px-4 py-2 bg-gradient-to-r from-accent to-accent-muted text-white text-sm font-semibold rounded-lg hover:from-accent-hover hover:to-accent transition-all shadow-md disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 bg-accent text-[#1E1F22] text-xs font-semibold rounded-full hover:bg-accent-hover transition-all shadow-antigravity disabled:opacity-50 flex items-center gap-2"
           >
             {loadingOutcomes ? (
               <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span className="w-3.5 h-3.5 border-2 border-[#1E1F22]/30 border-t-[#1E1F22] rounded-full animate-spin" />
                 Fetching Prices...
               </>
             ) : (
@@ -78,7 +81,7 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
           </button>
           <button
             onClick={handleClear}
-            className="px-3 py-2 bg-surface border border-edge text-dim hover:text-danger hover:border-danger/30 text-xs font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-surface-elevated text-dim hover:text-signal-avoid text-xs font-medium rounded-full transition-colors shadow-antigravity"
           >
             Clear History
           </button>
@@ -86,7 +89,7 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
       </div>
 
       {error && (
-        <div className="px-6 py-3 bg-danger/10 border-b border-danger/20 text-danger text-sm">
+        <div className="px-6 py-3 bg-signal-avoid/15 text-signal-avoid text-xs font-medium">
           {error}
         </div>
       )}
@@ -95,7 +98,7 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-edge bg-surface/40 text-xs font-semibold text-faint uppercase tracking-wider">
+            <tr className="border-b border-surface-elevated/40 bg-surface-elevated text-xs font-semibold text-dim uppercase tracking-wider">
               <th className="py-3.5 px-6">Date</th>
               <th className="py-3.5 px-4">Ticker</th>
               <th className="py-3.5 px-4">Score</th>
@@ -105,7 +108,7 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
               <th className="py-3.5 px-6">Outcome Verification</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-edge text-sm">
+          <tbody className="divide-y divide-surface-elevated/40 text-xs">
             {history.map((entry, idx) => {
               const dateStr = entry.scoredAt
                 ? new Date(entry.scoredAt).toLocaleDateString('en-US', {
@@ -122,7 +125,7 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                 returnPct = ((currentPrice - entryPrice) / entryPrice) * 100;
               }
 
-              let outcomeBadge = <span className="text-faint text-xs italic">Click Update Outcomes</span>;
+              let outcomeBadge = <span className="text-dim text-xs italic">Click Update Outcomes</span>;
               if (returnPct != null) {
                 const isBuy = entry.signal === 'BUY_SIGNAL';
                 const isAvoid = entry.signal === 'AVOID';
@@ -132,13 +135,13 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                 if (isBuy) {
                   if (returnPct >= 0) {
                     outcomeBadge = (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-signal-buy bg-signal-buy/10 border border-signal-buy/30 px-2.5 py-1 rounded-full">
+                      <span className="inline-flex items-center text-xs font-semibold text-signal-buy bg-signal-buy/15 px-3 py-1 rounded-full font-mono">
                         HIT ({pctStr})
                       </span>
                     );
                   } else {
                     outcomeBadge = (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-signal-avoid bg-signal-avoid/10 border border-signal-avoid/30 px-2.5 py-1 rounded-full">
+                      <span className="inline-flex items-center text-xs font-semibold text-signal-avoid bg-signal-avoid/15 px-3 py-1 rounded-full font-mono">
                         MISS ({pctStr})
                       </span>
                     );
@@ -146,20 +149,20 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                 } else if (isAvoid) {
                   if (returnPct <= 0) {
                     outcomeBadge = (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-signal-buy bg-signal-buy/10 border border-signal-buy/30 px-2.5 py-1 rounded-full">
+                      <span className="inline-flex items-center text-xs font-semibold text-signal-buy bg-signal-buy/15 px-3 py-1 rounded-full font-mono">
                         HIT (Avoided {pctStr})
                       </span>
                     );
                   } else {
                     outcomeBadge = (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-signal-avoid bg-signal-avoid/10 border border-signal-avoid/30 px-2.5 py-1 rounded-full">
+                      <span className="inline-flex items-center text-xs font-semibold text-signal-avoid bg-signal-avoid/15 px-3 py-1 rounded-full font-mono">
                         MISS (Up {pctStr})
                       </span>
                     );
                   }
                 } else {
                   outcomeBadge = (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-signal-watch bg-signal-watch/10 border border-signal-watch/30 px-2.5 py-1 rounded-full">
+                    <span className="inline-flex items-center text-xs font-semibold text-signal-watch bg-signal-watch/15 px-3 py-1 rounded-full font-mono">
                       WATCH ({pctStr})
                     </span>
                   );
@@ -176,13 +179,13 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
 
               return (
                 <tr key={entry.scoredAt || idx} className="hover:bg-surface-elevated/40 transition-colors">
-                  <td className="py-4 px-6 text-dim text-xs whitespace-nowrap">{dateStr}</td>
+                  <td className="py-4 px-6 text-dim whitespace-nowrap font-mono">{dateStr}</td>
                   <td className="py-4 px-4 font-mono font-bold text-prime">
                     <div className="flex items-center gap-1.5">
                       {onSelectTicker ? (
                         <button
                           onClick={() => onSelectTicker(entry.ticker)}
-                          className="hover:text-accent transition-colors underline decoration-accent/30"
+                          className="hover:text-prime transition-colors underline decoration-dim"
                         >
                           {entry.ticker}
                         </button>
@@ -190,24 +193,24 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                         entry.ticker
                       )}
                       {isTSX && (
-                        <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-1 py-0 rounded">
+                        <span className="text-[10px] text-dim bg-surface px-2 py-0.5 rounded-full font-sans">
                           TSX
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-4 font-mono">
                     <span className="font-bold text-prime">{entry.score}</span>
-                    <span className="text-xs text-faint">/100 ({entry.grade})</span>
+                    <span className="text-xs text-dim">/100 ({entry.grade})</span>
                   </td>
                   <td className="py-4 px-4">
                     <span
-                      className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                      className={`text-xs font-semibold px-3 py-1 rounded-full uppercase ${
                         entry.signal === 'BUY_SIGNAL'
-                          ? 'bg-signal-buy/10 text-signal-buy border border-signal-buy/30'
+                          ? 'bg-signal-buy/15 text-signal-buy'
                           : entry.signal === 'AVOID'
-                            ? 'bg-signal-avoid/10 text-signal-avoid border border-signal-avoid/30'
-                            : 'bg-signal-watch/10 text-signal-watch border border-signal-watch/30'
+                            ? 'bg-signal-avoid/15 text-signal-avoid'
+                            : 'bg-signal-watch/15 text-signal-watch'
                       }`}
                     >
                       {entry.signal === 'BUY_SIGNAL' ? 'BUY' : entry.signal || 'WATCH'}

@@ -481,15 +481,15 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   /* ── No digest loaded (e.g., auto-fetch disabled or cleared cache) — show prominent Check Newer button ── */
   if (!digest) {
     return (
-      <div className="w-full max-w-3xl mx-auto animate-fade-in">
-        <div className="bg-surface-card border border-edge rounded-2xl p-8 text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center font-mono font-bold text-xl text-accent">
+      <div className="w-full max-w-3xl mx-auto animate-fade-in font-sans">
+        <div className="bg-surface-card rounded-2xl p-8 text-center space-y-4 shadow-antigravity">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/15 flex items-center justify-center font-mono font-bold text-lg text-accent">
             AI
           </div>
           <div>
             <h3 className="text-xl font-bold text-prime">BNN Bloomberg MarketCall Digest</h3>
             <p className="text-xs text-dim max-w-md mx-auto mt-1 leading-relaxed">
-              Click below to fetch and summarize today's episode audio stream with Groq Whisper &amp; AI.
+              Click below to fetch and summarize today&apos;s episode audio stream with Groq Whisper &amp; AI.
             </p>
           </div>
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
@@ -497,19 +497,18 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               type="button"
               onClick={fetchDigest}
               className="inline-flex items-center gap-2 px-6 py-3
-                         bg-accent text-on-accent text-sm font-semibold rounded-xl
-                         shadow-lg shadow-accent/20 hover:bg-accent-hover hover:scale-[1.02]
-                         active:scale-[0.98] transition-all"
+                         bg-accent text-[#1E1F22] text-xs font-semibold rounded-full
+                         shadow-antigravity hover:bg-accent-hover transition-all"
             >
-              Check Newer / Generate Today's Digest
+              Check Newer / Generate Today&apos;s Digest
             </button>
             <button
               type="button"
               onClick={onOpenSettings}
               className="inline-flex items-center gap-2 px-5 py-3
-                         bg-surface-elevated border border-edge
-                         text-prime text-sm font-semibold rounded-xl
-                         hover:border-accent/50 hover:text-accent transition-all"
+                         bg-surface-elevated text-dim hover:text-prime
+                         text-xs font-semibold rounded-full
+                         shadow-antigravity transition-all"
             >
               Open Settings
             </button>

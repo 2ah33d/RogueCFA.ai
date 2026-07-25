@@ -1,34 +1,34 @@
 import Scorecard from './Scorecard';
 
-/* ── Skeleton placeholder while a ticker is scoring ── */
+/* ── Skeleton placeholder while a ticker is scoring (Google Antigravity style) ── */
 function SkeletonCard() {
   return (
     <div
-      className="bg-surface-card border border-edge rounded-2xl overflow-hidden
-                  shadow-xl shadow-black/20 animate-pulse"
+      className="bg-surface-card rounded-2xl overflow-hidden
+                  shadow-antigravity animate-pulse"
     >
       {/* Header skeleton */}
-      <div className="px-6 pt-6 pb-4 border-b border-edge">
-        <div className="h-7 w-24 bg-surface-elevated rounded mb-2" />
-        <div className="h-4 w-40 bg-surface-elevated rounded" />
+      <div className="px-6 pt-6 pb-4 border-b border-surface-elevated/40">
+        <div className="h-7 w-24 bg-surface-elevated rounded-lg mb-2" />
+        <div className="h-4 w-40 bg-surface-elevated rounded-lg" />
       </div>
 
       {/* Score ring skeleton */}
-      <div className="px-6 py-6 flex items-center gap-6 border-b border-edge">
-        <div className="w-28 h-28 rounded-full bg-surface-elevated flex-shrink-0" />
+      <div className="px-6 py-6 flex items-center gap-6 border-b border-surface-elevated/40">
+        <div className="w-24 h-24 rounded-full bg-surface-elevated flex-shrink-0" />
         <div className="space-y-3 flex-1">
-          <div className="h-4 w-16 bg-surface-elevated rounded" />
-          <div className="h-8 w-12 bg-surface-elevated rounded" />
-          <div className="h-3 w-32 bg-surface-elevated rounded" />
+          <div className="h-4 w-16 bg-surface-elevated rounded-lg" />
+          <div className="h-8 w-12 bg-surface-elevated rounded-lg" />
+          <div className="h-3 w-32 bg-surface-elevated rounded-lg" />
         </div>
       </div>
 
       {/* Body skeleton */}
       <div className="px-6 py-5 space-y-4">
-        <div className="h-3 w-full bg-surface-elevated rounded" />
-        <div className="h-3 w-3/4 bg-surface-elevated rounded" />
-        <div className="h-3 w-5/6 bg-surface-elevated rounded" />
-        <div className="h-3 w-2/3 bg-surface-elevated rounded" />
+        <div className="h-3 w-full bg-surface-elevated rounded-lg" />
+        <div className="h-3 w-3/4 bg-surface-elevated rounded-lg" />
+        <div className="h-3 w-5/6 bg-surface-elevated rounded-lg" />
+        <div className="h-3 w-2/3 bg-surface-elevated rounded-lg" />
       </div>
     </div>
   );
@@ -74,12 +74,12 @@ export default function ScorecardGrid({
 
         {/* Loading skeletons with ticker overlay */}
         {loadingTickers.map((ticker) => (
-          <div key={`loading-${ticker}`} className="relative">
+          <div key={`loading-${ticker}`} className="relative font-sans">
             <SkeletonCard />
             <div className="absolute inset-0 flex items-center justify-center">
               <div
-                className="bg-surface-card/90 backdrop-blur-sm border border-edge
-                            rounded-xl px-4 py-2.5 flex items-center gap-3"
+                className="bg-surface-elevated/90 backdrop-blur-sm shadow-antigravity
+                            rounded-full px-5 py-2.5 flex items-center gap-3"
               >
                 <svg
                   className="animate-spin w-4 h-4 text-accent"
@@ -100,8 +100,8 @@ export default function ScorecardGrid({
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                   />
                 </svg>
-                <span className="text-sm text-prime font-mono font-medium">
-                  {ticker}
+                <span className="text-sm text-prime font-mono font-semibold">
+                  Scoring {ticker}...
                 </span>
               </div>
             </div>

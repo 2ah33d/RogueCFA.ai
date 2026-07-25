@@ -397,18 +397,21 @@ export default function App() {
 
         {/* ── Toast Notifications ── */}
         {toasts.length > 0 && (
-          <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+          <div className="fixed top-20 right-4 sm:right-6 z-50 flex flex-col gap-2.5 max-w-sm w-full animate-fade-in font-sans">
             {toasts.map((t) => (
               <div
                 key={t.id}
-                className="px-4 py-3 bg-surface-elevated border border-edge rounded-lg text-xs font-sans text-prime shadow-linear-hover animate-fade-in flex items-start justify-between gap-3"
+                className="px-4 py-3 bg-surface-elevated rounded-2xl text-xs text-prime shadow-antigravity-elevated flex items-center justify-between gap-3 border-0"
               >
-                <span>{t.message || t.msg}</span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-signal-avoid shrink-0" />
+                  <span className="text-prime font-medium leading-snug">{t.message || t.msg}</span>
+                </div>
                 <button
                   onClick={() =>
                     setToasts((prev) => prev.filter((item) => item.id !== t.id))
                   }
-                  className="text-dim hover:text-prime text-sm leading-none"
+                  className="text-dim hover:text-prime text-sm leading-none p-1 rounded-full hover:bg-surface-card transition-colors shrink-0"
                 >
                   ✕
                 </button>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { saveBnnPicks, getGuestTrackRecord } from '../lib/guestTracker';
 
 /**
- * MarketCallBar — Tool screen strip: clean plain text with subtle dividers (no nested boxes).
+ * MarketCallBar — Tool screen strip: clean plain text with subtle dividers (Google Antigravity style).
  */
 export default function MarketCallBar({ onSelectTicker, onSelectGuest, className = '' }) {
   const [picks, setPicks] = useState([]);
@@ -51,21 +51,21 @@ export default function MarketCallBar({ onSelectTicker, onSelectGuest, className
 
   if (loading) {
     return (
-      <div className={`w-full max-w-2xl mx-auto py-2 border-b border-edge animate-pulse ${className}`}>
-        <div className="h-4 bg-surface-elevated rounded w-48" />
+      <div className={`w-full max-w-2xl mx-auto py-2 border-b border-surface-card/40 animate-pulse ${className}`}>
+        <div className="h-4 bg-surface-elevated rounded-lg w-48" />
       </div>
     );
   }
 
   return (
-    <section className={`w-full max-w-2xl mx-auto py-3 border-b border-edge flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-sans ${className}`}>
+    <section className={`w-full max-w-2xl mx-auto py-3 border-b border-surface-card/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-sans ${className}`}>
       <div className="flex items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-dim">
           BNN Picks:
         </span>
       </div>
 
-      {/* Clean text row with subtle dividers — NO nested bordered boxes! */}
+      {/* Clean text row with subtle dividers */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
         {picks.map((pick, idx) => {
           const ticker = pick.tickers[0];
@@ -77,7 +77,7 @@ export default function MarketCallBar({ onSelectTicker, onSelectGuest, className
               <button
                 type="button"
                 onClick={() => onSelectTicker && onSelectTicker(ticker, pick.guest)}
-                className="font-mono font-semibold text-prime hover:text-white transition-colors"
+                className="font-mono font-bold text-prime hover:text-white transition-colors"
                 title={`Click to score ${ticker}`}
               >
                 {ticker}
@@ -91,12 +91,12 @@ export default function MarketCallBar({ onSelectTicker, onSelectGuest, className
                 {pick.guest}
               </button>
               {winRate && (
-                <span className="font-mono text-[10px] text-signal-buy">
-                  ({winRate})
+                <span className="font-mono text-[10px] text-signal-buy font-semibold bg-signal-buy/15 px-2 py-0.5 rounded-full">
+                  {winRate}
                 </span>
               )}
               {idx < picks.length - 1 && (
-                <span className="text-edge ml-1">·</span>
+                <span className="text-dim/40 ml-1">·</span>
               )}
             </div>
           );
