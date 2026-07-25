@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "RogueCFA MarketCall Digest",
   "version": "1.0.0",
-  "description": "Extract YouTube transcripts from your browser and generate MarketCall stock pick digests via RogueCFA.ai",
+  "description": "Extract YouTube transcripts from your browser and generate MarketCall stock pick digests via RogueCFA",
   "permissions": ["activeTab", "storage"],
   "host_permissions": [
     "https://www.youtube.com/*"

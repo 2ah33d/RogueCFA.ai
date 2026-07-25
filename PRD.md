@@ -1,4 +1,4 @@
-# PRD: RogueCFA.ai — AI Investment Scorecard
+# PRD: RogueCFA — AI Investment Scorecard
 
 > **Version:** 1.0  
 > **Author:** Zaheed Bhai  
@@ -9,7 +9,7 @@
 
 ## 1. Product Overview
 
-**RogueCFA.ai** is a React web application that lets retail investors score any stock ticker against their intended hold period using live Finnhub data and their own LLM API key (BYOK — Bring Your Own Key).
+**RogueCFA** is a React web application that lets retail investors score any stock ticker against their intended hold period using live Finnhub data and their own LLM API key (BYOK — Bring Your Own Key).
 
 A thin Vercel serverless proxy handles all API calls server-side, solving CORS restrictions and keeping user keys out of the browser's network layer. The app produces a consistent, structured investment scorecard in under 60 seconds.
 
@@ -763,4 +763,4 @@ When scoring any SEC-reporting stock, RogueCFA successfully fetches and parses t
 
 ---
 
-*End of PRD — RogueCFA.ai v1.0*
+*End of PRD — RogueCFA v1.0*

@@ -1,4 +1,4 @@
-# RogueCFA.ai — READY TO DEPLOY Checklist
+# RogueCFA — READY TO DEPLOY Checklist
 
 ## Prerequisites
 

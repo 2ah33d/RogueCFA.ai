@@ -245,7 +245,7 @@ export default function App() {
                 className="w-9 h-9 object-contain rounded-lg shadow-sm group-hover:scale-105 transition-transform duration-300"
               />
               <span className="text-xl font-extrabold tracking-tight text-prime">
-                RogueCFA<span className="text-accent">.ai</span>
+                RogueCFA
               </span>
             </div>
 
