@@ -36,7 +36,7 @@ const THEME = `
   /* ——— Text ——— */
   --c-prime:            227 227 227;   /* #E3E3E3 — Soft off-white primary text */
   --c-dim:              154 160 166;   /* #9AA0A6 — Soft muted grey secondary text */
-  --c-faint:            154 160 166 / 0.6;
+  --c-faint:            110 115 122 / 0.5;  /* #6E737B — Soft dimmed placeholder text */
 
   /* ——— Accent (Google Soft Muted Blue #8AB4F8) ——— */
   --c-accent:           138 180 248;   /* #8AB4F8 — Soft Google dark mode blue */
