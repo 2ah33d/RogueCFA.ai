@@ -33,13 +33,13 @@ const SIGNAL = {
   },
 };
 
-/* Score breakdown segment colors */
+/* Monochrome breakdown bar segments */
 const BREAKDOWN_COLORS = {
-  consensus: { bg: 'bg-accent', label: 'Consensus' },
-  momentum: { bg: 'bg-signal-watch', label: 'Momentum' },
-  valuation: { bg: 'bg-signal-buy', label: 'Valuation' },
-  earnings: { bg: 'bg-purple-500', label: 'Earnings' },
-  newsSentiment: { bg: 'bg-blue-500', label: 'News Sentiment' },
+  consensus: { bg: 'bg-white/80', label: 'Consensus' },
+  momentum: { bg: 'bg-white/60', label: 'Momentum' },
+  valuation: { bg: 'bg-white/40', label: 'Valuation' },
+  earnings: { bg: 'bg-white/25', label: 'Earnings' },
+  newsSentiment: { bg: 'bg-white/15', label: 'News Sentiment' },
 };
 
 /* ── Score Breakdown Bar ── */
@@ -55,9 +55,9 @@ function ScoreBreakdownBar({ breakdown }) {
         Score Breakdown
       </h4>
       {/* Stacked bar */}
-      <div className="h-2.5 rounded-lg overflow-hidden flex bg-surface-elevated">
+      <div className="h-2 rounded-full overflow-hidden flex bg-surface-elevated border border-edge">
         {Object.entries(breakdown).map(([key, value]) => {
-          const config = BREAKDOWN_COLORS[key] || { bg: 'bg-dim', label: key };
+          const config = BREAKDOWN_COLORS[key] || { bg: 'bg-white/20', label: key };
           const pct = (value / 100) * 100;
           return (
             <div
@@ -72,10 +72,10 @@ function ScoreBreakdownBar({ breakdown }) {
       {/* Legend */}
       <div className="flex flex-wrap gap-x-4 gap-y-1">
         {Object.entries(breakdown).map(([key, value]) => {
-          const config = BREAKDOWN_COLORS[key] || { bg: 'bg-dim', label: key };
+          const config = BREAKDOWN_COLORS[key] || { bg: 'bg-white/20', label: key };
           return (
             <div key={key} className="flex items-center gap-1.5 font-sans">
-              <div className={`w-2.5 h-2.5 rounded-sm ${config.bg}`} />
+              <div className={`w-2 h-2 rounded-full ${config.bg}`} />
               <span className="text-xs text-dim">
                 {config.label}: <span className="text-prime font-mono font-medium">{value.toFixed(1)}</span>
               </span>
@@ -142,7 +142,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
 
   return (
     <article
-      className={`bg-surface-card border border-edge rounded-lg overflow-hidden transition-shadow hover:shadow-google-hover ${className}`}
+      className={`bg-surface-card border border-edge rounded-lg overflow-hidden transition-shadow hover:shadow-linear-hover ${className}`}
     >
       {/* ── Header ── */}
       <div className="px-6 pt-6 pb-4 border-b border-edge flex items-start justify-between">
@@ -152,25 +152,26 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
               {ticker}
             </h3>
             {entryPrice != null && (
-              <span className="text-sm font-semibold text-dim font-mono bg-surface-elevated px-2.5 py-0.5 rounded-lg border border-edge">
+              <span className="text-xs font-medium text-prime font-mono bg-surface-elevated px-2.5 py-0.5 rounded-full border border-edge">
                 {isTSX ? 'CAD ' : ''}${Number(entryPrice).toFixed(2)}
               </span>
             )}
+
+            {/* Functional Status Badge ONLY */}
             <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-lg
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full
                           text-xs font-semibold uppercase tracking-wider
                           ${s.badgeBg} border ${s.badgeBorder} ${s.textClass}`}
             >
               {s.label}
             </span>
+
             {isTSX && (
-              <span
-                className="inline-flex items-center text-xs font-medium text-dim bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-lg"
-                title="Toronto Stock Exchange / Canadian Asset"
-              >
+              <span className="inline-flex items-center text-xs font-normal text-dim bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-full">
                 TSX
               </span>
             )}
+
             {guest && (
               <button
                 type="button"
@@ -178,7 +179,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
                   e.stopPropagation();
                   if (onSelectGuest) onSelectGuest(guest);
                 }}
-                className="inline-flex items-center text-xs font-medium text-accent hover:text-accent-hover bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center text-xs font-normal text-dim hover:text-prime bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-full transition-colors cursor-pointer"
                 title={`BNN MarketCall pick by ${guest}. Click for track record.`}
               >
                 BNN Pick: {guest}
@@ -186,29 +187,29 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
             )}
           </div>
           {companyName && companyName !== ticker && (
-            <p className="text-sm text-dim">{companyName}</p>
+            <p className="text-xs text-dim">{companyName}</p>
           )}
           <div className="flex flex-wrap items-center gap-2 mt-1.5">
             {isTSX && (
-              <span className="inline-flex items-center text-xs text-faint bg-surface-elevated border border-edge px-2 py-0.5 rounded-lg">
+              <span className="inline-flex items-center text-[11px] text-dim bg-surface-elevated border border-edge px-2 py-0.5 rounded-full">
                 CAD Currency &amp; TSX Peer Framing
               </span>
             )}
             {limitedData && (
-              <span className="inline-flex items-center text-xs text-signal-watch bg-signal-watch/10 border border-signal-watch/20 px-2 py-0.5 rounded-lg">
+              <span className="inline-flex items-center text-[11px] text-signal-watch bg-signal-watch/10 border border-signal-watch/20 px-2 py-0.5 rounded-full">
                 Limited Data
               </span>
             )}
             {coverageDepth != null && coverageDepth <= 10 && (
               <span
-                className="inline-flex items-center text-xs text-signal-watch bg-signal-watch/10 border border-signal-watch/20 px-2 py-0.5 rounded-lg"
+                className="inline-flex items-center text-[11px] text-signal-watch bg-signal-watch/10 border border-signal-watch/20 px-2 py-0.5 rounded-full"
                 title={`Analyst consensus weighted at ${(coverageModifier * 100).toFixed(0)}% due to low coverage depth (${coverageDepth} analysts)`}
               >
                 Low Coverage ({coverageDepth} Analysts — {(coverageModifier * 100).toFixed(0)}% Wt)
               </span>
             )}
             {hasAlphaVantage === false && (
-              <span className="inline-flex items-center text-xs text-faint bg-surface-elevated border border-edge px-2 py-0.5 rounded-lg">
+              <span className="inline-flex items-center text-[11px] text-dim bg-surface-elevated border border-edge px-2 py-0.5 rounded-full">
                 Finnhub Only
               </span>
             )}
@@ -220,16 +221,16 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
       </div>
 
       {/* ── Score ring + grade ── */}
-      <div className="px-6 py-6 flex items-center gap-6 border-b border-edge">
+      <div className="px-6 py-5 flex items-center gap-6 border-b border-edge">
         {/* Circular score gauge */}
-        <div className="relative w-28 h-28 flex-shrink-0">
-          <svg className="w-28 h-28 -rotate-90" viewBox="0 0 112 112">
+        <div className="relative w-24 h-24 flex-shrink-0">
+          <svg className="w-24 h-24 -rotate-90" viewBox="0 0 112 112">
             <circle
               cx="56"
               cy="56"
               r={RADIUS}
               fill="none"
-              stroke="rgb(var(--c-edge))"
+              stroke="rgba(255, 255, 255, 0.08)"
               strokeWidth="6"
             />
             <circle
@@ -246,27 +247,27 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center font-mono">
-            <span className={`text-3xl font-bold ${s.textClass}`}>
+            <span className={`text-2xl font-bold ${s.textClass}`}>
               {clampedScore}
             </span>
-            <span className="text-xs text-faint">/100</span>
+            <span className="text-[10px] text-dim">/100</span>
           </div>
         </div>
 
         {/* Grade + consensus */}
-        <div className="space-y-3 min-w-0 font-sans">
+        <div className="space-y-2 min-w-0 font-sans">
           <div>
             <span className="text-xs text-dim uppercase tracking-wider font-semibold">
               Grade
             </span>
-            <p className="text-3xl font-bold text-prime font-mono">{grade}</p>
+            <p className="text-2xl font-bold text-prime font-mono">{grade}</p>
           </div>
           {consensus && (
             <div>
               <span className="text-xs text-dim uppercase tracking-wider font-semibold">
                 Consensus
               </span>
-              <p className="text-sm text-dim leading-snug">{consensus.label}</p>
+              <p className="text-xs text-dim leading-snug">{consensus.label}</p>
             </div>
           )}
         </div>
@@ -283,7 +284,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
             <h4 className="text-xs font-semibold text-dim uppercase tracking-wider mb-1.5">
               Investment Thesis
             </h4>
-            <p className="text-sm text-prime leading-relaxed">
+            <p className="text-xs text-prime leading-relaxed">
               {thesis}
             </p>
           </div>
@@ -295,7 +296,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
             <h4 className="text-xs font-semibold text-dim uppercase tracking-wider mb-1.5">
               Sentiment
             </h4>
-            <p className="text-sm text-dim leading-relaxed">{sentiment}</p>
+            <p className="text-xs text-dim leading-relaxed">{sentiment}</p>
           </div>
         )}
 
@@ -305,7 +306,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
             <h4 className="text-xs font-semibold text-dim uppercase tracking-wider mb-1.5">
               Timeframe Verdict
             </h4>
-            <p className="text-sm text-prime leading-relaxed font-medium">
+            <p className="text-xs text-prime leading-relaxed font-normal">
               {verdict}
             </p>
           </div>
@@ -317,7 +318,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
             <h4 className="text-xs font-semibold text-dim uppercase tracking-wider mb-1">
               Watch For
             </h4>
-            <p className="text-sm text-prime leading-relaxed">{watchFor}</p>
+            <p className="text-xs text-dim leading-relaxed">{watchFor}</p>
           </div>
         )}
 
@@ -332,7 +333,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
                 {risks.map((risk, i) => (
                   <li
                     key={i}
-                    className="flex items-start gap-2 text-sm text-dim"
+                    className="flex items-start gap-2 text-xs text-dim"
                   >
                     <span className="text-signal-avoid mt-0.5 text-xs">•</span>
                     {risk}
@@ -350,7 +351,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
                 {catalysts.map((catalyst, i) => (
                   <li
                     key={i}
-                    className="flex items-start gap-2 text-sm text-dim"
+                    className="flex items-start gap-2 text-xs text-dim"
                   >
                     <span className="text-signal-buy mt-0.5 text-xs">•</span>
                     {catalyst}
@@ -364,10 +365,10 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
 
       {/* ── Footer ── */}
       <div className="px-6 py-3 bg-surface border-t border-edge text-xs text-dim flex items-center justify-between font-sans">
-        <span className="font-mono">
+        <span className="font-mono text-[11px]">
           {scoredAt ? new Date(scoredAt).toLocaleString() : ''}
         </span>
-        <span className="italic">Not financial advice</span>
+        <span className="italic text-[11px]">Not financial advice</span>
       </div>
     </article>
   );

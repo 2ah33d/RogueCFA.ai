@@ -29,28 +29,28 @@ import DigestView from './components/DigestView';
    ════════════════════════════════════════════════════════════════ */
 const THEME = `
 :root {
-  /* ——— Surfaces (Discord / VSCode Dark Aesthetic) ——— */
-  --c-surface:          30 31 34;      /* #1E1F22  — Deep dark grey background */
-  --c-surface-card:     43 45 49;      /* #2B2D31  — Dark card surface fill    */
-  --c-surface-elevated: 49 51 56;      /* #313338  — Secondary dark tag/chip   */
+  /* ——— Surfaces (Linear.app Tiered Dark Aesthetic) ——— */
+  --c-surface:          12 12 13;      /* #0C0C0D — Base background */
+  --c-surface-card:     23 24 26;      /* #17181A — Card / panel surface */
+  --c-surface-elevated: 28 29 31;      /* #1C1D1F — Elevated surface (chips, dropdowns) */
 
-  /* ——— Borders ——— */
-  --c-edge:             60 63 69;      /* #3C3F45  — Subtle dark border        */
+  /* ——— Borders (8% white opacity — barely visible) ——— */
+  --c-edge:             255 255 255 / 0.08;
 
   /* ——— Text ——— */
-  --c-prime:            242 243 245;   /* #F2F3F5  — Crisp light text          */
-  --c-dim:              181 186 193;   /* #B5BAC1  — Secondary grey text       */
-  --c-faint:            128 132 142;   /* #80848E  — Muted text                */
+  --c-prime:            237 237 237;   /* #EDEDED — Primary display text */
+  --c-dim:              138 143 152;   /* #8A8F98 — Muted grey secondary text */
+  --c-faint:            138 143 152 / 0.6;
 
-  /* ——— Accent (Interactive Steel Blue #166392 / VSCode Blue) ——— */
-  --c-accent:           22 99 146;     /* #166392  — Steel blue accent         */
-  --c-accent-hover:     56 139 253;    /* #388BFD  — Bright blue hover         */
-  --c-accent-muted:     22 99 146;
+  /* ——— Accent (Reserve strictly for CTA / Primary Action) ——— */
+  --c-accent:           94 106 210;    /* #5E6AD2 — Linear indigo blue */
+  --c-accent-hover:     114 125 230;   /* #727DE6 — Hover state */
+  --c-accent-muted:     94 106 210 / 0.2;
 
-  /* ——— Signal colours (High contrast dark mode) ——— */
-  --c-signal-buy:       46 160 67;     /* #2EA043  — Emerald green             */
-  --c-signal-watch:     210 153 34;    /* #D29922  — Amber gold                */
-  --c-signal-avoid:     248 81 73;     /* #F85149  — Ruby red                  */
+  /* ——— Functional Status Colours (Strictly for real status meaning) ——— */
+  --c-signal-buy:       46 160 67;     /* #2EA043 — Win / Buy status */
+  --c-signal-watch:     210 153 34;    /* #D29922 — Caution / Watch status */
+  --c-signal-avoid:     248 81 73;     /* #F85149 — Loss / Avoid status */
 
   /* ——— Danger ——— */
   --c-danger:           248 81 73;     /* #F85149 */
@@ -249,33 +249,33 @@ export default function App() {
               </span>
             </div>
 
-            <nav className="flex items-center gap-6 text-sm font-medium border-b border-edge/40">
+            <nav className="flex items-center gap-1 bg-surface-card p-1 rounded-full border border-edge text-xs">
               <button
                 onClick={() => setActiveTab('score')}
-                className={`py-2 px-1 border-b-2 transition-all ${
+                className={`px-3.5 py-1 rounded-full transition-colors font-medium ${
                   activeTab === 'score'
-                    ? 'border-accent text-accent font-semibold'
-                    : 'border-transparent text-dim hover:text-prime'
+                    ? 'bg-surface-elevated text-prime border border-edge'
+                    : 'text-dim hover:text-prime border border-transparent'
                 }`}
               >
                 Score Ticker
               </button>
               <button
                 onClick={() => setActiveTab('digest')}
-                className={`py-2 px-1 border-b-2 transition-all ${
+                className={`px-3.5 py-1 rounded-full transition-colors font-medium ${
                   activeTab === 'digest'
-                    ? 'border-accent text-accent font-semibold'
-                    : 'border-transparent text-dim hover:text-prime'
+                    ? 'bg-surface-elevated text-prime border border-edge'
+                    : 'text-dim hover:text-prime border border-transparent'
                 }`}
               >
                 Latest Picks
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`py-2 px-1 border-b-2 transition-all ${
+                className={`px-3.5 py-1 rounded-full transition-colors font-medium ${
                   activeTab === 'history'
-                    ? 'border-accent text-accent font-semibold'
-                    : 'border-transparent text-dim hover:text-prime'
+                    ? 'bg-surface-elevated text-prime border border-edge'
+                    : 'text-dim hover:text-prime border border-transparent'
                 }`}
               >
                 Score History
@@ -284,13 +284,13 @@ export default function App() {
 
             <button
               onClick={() => setShowSettings(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg
+              className="w-8 h-8 flex items-center justify-center rounded-full
                          text-dim hover:text-prime hover:bg-surface-elevated
-                         transition-colors"
+                         transition-colors border border-edge"
               aria-label="Open settings"
             >
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -337,20 +337,19 @@ export default function App() {
 
         {/* ── Main content ── */}
         <main
-          className="flex-1 w-full max-w-6xl mx-auto px-4 py-10
-                      flex flex-col items-center gap-10"
+          className="flex-1 w-full max-w-5xl mx-auto px-4 py-8
+                      flex flex-col items-center gap-8"
         >
           {activeTab === 'score' ? (
             <>
               {/* Hero (hidden once results appear) */}
               {scorecards.length === 0 && loadingTickers.length === 0 && (
-                <div className="text-center space-y-3 animate-fade-in">
-                  <h2 className="text-3xl md:text-4xl font-extrabold text-prime">
+                <div className="text-center space-y-2 animate-fade-in py-4">
+                  <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-prime">
                     AI-Powered Stock Scoring
                   </h2>
-                  <p className="text-dim text-lg max-w-lg mx-auto leading-relaxed">
-                    Enter a ticker, pick your hold period, and get an instant
-                    investment scorecard backed by live data and AI analysis.
+                  <p className="text-dim text-sm max-w-md mx-auto leading-relaxed">
+                    Score any stock ticker against your hold period using live data and AI analysis.
                   </p>
                 </div>
               )}

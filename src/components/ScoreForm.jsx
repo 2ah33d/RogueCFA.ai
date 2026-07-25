@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { HOLD_PERIODS } from '../lib/promptBuilder';
 
+/**
+ * ScoreForm — Linear.app aesthetic: 8px card, monochrome fields, single blue primary CTA button.
+ */
 export default function ScoreForm({ onScore, loading, prefilledTicker = '', prefilledGuest = null, className = '' }) {
   const [tickers, setTickers] = useState('');
   const [holdPeriod, setHoldPeriod] = useState('6M');
@@ -46,12 +49,12 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
             <div className="flex items-center justify-between mb-1.5">
               <label
                 htmlFor="ticker-input"
-                className="block text-sm font-medium text-dim"
+                className="block text-xs font-semibold text-dim uppercase tracking-wider"
               >
                 Ticker Symbol(s)
               </label>
               {prefilledGuest && (
-                <span className="text-xs font-medium text-dim bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-lg">
+                <span className="text-xs font-normal text-dim bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-full">
                   BNN Pick: {prefilledGuest}
                 </span>
               )}
@@ -67,15 +70,14 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
               placeholder="AAPL, MSFT, SHOP"
               disabled={loading}
               className="w-full px-4 py-3 bg-surface border border-edge rounded-lg
-                         text-prime text-lg font-mono placeholder-faint
-                         focus:outline-none focus:border-accent focus:ring-1
-                         focus:ring-accent/30 transition-colors
+                         text-prime text-lg font-mono placeholder:text-faint
+                         focus:outline-none focus:border-white/20 transition-colors
                          disabled:opacity-50 tracking-wider"
               autoComplete="off"
               spellCheck="false"
             />
             <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
-              <p className="text-xs text-faint">
+              <p className="text-xs text-dim">
                 Enter up to 5 tickers separated by commas
               </p>
               <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs text-dim hover:text-prime transition-colors select-none">
@@ -84,9 +86,9 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
                   checked={tsxOnly}
                   onChange={(e) => setTsxOnly(e.target.checked)}
                   disabled={loading}
-                  className="rounded border-edge bg-surface text-accent focus:ring-accent/30 w-3.5 h-3.5 cursor-pointer"
+                  className="rounded border-edge bg-surface text-accent focus:ring-0 w-3.5 h-3.5 cursor-pointer"
                 />
-                <span>TSX-First (Auto-append <code className="text-dim font-mono">.TO</code>)</span>
+                <span>TSX-First (Auto-append <code className="text-prime font-mono">.TO</code>)</span>
               </label>
             </div>
           </div>
@@ -96,7 +98,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
             <div className="flex-1">
               <label
                 htmlFor="hold-period"
-                className="block text-sm font-medium text-dim mb-1.5"
+                className="block text-xs font-semibold text-dim uppercase tracking-wider mb-1.5"
               >
                 Hold Period
               </label>
@@ -108,11 +110,10 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
                   disabled={loading}
                   className="w-full px-4 py-3 bg-surface border border-edge rounded-lg
                              text-prime appearance-none cursor-pointer
-                             focus:outline-none focus:border-accent focus:ring-1
-                             focus:ring-accent/30 transition-colors disabled:opacity-50 font-sans"
+                             focus:outline-none focus:border-white/20 transition-colors disabled:opacity-50 font-sans text-sm"
                 >
                   {Object.entries(HOLD_PERIODS).map(([key, { label }]) => (
-                    <option key={key} value={key}>
+                    <option key={key} value={key} className="bg-surface-card text-prime">
                       {label}
                     </option>
                   ))}
@@ -140,7 +141,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
                 type="submit"
                 disabled={loading}
                 className="w-full sm:w-auto px-8 py-3
-                           bg-accent text-white font-medium rounded-lg
+                           bg-accent text-white text-sm font-medium rounded-lg
                            hover:bg-accent-hover transition-colors
                            disabled:opacity-50 disabled:cursor-not-allowed
                            flex items-center justify-center gap-2 min-w-[140px]"
@@ -177,7 +178,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
 
           {/* Error */}
           {error && (
-            <p className="text-sm text-danger font-medium">{error}</p>
+            <p className="text-xs text-danger font-medium">{error}</p>
           )}
         </div>
       </div>
