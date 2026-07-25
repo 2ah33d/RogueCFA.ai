@@ -1,35 +1,38 @@
 import React from 'react';
 
+/**
+ * ComparisonMatrix — Side-by-side scorecard evaluation.
+ * Google Minimal aesthetic: quiet 1px border cards, flat chips, 8px radius.
+ */
 export default function ComparisonMatrix({ scorecards, comparisonResult }) {
   if (!scorecards || scorecards.length < 2) return null;
 
-  /* Find highest scoring ticker */
   const topScorecard = [...scorecards].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
   const winnerTicker = comparisonResult?.winner || topScorecard?.ticker;
 
   return (
-    <section className="w-full bg-surface-card border border-edge rounded-2xl p-6 md:p-8 shadow-xl animate-slide-up space-y-6">
+    <section className="w-full bg-surface-card border border-edge rounded-lg p-6 space-y-6 hover:shadow-google-hover transition-shadow">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-edge pb-5">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-xs font-bold uppercase tracking-wider mb-2">
+          <span className="text-xs font-semibold text-dim uppercase tracking-wider block mb-1">
             Head-to-Head Analysis
-          </div>
-          <h3 className="text-2xl font-bold text-prime font-mono">
+          </span>
+          <h3 className="text-xl font-bold text-prime">
             Comparative Matrix ({scorecards.length} Assets)
           </h3>
           <p className="text-xs text-dim mt-0.5">
-            Side-by-side evaluation across deterministic math sub-scores and AI trade-off analysis.
+            Side-by-side evaluation across quantitative math sub-scores and AI trade-off analysis.
           </p>
         </div>
 
         {winnerTicker && (
-          <div className="bg-gradient-to-r from-signal-buy/20 to-surface-elevated border border-signal-buy/40 px-4 py-3 rounded-xl flex items-center gap-3">
-            <span className="text-2xl">🏆</span>
+          <div className="bg-surface-elevated border border-edge px-4 py-2.5 rounded-lg flex items-center gap-3">
+            <span className="text-xl">🏆</span>
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-signal-buy block">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-signal-buy block">
                 Top Quantitative Candidate
               </span>
-              <span className="text-lg font-bold font-mono text-prime">
+              <span className="text-base font-bold font-mono text-prime">
                 {winnerTicker}
               </span>
             </div>
@@ -41,8 +44,8 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-edge bg-surface/40 text-xs font-semibold text-faint uppercase tracking-wider">
-              <th className="py-3.5 px-4">Metric / Sub-Score</th>
+            <tr className="border-b border-edge bg-surface-elevated text-xs font-semibold text-dim uppercase tracking-wider">
+              <th className="py-3 px-4">Metric / Sub-Score</th>
               {scorecards.map((card) => {
                 const isWinner = card.ticker === winnerTicker;
                 const isTSX =
@@ -53,17 +56,17 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
                   card.currency === 'CAD' ||
                   card.country === 'CA';
                 return (
-                  <th key={card.ticker} className={`py-3.5 px-4 text-center ${isWinner ? 'bg-accent/10 font-bold text-prime' : 'text-dim'}`}>
+                  <th key={card.ticker} className={`py-3 px-4 text-center ${isWinner ? 'bg-surface-card font-bold text-prime' : 'text-dim'}`}>
                     <div className="text-base font-mono font-bold text-prime flex items-center justify-center gap-1.5">
                       {card.ticker}
                       {isWinner && <span className="text-xs text-signal-buy">★</span>}
                       {isTSX && (
-                        <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/30 px-1 py-0 rounded">
+                        <span className="text-[10px] text-dim bg-surface-elevated border border-edge px-1.5 py-0.5 rounded-lg font-sans">
                           TSX
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-faint font-normal truncate max-w-[120px] mx-auto">
+                    <div className="text-[11px] text-faint font-normal font-sans truncate max-w-[120px] mx-auto">
                       {card.companyName || card.ticker}
                     </div>
                   </th>
@@ -71,14 +74,14 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-edge text-sm">
+          <tbody className="divide-y divide-edge text-sm font-sans">
             {/* Total Score */}
             <tr>
-              <td className="py-4 px-4 font-semibold text-prime">Total Math Score</td>
+              <td className="py-3.5 px-4 font-semibold text-prime">Total Math Score</td>
               {scorecards.map((card) => {
                 const isWinner = card.ticker === winnerTicker;
                 return (
-                  <td key={card.ticker} className={`py-4 px-4 text-center font-mono font-bold ${isWinner ? 'bg-accent/5 text-accent' : 'text-prime'}`}>
+                  <td key={card.ticker} className={`py-3.5 px-4 text-center font-mono font-bold ${isWinner ? 'text-accent' : 'text-prime'}`}>
                     <span className="text-lg">{card.score}</span>
                     <span className="text-xs text-faint">/100 ({card.grade})</span>
                   </td>
@@ -90,9 +93,9 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
             <tr>
               <td className="py-3.5 px-4 font-medium text-dim">Signal</td>
               {scorecards.map((card) => (
-                <td key={card.ticker} className="py-3.5 px-4 text-center">
+                <td key={card.ticker} className="py-3.5 px-4 text-center font-sans">
                   <span
-                    className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                    className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-lg ${
                       card.signal === 'BUY_SIGNAL'
                         ? 'bg-signal-buy/10 text-signal-buy border border-signal-buy/30'
                         : card.signal === 'AVOID'
@@ -131,7 +134,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
               <td className="py-3.5 px-4 font-medium text-dim">Valuation Reasonableness</td>
               {scorecards.map((card) => (
                 <td key={card.ticker} className="py-3.5 px-4 text-center font-mono text-prime">
-                  {card.score_breakdown?.valuation != null ? `${card.score_breakdown.valuation} pts` : <span className="text-faint text-xs">Finnhub N/A</span>}
+                  {card.score_breakdown?.valuation != null ? `${card.score_breakdown.valuation} pts` : <span className="text-faint text-xs font-sans">N/A</span>}
                 </td>
               ))}
             </tr>
@@ -141,7 +144,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
               <td className="py-3.5 px-4 font-medium text-dim">Earnings Beat / Trend</td>
               {scorecards.map((card) => (
                 <td key={card.ticker} className="py-3.5 px-4 text-center font-mono text-prime">
-                  {card.score_breakdown?.earnings != null ? `${card.score_breakdown.earnings} pts` : <span className="text-faint text-xs">Finnhub N/A</span>}
+                  {card.score_breakdown?.earnings != null ? `${card.score_breakdown.earnings} pts` : <span className="text-faint text-xs font-sans">N/A</span>}
                 </td>
               ))}
             </tr>
@@ -151,10 +154,10 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
 
       {/* ── AI Comparative Narrative ── */}
       {comparisonResult && (
-        <div className="bg-surface-elevated/60 border border-edge rounded-xl p-5 space-y-4">
+        <div className="bg-surface-elevated border border-edge rounded-lg p-5 space-y-4 font-sans">
           {comparisonResult.comparative_summary && (
             <div>
-              <h4 className="text-xs font-semibold text-accent uppercase tracking-wider mb-1.5">
+              <h4 className="text-xs font-semibold text-dim uppercase tracking-wider mb-1.5">
                 Comparative Summary
               </h4>
               <p className="text-sm text-prime leading-relaxed">
@@ -165,7 +168,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
 
           {Array.isArray(comparisonResult.key_tradeoffs) && comparisonResult.key_tradeoffs.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-faint uppercase tracking-wider mb-2">
+              <h4 className="text-xs font-semibold text-dim uppercase tracking-wider mb-2">
                 Relative Trade-Offs
               </h4>
               <ul className="space-y-1.5">

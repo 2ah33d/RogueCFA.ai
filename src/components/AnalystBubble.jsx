@@ -1,20 +1,8 @@
 import React from 'react';
 
 /**
- * AnalystBubble — Prominent, future-proof analyst profile card.
- * Designed for the DigestView but reusable anywhere.
- *
- * When the analyst tracking system is complete, pass the `trackRecord`
- * prop (same shape as getGuestTrackRecord() output) to render live stats.
- * Until then, placeholder slots show gracefully.
- *
- * @param {Object} props
- * @param {string} props.guestName - Analyst's full name
- * @param {string} props.firm - Firm / title
- * @param {string} [props.episodeFocus] - Episode theme
- * @param {string} [props.date] - Episode date
- * @param {Object} [props.trackRecord] - { hitRate, avgReturn, totalPicks, resolvedPicks, correctPicks }
- * @param {Function} [props.onSelectGuest] - Called with guestName when bubble is clicked
+ * AnalystBubble — Google Minimal analyst profile card.
+ * Quiet white card, 1px border, 8px radius, clean typography.
  */
 export default function AnalystBubble({
   guestName,
@@ -33,59 +21,47 @@ export default function AnalystBubble({
     <button
       type="button"
       onClick={() => onSelectGuest && onSelectGuest(guestName)}
-      className={`w-full text-left group relative overflow-hidden
-                  bg-gradient-to-br from-surface-elevated to-surface-card
-                  border border-edge hover:border-accent/50
-                  rounded-2xl p-5 transition-all duration-300
-                  shadow-lg shadow-black/10 hover:shadow-accent/10
-                  hover:translate-y-[-1px] ${className}`}
+      className={`w-full text-left group bg-surface-card border border-edge hover:border-accent/40 rounded-lg p-4 transition-all hover:shadow-google-hover ${className}`}
       title={`View ${guestName}'s track record`}
     >
-      {/* Gradient accent line */}
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-accent via-accent-hover to-accent-muted opacity-60 group-hover:opacity-100 transition-opacity" />
-
       <div className="flex items-start justify-between gap-4">
         {/* Left: Identity */}
         <div className="flex items-start gap-3.5 min-w-0">
           {/* Avatar initial */}
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-accent to-accent-muted
-                          flex items-center justify-center shadow-md shadow-accent/20
-                          flex-shrink-0">
-            <span className="text-white font-bold text-lg">
+          <div className="w-10 h-10 rounded-lg bg-surface-elevated border border-edge text-prime font-bold flex items-center justify-center flex-shrink-0">
+            <span className="text-prime font-bold text-base">
               {guestName.charAt(0).toUpperCase()}
             </span>
           </div>
 
           <div className="min-w-0">
-            <h3 className="text-base font-bold text-prime truncate group-hover:text-accent transition-colors">
+            <h3 className="text-base font-semibold text-prime truncate group-hover:text-accent transition-colors font-sans">
               {guestName}
             </h3>
-            <p className="text-xs text-dim truncate mt-0.5">
+            <p className="text-xs text-dim truncate mt-0.5 font-sans">
               {firm || 'BNN MarketCall Guest'}
             </p>
             {episodeFocus && (
-              <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-mono font-semibold
-                             text-accent bg-accent/10 border border-accent/25 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center mt-1.5 text-xs text-dim bg-surface-elevated border border-edge px-2 py-0.5 rounded-lg font-sans">
                 {episodeFocus}
               </span>
             )}
           </div>
         </div>
 
-        {/* Right: Stats area (future-proof) */}
+        {/* Right: Stats area */}
         <div className="flex-shrink-0 text-right">
           {date && (
-            <span className="text-[10px] text-faint font-mono block mb-1.5">
+            <span className="text-xs text-faint font-mono block mb-1">
               {date}
             </span>
           )}
 
           {hasStats ? (
-            /* Live stats from track record system */
-            <div className="space-y-1">
-              <div className="flex items-baseline justify-end gap-1.5">
+            <div className="space-y-0.5 font-mono">
+              <div className="flex items-baseline justify-end gap-1">
                 <span
-                  className={`text-lg font-mono font-bold ${
+                  className={`text-base font-bold ${
                     trackRecord.hitRate >= 0.6
                       ? 'text-signal-buy'
                       : trackRecord.hitRate <= 0.4
@@ -95,37 +71,26 @@ export default function AnalystBubble({
                 >
                   {(trackRecord.hitRate * 100).toFixed(0)}%
                 </span>
-                <span className="text-[10px] text-dim font-mono">hit rate</span>
+                <span className="text-[11px] text-dim">win rate</span>
               </div>
-              <div className="text-[10px] text-dim font-mono">
-                {trackRecord.correctPicks}/{trackRecord.resolvedPicks} resolved
+              <div className="text-[11px] text-faint">
+                {trackRecord.correctPicks}/{trackRecord.resolvedPicks} picks
               </div>
-              {trackRecord.avgReturn != null && (
-                <div className={`text-[10px] font-mono font-semibold ${
-                  trackRecord.avgReturn > 0 ? 'text-signal-buy' : trackRecord.avgReturn < 0 ? 'text-signal-avoid' : 'text-dim'
-                }`}>
-                  avg {trackRecord.avgReturn >= 0 ? '+' : ''}{trackRecord.avgReturn}%
-                </div>
-              )}
             </div>
           ) : (
-            /* Placeholder — will populate when track record system is built */
-            <div className="space-y-1">
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-dim
-                             bg-surface-elevated border border-edge px-2 py-0.5 rounded-full">
-                View Track Record
-              </span>
-            </div>
+            <span className="inline-flex items-center text-xs text-accent font-medium bg-surface-elevated border border-edge px-2.5 py-1 rounded-lg">
+              Track Record
+            </span>
           )}
         </div>
       </div>
 
       {/* Bottom hint */}
-      <div className="mt-3 pt-2.5 border-t border-edge/50 flex items-center justify-between">
-        <span className="text-[10px] text-faint">
-          Click to view full analyst profile & historical picks
+      <div className="mt-3 pt-2.5 border-t border-edge flex items-center justify-between font-sans">
+        <span className="text-xs text-dim">
+          Click to view full analyst profile &amp; pick history
         </span>
-        <svg className="w-3.5 h-3.5 text-faint group-hover:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-3.5 h-3.5 text-dim group-hover:text-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </div>

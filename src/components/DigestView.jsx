@@ -534,10 +534,9 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6 animate-fade-in">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-elevated/40 border border-edge p-3 rounded-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-card border border-edge p-3 rounded-lg">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center justify-center w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <h2 className="text-xs font-bold uppercase tracking-wider text-prime font-mono">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-dim">
             MarketCall Digest
           </h2>
           <HistoryBrowser
@@ -547,7 +546,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           <button
             type="button"
             onClick={handleRefreshFull}
-            className="text-[10px] text-accent hover:text-accent-hover font-mono px-2 py-1 rounded bg-accent/10 border border-accent/20 transition-colors flex items-center gap-1"
+            className="text-xs font-medium text-accent hover:text-accent-hover px-2 py-1 rounded-lg bg-surface-elevated border border-edge transition-colors flex items-center gap-1"
             title="Check YouTube for a newer episode"
           >
             Check Newer
@@ -558,9 +557,9 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-dim hover:text-accent transition-colors font-mono flex items-center gap-1"
+            className="text-xs text-dim hover:text-accent transition-colors flex items-center gap-1 font-medium"
           >
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
               <path fill="rgb(var(--c-surface))" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
             </svg>
@@ -581,12 +580,11 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
       {/* Market Outlook */}
       {digest.marketOutlook && (
-        <div className="bg-surface-card border border-edge rounded-xl p-5">
-          <h3 className="text-xs font-bold font-mono text-faint uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+        <div className="bg-surface-card border border-edge rounded-lg p-5">
+          <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-2.5">
             Market Outlook
           </h3>
-          <p className="text-sm text-prime/90 leading-relaxed">
+          <p className="text-sm text-prime leading-relaxed font-sans">
             {digest.marketOutlook}
           </p>
         </div>
@@ -595,12 +593,9 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       {/* Picks */}
       {Array.isArray(digest.picks) && digest.picks.length > 0 && (
         <div>
-          <h3 className="text-xs font-bold font-mono text-faint uppercase tracking-wider mb-3 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-signal-buy" />
-              Top Picks
-            </span>
-            <span className="text-[10px] font-normal text-dim">
+          <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-3 flex items-center justify-between">
+            <span>Top Picks</span>
+            <span className="text-[11px] font-normal text-faint">
               {digest.picks.length} pick{digest.picks.length !== 1 ? 's' : ''} • Click to expand
             </span>
           </h3>
@@ -623,12 +618,9 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       {/* Caller Mentions (Q&A) */}
       {(Array.isArray(digest.callerMentions) && digest.callerMentions.length > 0 ? digest.callerMentions : Array.isArray(digest.caller_mentions) && digest.caller_mentions.length > 0 ? digest.caller_mentions : null) && (
         <div>
-          <h3 className="text-xs font-bold font-mono text-faint uppercase tracking-wider mb-3 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-              Caller Mentions (Q&amp;A)
-            </span>
-            <span className="text-[10px] font-normal text-dim">
+          <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-3 flex items-center justify-between">
+            <span>Caller Mentions (Q&amp;A)</span>
+            <span className="text-[11px] font-normal text-faint">
               {(digest.callerMentions || digest.caller_mentions).length} mention{(digest.callerMentions || digest.caller_mentions).length !== 1 ? 's' : ''} • Click to expand
             </span>
           </h3>
@@ -651,12 +643,11 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
       {/* Closing Notes */}
       {digest.closingNotes && (
-        <div className="bg-surface-card/60 border border-edge rounded-xl p-5">
-          <h3 className="text-xs font-bold font-mono text-faint uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-signal-watch" />
+        <div className="bg-surface-card border border-edge rounded-lg p-5">
+          <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-2.5">
             Closing Notes
           </h3>
-          <p className="text-sm text-dim leading-relaxed italic">
+          <p className="text-sm text-dim leading-relaxed italic font-sans">
             {digest.closingNotes}
           </p>
         </div>

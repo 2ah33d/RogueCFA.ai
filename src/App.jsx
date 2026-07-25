@@ -29,31 +29,31 @@ import DigestView from './components/DigestView';
    ════════════════════════════════════════════════════════════════ */
 const THEME = `
 :root {
-  /* ——— Surfaces ——— */
-  --c-surface:          248 250 252;   /* #F8FAFC  — clean institutional slate white */
-  --c-surface-card:     255 255 255;   /* #FFFFFF  — pure white card fill      */
-  --c-surface-elevated: 241 245 249;   /* #F1F5F9  — soft slate elevated pill/nav */
+  /* ——— Surfaces (Google Minimal) ——— */
+  --c-surface:          241 243 244;   /* #F1F3F4  — Google neutral grey page background */
+  --c-surface-card:     255 255 255;   /* #FFFFFF  — pure white card background      */
+  --c-surface-elevated: 241 243 244;   /* #F1F3F4  — flat grey chip/tag background   */
 
   /* ——— Borders ——— */
-  --c-edge:             226 232 240;   /* #E2E8F0  — crisp slate-gray border   */
+  --c-edge:             218 220 224;   /* #DADCE0  — 1px solid #DADCE0 border   */
 
   /* ——— Text ——— */
-  --c-prime:            15 23 42;      /* #0F172A  — rich institutional deep slate/black */
-  --c-dim:              71 85 105;     /* #475569  — secondary slate text      */
-  --c-faint:            148 163 184;   /* #94A3B8  — muted slate-gray          */
+  --c-prime:            32 33 36;      /* #202124  — primary text */
+  --c-dim:              95 99 104;     /* #5F6368  — secondary text */
+  --c-faint:            128 134 139;   /* #80868B  — muted text */
 
-  /* ——— Accent (Exact Robot/Bars Logo Steel Blue #166392) ——— */
-  --c-accent:           22 99 146;     /* #166392  — muted mid-tone steel blue */
-  --c-accent-hover:     32 126 184;    /* #207eb8  — bright steel blue hover   */
-  --c-accent-muted:     16 74 110;     /* #104a6e  — deep steel blue border/shadow */
+  /* ——— Accent (Interactive Only — Existing Blue #166392) ——— */
+  --c-accent:           22 99 146;     /* #166392  — steel blue accent */
+  --c-accent-hover:     26 115 232;    /* #1A73E8  — hover state blue */
+  --c-accent-muted:     22 99 146;
 
   /* ——— Signal colours ——— */
-  --c-signal-buy:       16 185 129;    /* #10b981  — crisp emerald green       */
-  --c-signal-watch:     245 158 11;    /* #f59e0b  — rich amber                */
-  --c-signal-avoid:     239 68 68;     /* #ef4444  — bright ruby red           */
+  --c-signal-buy:       24 128 56;     /* #188038  — Google green */
+  --c-signal-watch:     234 134 0;     /* #EA8600  — Google amber */
+  --c-signal-avoid:     217 48 37;     /* #D93025  — Google red */
 
   /* ——— Danger ——— */
-  --c-danger:           225 29 72;     /* #e11d48  — crimson                   */
+  --c-danger:           217 48 37;     /* #D93025 */
 }
 `;
 
@@ -249,33 +249,33 @@ export default function App() {
               </span>
             </div>
 
-            <nav className="flex items-center gap-1 bg-surface-elevated p-1 rounded-xl border border-edge text-xs font-semibold">
+            <nav className="flex items-center gap-6 text-sm font-medium border-b border-edge/40">
               <button
                 onClick={() => setActiveTab('score')}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
+                className={`py-2 px-1 border-b-2 transition-all ${
                   activeTab === 'score'
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-dim hover:text-prime'
+                    ? 'border-accent text-accent font-semibold'
+                    : 'border-transparent text-dim hover:text-prime'
                 }`}
               >
                 Score Ticker
               </button>
               <button
                 onClick={() => setActiveTab('digest')}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
+                className={`py-2 px-1 border-b-2 transition-all ${
                   activeTab === 'digest'
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-dim hover:text-prime'
+                    ? 'border-accent text-accent font-semibold'
+                    : 'border-transparent text-dim hover:text-prime'
                 }`}
               >
                 Latest Picks
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
+                className={`py-2 px-1 border-b-2 transition-all ${
                   activeTab === 'history'
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-dim hover:text-prime'
+                    ? 'border-accent text-accent font-semibold'
+                    : 'border-transparent text-dim hover:text-prime'
                 }`}
               >
                 Score History

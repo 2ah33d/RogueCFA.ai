@@ -39,10 +39,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
 
   return (
     <form onSubmit={handleSubmit} className={`w-full max-w-2xl mx-auto ${className}`}>
-      <div
-        className="bg-surface-card border border-edge rounded-2xl p-6 md:p-8
-                    shadow-xl shadow-black/20"
-      >
+      <div className="bg-surface-card border border-edge rounded-lg p-6 md:p-8">
         <div className="space-y-5">
           {/* Ticker input */}
           <div>
@@ -54,7 +51,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
                 Ticker Symbol(s)
               </label>
               {prefilledGuest && (
-                <span className="text-xs font-mono font-bold text-accent bg-accent/10 border border-accent/30 px-2.5 py-0.5 rounded-full">
+                <span className="text-xs font-medium text-dim bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-lg">
                   BNN Pick: {prefilledGuest}
                 </span>
               )}
@@ -89,7 +86,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
                   disabled={loading}
                   className="rounded border-edge bg-surface text-accent focus:ring-accent/30 w-3.5 h-3.5 cursor-pointer"
                 />
-                <span>TSX-First (Auto-append <code className="text-accent font-mono">.TO</code>)</span>
+                <span>TSX-First (Auto-append <code className="text-dim font-mono">.TO</code>)</span>
               </label>
             </div>
           </div>
@@ -112,7 +109,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
                   className="w-full px-4 py-3 bg-surface border border-edge rounded-lg
                              text-prime appearance-none cursor-pointer
                              focus:outline-none focus:border-accent focus:ring-1
-                             focus:ring-accent/30 transition-colors disabled:opacity-50"
+                             focus:ring-accent/30 transition-colors disabled:opacity-50 font-sans"
                 >
                   {Object.entries(HOLD_PERIODS).map(([key, { label }]) => (
                     <option key={key} value={key}>
@@ -143,14 +140,9 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
                 type="submit"
                 disabled={loading}
                 className="w-full sm:w-auto px-8 py-3
-                           bg-gradient-to-r from-accent to-accent-muted
-                           text-white font-semibold rounded-lg
-                           hover:from-accent-hover hover:to-accent
-                           transition-all duration-200
-                           shadow-lg shadow-accent/20 hover:shadow-accent/30
-                           active:scale-[0.98]
+                           bg-accent text-white font-medium rounded-lg
+                           hover:bg-accent-hover transition-colors
                            disabled:opacity-50 disabled:cursor-not-allowed
-                           disabled:active:scale-100
                            flex items-center justify-center gap-2 min-w-[140px]"
               >
                 {loading ? (
@@ -185,7 +177,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
 
           {/* Error */}
           {error && (
-            <p className="text-sm text-danger animate-fade-in">{error}</p>
+            <p className="text-sm text-danger font-medium">{error}</p>
           )}
         </div>
       </div>
