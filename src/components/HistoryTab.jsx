@@ -3,7 +3,7 @@ import { getHistory, clearHistory } from '../lib/historyManager';
 import Scorecard from './Scorecard';
 
 /**
- * HistoryTab — Linear.app aesthetic: monochrome 8px card, pill chips, subtle 8% borders.
+ * HistoryTab — Google Antigravity aesthetic: 16px radius cards, soft elevation shadows, task-status pills.
  */
 export default function HistoryTab({ onSelectTicker, className = '' }) {
   const [history, setHistory] = useState([]);
@@ -48,7 +48,7 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
 
   if (totalScored === 0) {
     return (
-      <div className={`w-full max-w-5xl mx-auto p-12 text-center bg-surface-card border border-edge rounded-lg animate-fade-in ${className}`}>
+      <div className={`w-full max-w-5xl mx-auto p-12 text-center bg-surface-card rounded-2xl shadow-antigravity animate-fade-in ${className}`}>
         <div className="text-xs font-semibold uppercase tracking-wider text-dim mb-3">HISTORICAL EVALUATIONS</div>
         <h3 className="text-xl font-bold text-prime mb-2">No scoring history yet.</h3>
         <p className="text-xs text-dim max-w-md mx-auto">
@@ -61,9 +61,9 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
   return (
     <div className={`w-full max-w-6xl mx-auto space-y-6 animate-fade-in ${className}`}>
       {/* Summary Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-surface-card border border-edge rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-surface-card rounded-2xl shadow-antigravity font-sans">
         <div className="flex items-center gap-4">
-          <div className="p-2.5 bg-surface-elevated border border-edge rounded-lg text-prime font-mono font-semibold text-xs">
+          <div className="p-3 bg-surface-elevated rounded-xl text-prime font-mono font-semibold text-xs shadow-inner">
             SUM
           </div>
           <div>
@@ -73,8 +73,8 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-edge pt-4 md:pt-0 md:pl-6">
-          <div className="p-2.5 bg-surface-elevated border border-edge rounded-lg text-signal-buy font-mono font-semibold text-xs">
+        <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-surface-elevated/40 pt-4 md:pt-0 md:pl-6">
+          <div className="p-3 bg-signal-buy/15 rounded-xl text-signal-buy font-mono font-semibold text-xs">
             ACC
           </div>
           <div>
@@ -86,8 +86,8 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-edge pt-4 md:pt-0 md:pl-6">
-          <div className="p-2.5 bg-surface-elevated border border-edge rounded-lg text-prime font-mono text-xs">
+        <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-surface-elevated/40 pt-4 md:pt-0 md:pl-6">
+          <div className="p-3 bg-surface-elevated rounded-xl text-prime font-mono text-xs shadow-inner">
             RET
           </div>
           <div>
@@ -101,12 +101,12 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
       </div>
 
       {/* Table Header & Controls */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between px-1 font-sans">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-prime">
             Score History &amp; Outcomes
           </h3>
-          <span className="text-xs text-dim bg-surface-card px-2.5 py-0.5 rounded-full border border-edge font-normal">
+          <span className="text-xs text-dim bg-surface-card px-3 py-0.5 rounded-full font-normal shadow-antigravity">
             Auto-saved
           </span>
         </div>
@@ -118,14 +118,14 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
               <button
                 type="button"
                 onClick={handleClear}
-                className="px-3 py-1 text-xs font-medium bg-danger text-white rounded-lg transition-colors"
+                className="px-3 py-1 text-xs font-semibold bg-danger text-white rounded-full transition-colors shadow-antigravity"
               >
                 Yes, Clear
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmClear(false)}
-                className="px-2.5 py-1 text-xs bg-surface-card hover:bg-surface-elevated text-dim hover:text-prime rounded-lg transition-colors border border-edge"
+                className="px-3 py-1 text-xs bg-surface-card hover:bg-surface-elevated text-dim hover:text-prime rounded-full transition-colors"
               >
                 Cancel
               </button>
@@ -134,7 +134,7 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
             <button
               type="button"
               onClick={handleClear}
-              className="px-3 py-1.5 text-xs text-dim hover:text-danger bg-surface-card hover:bg-surface-elevated border border-edge rounded-lg transition-colors font-medium"
+              className="px-4 py-1.5 text-xs text-dim hover:text-danger bg-surface-card hover:bg-surface-elevated rounded-full transition-colors font-medium shadow-antigravity"
             >
               Clear History
             </button>
@@ -143,11 +143,11 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
       </div>
 
       {/* History Table */}
-      <div className="bg-surface-card border border-edge rounded-lg overflow-hidden">
+      <div className="bg-surface-card rounded-2xl overflow-hidden shadow-antigravity">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-surface-elevated border-b border-edge text-dim uppercase tracking-wider text-[11px]">
+              <tr className="bg-surface-elevated text-dim uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-4 font-semibold w-10 text-center">#</th>
                 <th className="py-3 px-4 font-semibold">Ticker</th>
                 <th className="py-3 px-4 font-semibold">Date</th>
@@ -158,7 +158,7 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                 <th className="py-3 px-6 font-semibold">Outcome</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-edge font-mono">
+            <tbody className="divide-y divide-surface-elevated/40 font-mono">
               {history.map((entry, idx) => {
                 const isExpanded = expandedId === entry.id;
                 const dateStr = entry.date
@@ -172,19 +172,19 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                 let outcomeBadge = null;
                 if (entry.outcome === 'CORRECT') {
                   outcomeBadge = (
-                    <span className="inline-flex items-center text-xs font-semibold text-signal-buy bg-signal-buy/10 border border-signal-buy/30 px-2.5 py-0.5 rounded-full">
+                    <span className="inline-flex items-center text-xs font-semibold text-signal-buy bg-signal-buy/15 px-3 py-1 rounded-full">
                       CORRECT
                     </span>
                   );
                 } else if (entry.outcome === 'INCORRECT') {
                   outcomeBadge = (
-                    <span className="inline-flex items-center text-xs font-semibold text-signal-avoid bg-signal-avoid/10 border border-signal-avoid/30 px-2.5 py-0.5 rounded-full">
+                    <span className="inline-flex items-center text-xs font-semibold text-signal-avoid bg-signal-avoid/15 px-3 py-1 rounded-full">
                       INCORRECT
                     </span>
                   );
                 } else if (entry.outcome === 'NEUTRAL') {
                   outcomeBadge = (
-                    <span className="inline-flex items-center text-xs font-semibold text-signal-watch bg-signal-watch/10 border border-signal-watch/30 px-2.5 py-0.5 rounded-full">
+                    <span className="inline-flex items-center text-xs font-semibold text-signal-watch bg-signal-watch/15 px-3 py-1 rounded-full">
                       NEUTRAL
                     </span>
                   );
@@ -200,7 +200,7 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                     }
                   }
                   outcomeBadge = (
-                    <span className="inline-flex items-center text-xs text-dim bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-full font-sans">
+                    <span className="inline-flex items-center text-xs text-dim bg-surface-elevated px-3 py-1 rounded-full font-sans">
                       {countdownText}
                     </span>
                   );
@@ -212,17 +212,17 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                       onClick={() => setExpandedId(isExpanded ? null : entry.id)}
                       className="hover:bg-surface-elevated transition-colors cursor-pointer select-none group"
                     >
-                      <td className="py-3.5 px-4 text-center text-dim group-hover:text-prime font-mono">
+                      <td className="py-4 px-4 text-center text-dim group-hover:text-prime font-mono">
                         <span>{isExpanded ? '▼' : '▶'}</span>
                       </td>
-                      <td className="py-3.5 px-4 font-bold text-prime text-sm">
+                      <td className="py-4 px-4 font-bold text-prime text-sm">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             if (onSelectTicker) onSelectTicker(entry.ticker);
                           }}
-                          className="hover:text-prime underline decoration-white/20 transition-colors text-left font-mono"
+                          className="hover:text-prime underline decoration-dim transition-colors text-left font-mono"
                           title={`Click to score ${entry.ticker}`}
                         >
                           {entry.ticker}
@@ -231,26 +231,26 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                           {entry.companyName || entry.ticker}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-dim whitespace-nowrap font-mono">{dateStr}</td>
-                      <td className="py-3.5 px-4 text-prime font-mono">{entry.holdPeriod || '6M'}</td>
-                      <td className="py-3.5 px-4 font-mono">
+                      <td className="py-4 px-4 text-dim whitespace-nowrap font-mono">{dateStr}</td>
+                      <td className="py-4 px-4 text-prime font-mono">{entry.holdPeriod || '6M'}</td>
+                      <td className="py-4 px-4 font-mono">
                         <span className="font-bold text-base text-prime">{entry.score}</span>
                         <span className="text-xs text-dim">/100 ({entry.grade})</span>
                       </td>
-                      <td className="py-3.5 px-4">
+                      <td className="py-4 px-4 font-sans">
                         <span
-                          className={`text-xs font-semibold px-2.5 py-0.5 rounded-full uppercase ${
+                          className={`text-xs font-semibold px-3 py-1 rounded-full uppercase ${
                             entry.signal === 'BUY_SIGNAL'
-                              ? 'bg-signal-buy/10 text-signal-buy border border-signal-buy/30'
+                              ? 'bg-signal-buy/15 text-signal-buy'
                               : entry.signal === 'AVOID'
-                                ? 'bg-signal-avoid/10 text-signal-avoid border border-signal-avoid/30'
-                                : 'bg-signal-watch/10 text-signal-watch border border-signal-watch/30'
+                                ? 'bg-signal-avoid/15 text-signal-avoid'
+                                : 'bg-signal-watch/15 text-signal-watch'
                           }`}
                         >
                           {entry.signal === 'BUY_SIGNAL' ? 'BUY' : entry.signal || 'WATCH'}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold">
+                      <td className="py-4 px-4 text-right font-mono font-bold">
                         {entry.actualReturn != null && !isNaN(entry.actualReturn) ? (
                           <span
                             className={
@@ -268,15 +268,15 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                           <span className="text-dim font-normal">—</span>
                         )}
                       </td>
-                      <td className="py-3.5 px-6">{outcomeBadge}</td>
+                      <td className="py-4 px-6">{outcomeBadge}</td>
                     </tr>
 
                     {/* Expandable Row Content */}
                     {isExpanded && (
-                      <tr className="bg-surface-elevated border-b border-edge">
+                      <tr className="bg-surface-elevated">
                         <td colSpan={8} className="p-6">
                           <div className="max-w-4xl mx-auto space-y-4 animate-fade-in font-sans">
-                            <div className="flex items-center justify-between text-xs text-dim bg-surface-card p-3 rounded-lg border border-edge">
+                            <div className="flex items-center justify-between text-xs text-dim bg-surface-card p-4 rounded-xl shadow-antigravity">
                               <div>
                                 <span className="text-dim">Scored Price: </span>
                                 <span className="text-prime font-semibold font-mono">

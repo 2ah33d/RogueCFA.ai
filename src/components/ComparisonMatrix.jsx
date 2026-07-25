@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * ComparisonMatrix — Linear.app aesthetic: monochrome matrix table, pill status chips, 8% white opacity border.
+ * ComparisonMatrix — Google Antigravity aesthetic: 16px radius, soft elevation shadow, task-status pills.
  */
 export default function ComparisonMatrix({ scorecards, comparisonResult }) {
   if (!scorecards || scorecards.length < 2) return null;
@@ -10,8 +10,8 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
   const winnerTicker = comparisonResult?.winner || topScorecard?.ticker;
 
   return (
-    <section className="w-full bg-surface-card border border-edge rounded-lg p-6 space-y-6 hover:shadow-linear-hover transition-shadow">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-edge pb-5">
+    <section className="w-full bg-surface-card rounded-2xl p-6 sm:p-8 space-y-6 shadow-antigravity">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-surface-elevated/40 pb-5 font-sans">
         <div>
           <span className="text-xs font-semibold text-dim uppercase tracking-wider block mb-1">
             Head-to-Head Analysis
@@ -25,13 +25,13 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
         </div>
 
         {winnerTicker && (
-          <div className="bg-surface-elevated border border-edge px-4 py-2.5 rounded-lg flex items-center gap-3">
+          <div className="bg-signal-buy/15 px-4 py-3 rounded-2xl flex items-center gap-3">
             <span className="text-xl">🏆</span>
             <div>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-signal-buy block">
                 Top Quantitative Candidate
               </span>
-              <span className="text-base font-bold font-mono text-prime">
+              <span className="text-base font-bold font-mono text-signal-buy">
                 {winnerTicker}
               </span>
             </div>
@@ -43,7 +43,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-edge bg-surface-elevated text-xs font-semibold text-dim uppercase tracking-wider">
+            <tr className="border-b border-surface-elevated/40 bg-surface-elevated text-xs font-semibold text-dim uppercase tracking-wider">
               <th className="py-3 px-4">Metric / Sub-Score</th>
               {scorecards.map((card) => {
                 const isWinner = card.ticker === winnerTicker;
@@ -60,7 +60,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
                       {card.ticker}
                       {isWinner && <span className="text-xs text-signal-buy">★</span>}
                       {isTSX && (
-                        <span className="text-[10px] text-dim bg-surface-elevated border border-edge px-2 py-0.5 rounded-full font-sans">
+                        <span className="text-[10px] text-dim bg-surface px-2 py-0.5 rounded-full font-sans">
                           TSX
                         </span>
                       )}
@@ -73,7 +73,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-edge text-sm font-sans">
+          <tbody className="divide-y divide-surface-elevated/40 text-sm font-sans">
             {/* Total Score */}
             <tr>
               <td className="py-3.5 px-4 font-medium text-prime">Total Math Score</td>
@@ -94,12 +94,12 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
               {scorecards.map((card) => (
                 <td key={card.ticker} className="py-3.5 px-4 text-center font-sans">
                   <span
-                    className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                    className={`inline-block text-xs font-semibold px-3 py-1 rounded-full uppercase ${
                       card.signal === 'BUY_SIGNAL'
-                        ? 'bg-signal-buy/10 text-signal-buy border border-signal-buy/30'
+                        ? 'bg-signal-buy/15 text-signal-buy'
                         : card.signal === 'AVOID'
-                          ? 'bg-signal-avoid/10 text-signal-avoid border border-signal-avoid/30'
-                          : 'bg-signal-watch/10 text-signal-watch border border-signal-watch/30'
+                          ? 'bg-signal-avoid/15 text-signal-avoid'
+                          : 'bg-signal-watch/15 text-signal-watch'
                     }`}
                   >
                     {card.signal === 'BUY_SIGNAL' ? 'BUY' : card.signal || 'WATCH'}
@@ -153,7 +153,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
 
       {/* ── AI Comparative Narrative ── */}
       {comparisonResult && (
-        <div className="bg-surface-elevated border border-edge rounded-lg p-5 space-y-4 font-sans">
+        <div className="bg-surface-elevated rounded-2xl p-6 space-y-4 font-sans shadow-inner">
           {comparisonResult.comparative_summary && (
             <div>
               <h4 className="text-xs font-semibold text-dim uppercase tracking-wider mb-1.5">

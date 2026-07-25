@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RogueCFA — AI Investment Scorecard</title>
     <meta name="description" content="Score any stock ticker against your intended hold period using live analyst data and AI. Free, BYOK, no account required." />
-    <meta name="theme-color" content="#0C0C0D" />
+    <meta name="theme-color" content="#1E1F22" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,6 +18,9 @@
             fontFamily: {
               sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
               mono: ['JetBrains Mono', 'Menlo', 'monospace'],
+            },
+            borderRadius: {
+              '2xl': '16px',
             },
             colors: {
               surface: {
@@ -40,7 +43,9 @@
               danger: 'rgb(var(--c-danger) / <alpha-value>)',
             },
             boxShadow: {
-              'linear-hover': '0 4px 20px rgba(0, 0, 0, 0.5)',
+              'antigravity': '0 2px 10px rgba(0, 0, 0, 0.24)',
+              'antigravity-hover': '0 6px 24px rgba(0, 0, 0, 0.35)',
+              'antigravity-elevated': '0 8px 32px rgba(0, 0, 0, 0.45)',
             },
           },
         },
@@ -48,7 +53,7 @@
     </script>
     <style>
       /* Pre-React background to prevent flash */
-      body { background-color: #0C0C0D; color: #EDEDED; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+      body { background-color: #1E1F22; color: #E3E3E3; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
       #root { min-height: 100vh; }
     </style>
   </head>

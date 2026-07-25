@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getGuestTrackRecord } from '../lib/guestTracker';
 
 /**
- * GuestModal — Linear.app aesthetic: 8px card modal, full-round pill badges, dark tiered surface.
+ * GuestModal — Google Antigravity aesthetic: 16px (rounded-2xl) modal, soft elevation shadow, task-status pills.
  */
 export default function GuestModal({ guestName, onClose, onSelectTicker, className = '' }) {
   const [liveRecord, setLiveRecord] = useState(null);
@@ -64,12 +64,12 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
     );
   } else if (isNoTrackRecord) {
     bodyContent = (
-      <div className="p-8 text-center bg-surface-elevated border border-edge rounded-lg space-y-3 font-sans">
+      <div className="p-8 text-center bg-surface-elevated rounded-2xl space-y-3 font-sans shadow-inner">
         <h4 className="text-base font-medium text-prime">No Track Record Recorded Yet</h4>
         <p className="text-xs text-dim max-w-md mx-auto leading-relaxed">
           RogueCFA automatically indexes past picks articles whenever new MarketCall episodes air or when a cold-start search runs for this guest analyst.
         </p>
-        <div className="inline-block bg-surface-card border border-edge px-3 py-1 rounded-full text-xs text-dim">
+        <div className="inline-block bg-surface-card px-3.5 py-1 rounded-full text-xs text-dim font-medium">
           Status: Pending Organic Ingestion
         </div>
       </div>
@@ -78,21 +78,21 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
     bodyContent = (
       <div className="space-y-6 font-sans">
         {/* Data Sample Size Verification Badge */}
-        <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-surface-elevated border border-edge rounded-lg text-xs text-dim">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-4 bg-surface-elevated rounded-xl text-xs text-dim shadow-inner">
           <div className="flex items-center gap-2">
             <span>
               <strong className="text-prime font-medium">Data Depth:</strong> {record.dataSummaryText || `Based on latest ${record.totalPicks || picksList.length} past picks across ${record.dataUsedEpisodes || 3} episodes`}
             </span>
           </div>
-          <span className="bg-surface-card px-2.5 py-1 rounded-full border border-edge font-normal text-dim text-xs">
+          <span className="bg-surface-card px-3 py-1 rounded-full font-medium text-dim text-xs">
             Sample Verified ({picksList.length} Picks)
           </span>
         </div>
 
         {/* Horizon Specialist Card */}
         {record.optimalHorizonKey && (
-          <div className="p-4 bg-surface-card border border-edge rounded-lg">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+          <div className="p-5 bg-surface-elevated rounded-2xl space-y-4 shadow-antigravity">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-dim block">
                   Time Horizon Assessment
@@ -104,8 +104,8 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                   {record.guestName}'s picks show superior accuracy on the <strong className="text-prime font-mono">{record.optimalHorizonKey}</strong> holding term.
                 </p>
               </div>
-              <div className="bg-surface-elevated border border-edge px-4 py-2 rounded-lg text-center sm:text-right shrink-0">
-                <span className="text-[11px] text-dim uppercase font-medium block">Optimal Win Rate</span>
+              <div className="bg-signal-buy/15 px-4 py-2.5 rounded-2xl text-center sm:text-right shrink-0">
+                <span className="text-[11px] text-signal-buy/80 uppercase font-medium block">Optimal Win Rate</span>
                 <span className="text-2xl font-bold font-mono text-signal-buy">
                   {((record.optimalHorizonHitRate || record.hitRate || 0.83) * 100).toFixed(0)}%
                 </span>
@@ -117,8 +117,8 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
 
             {/* Timeframe Comparison Grid */}
             {record.timeframeBreakdown && (
-              <div className="grid grid-cols-3 gap-2 pt-3 border-t border-edge text-xs">
-                <div className={`p-2 rounded-lg border ${record.optimalHorizonKey === '1M-3M' ? 'border-white/20 bg-surface-elevated' : 'border-edge bg-surface'}`}>
+              <div className="grid grid-cols-3 gap-3 pt-3 border-t border-surface-card text-xs">
+                <div className={`p-3 rounded-xl ${record.optimalHorizonKey === '1M-3M' ? 'bg-surface-card shadow-antigravity' : 'bg-surface'}`}>
                   <span className="text-[11px] text-dim block">Short-Term (1-3M)</span>
                   <span className="font-semibold text-prime text-sm font-mono">
                     {record.timeframeBreakdown.shortTerm?.hitRate != null ? `${(record.timeframeBreakdown.shortTerm.hitRate * 100).toFixed(0)}% win` : 'N/A'}
@@ -128,7 +128,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                   </span>
                 </div>
 
-                <div className={`p-2 rounded-lg border ${record.optimalHorizonKey === '6M' ? 'border-white/20 bg-surface-elevated' : 'border-edge bg-surface'}`}>
+                <div className={`p-3 rounded-xl ${record.optimalHorizonKey === '6M' ? 'bg-surface-card shadow-antigravity' : 'bg-surface'}`}>
                   <span className="text-[11px] text-dim block">Mid-Term (6M)</span>
                   <span className="font-semibold text-prime text-sm font-mono">
                     {record.timeframeBreakdown.midTerm?.hitRate != null ? `${(record.timeframeBreakdown.midTerm.hitRate * 100).toFixed(0)}% win` : 'N/A'}
@@ -138,7 +138,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                   </span>
                 </div>
 
-                <div className={`p-2 rounded-lg border ${record.optimalHorizonKey === '1Y-3Y' ? 'border-white/20 bg-surface-elevated' : 'border-edge bg-surface'}`}>
+                <div className={`p-3 rounded-xl ${record.optimalHorizonKey === '1Y-3Y' ? 'bg-surface-card shadow-antigravity' : 'bg-surface'}`}>
                   <span className="text-[11px] text-dim block">Long-Term (1-3Y)</span>
                   <span className="font-semibold text-prime text-sm font-mono">
                     {record.timeframeBreakdown.longTerm?.hitRate != null ? `${(record.timeframeBreakdown.longTerm.hitRate * 100).toFixed(0)}% win` : 'N/A'}
@@ -154,13 +154,13 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-surface-elevated border border-edge p-3.5 rounded-lg">
+          <div className="bg-surface-elevated p-4 rounded-xl shadow-antigravity">
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Total Picks</span>
             <span className="text-xl font-bold font-mono text-prime mt-0.5 block">{record.totalPicks || picksList.length}</span>
             <span className="text-[11px] text-dim">{record.resolvedPicks || picksList.length} evaluated</span>
           </div>
 
-          <div className="bg-surface-elevated border border-edge p-3.5 rounded-lg">
+          <div className="bg-surface-elevated p-4 rounded-xl shadow-antigravity">
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Hit Rate</span>
             {record.hitRate !== null ? (
               <>
@@ -178,7 +178,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
             )}
           </div>
 
-          <div className="bg-surface-elevated border border-edge p-3.5 rounded-lg">
+          <div className="bg-surface-elevated p-4 rounded-xl shadow-antigravity">
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Avg Pick Return</span>
             <span
               className={`text-xl font-bold font-mono mt-0.5 block ${
@@ -191,12 +191,12 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
             <span className="text-[11px] text-dim">1-Yr Total Return</span>
           </div>
 
-          <div className="bg-surface-elevated border border-edge p-3.5 rounded-lg">
+          <div className="bg-surface-elevated p-4 rounded-xl shadow-antigravity">
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Credibility Score</span>
             {record.credibilityScore != null ? (
               <>
                 <span className="text-xl font-bold font-mono text-prime mt-0.5 block">{record.credibilityScore}/100</span>
-                <span className="text-[11px] text-dim">Bayesian Shrinkage (k=6)</span>
+                <span className="text-[11px] text-dim">Bayesian Shrinkage</span>
               </>
             ) : hasEnoughData ? (
               <>
@@ -219,14 +219,14 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
           </h4>
 
           {picksList.length === 0 ? (
-            <div className="p-8 text-center text-dim text-xs border border-edge rounded-lg bg-surface-elevated">
+            <div className="p-8 text-center text-dim text-xs rounded-xl bg-surface-elevated">
               No stock picks recorded for this analyst yet.
             </div>
           ) : (
-            <div className="border border-edge rounded-lg overflow-hidden overflow-x-auto">
+            <div className="rounded-xl overflow-hidden overflow-x-auto shadow-antigravity bg-surface-elevated">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-surface-elevated border-b border-edge text-dim uppercase tracking-wider text-[11px]">
+                  <tr className="bg-surface text-dim uppercase tracking-wider text-[11px]">
                     <th className="py-3 px-4 font-semibold">Ticker</th>
                     <th className="py-3 px-4 font-semibold">Review Date</th>
                     <th className="py-3 px-4 font-semibold">Then Price</th>
@@ -234,11 +234,11 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                     <th className="py-3 px-4 font-semibold text-right">Total Return</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-edge font-mono">
+                <tbody className="divide-y divide-surface-card font-mono">
                   {picksList.map((pick, idx) => {
                     const ret = pick.totalReturnPct ?? pick.total_return_pct ?? pick.returnPct ?? pick.return_pct ?? pick.actualReturn;
                     return (
-                      <tr key={`${pick.ticker}-${idx}`} className="hover:bg-surface-elevated transition-colors">
+                      <tr key={`${pick.ticker}-${idx}`} className="hover:bg-surface-card transition-colors">
                         <td className="py-3.5 px-4 font-bold text-prime">
                           <button
                             type="button"
@@ -248,7 +248,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                                 onClose();
                               }
                             }}
-                            className="hover:text-prime underline decoration-white/20 transition-colors text-left font-mono"
+                            className="hover:text-prime underline decoration-dim transition-colors text-left font-mono"
                             title={`Click to score ${pick.ticker}`}
                           >
                             {pick.ticker}
@@ -279,16 +279,16 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
       <div
-        className={`bg-surface-card border border-edge rounded-lg max-w-3xl w-full max-h-[85vh] flex flex-col shadow-linear-hover overflow-hidden ${className}`}
+        className={`bg-surface-card rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-antigravity-elevated overflow-hidden ${className}`}
       >
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-edge flex items-center justify-between bg-surface-card">
+        <div className="px-6 py-4 border-b border-surface-elevated/40 flex items-center justify-between bg-surface-card">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-base font-semibold text-prime">{record?.guestName || guestName}</span>
-              <span className="text-xs text-dim bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-full">
+              <span className="text-xs text-dim bg-surface-elevated px-3 py-0.5 rounded-full font-normal">
                 BNN MarketCall Guest
               </span>
             </div>
@@ -299,7 +299,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-dim hover:text-prime hover:bg-surface-elevated rounded-lg transition-colors text-base"
+            className="p-1.5 text-dim hover:text-prime hover:bg-surface-elevated rounded-full transition-colors text-base"
             title="Close modal (Esc)"
           >
             ✕
@@ -312,11 +312,11 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-edge bg-surface-card flex justify-end">
+        <div className="px-6 py-4 border-t border-surface-elevated/40 bg-surface-card flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium bg-surface-elevated hover:bg-surface border border-edge text-prime rounded-lg transition-colors"
+            className="px-5 py-2 text-xs font-semibold bg-accent text-[#1E1F22] rounded-full transition-colors shadow-antigravity"
           >
             Close Panel
           </button>

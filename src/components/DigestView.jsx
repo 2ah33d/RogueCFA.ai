@@ -532,9 +532,9 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
   /* ── Digest loaded ── */
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6 animate-fade-in">
+    <div className="w-full max-w-3xl mx-auto space-y-6 animate-fade-in font-sans">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-card border border-edge p-3 rounded-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-card p-4 rounded-2xl shadow-antigravity">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-dim">
             MarketCall Digest
@@ -546,7 +546,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           <button
             type="button"
             onClick={handleRefreshFull}
-            className="text-xs font-medium text-dim hover:text-prime px-3 py-1 rounded-full bg-surface-elevated border border-edge transition-colors flex items-center gap-1"
+            className="text-xs font-medium text-dim hover:text-prime px-3 py-1 rounded-full bg-surface-elevated transition-colors flex items-center gap-1"
             title="Check YouTube for a newer episode"
           >
             Check Newer
@@ -580,7 +580,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
       {/* Market Outlook */}
       {digest.marketOutlook && (
-        <div className="bg-surface-card border border-edge rounded-lg p-5">
+        <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity">
           <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-2.5">
             Market Outlook
           </h3>
@@ -643,7 +643,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
       {/* Closing Notes */}
       {digest.closingNotes && (
-        <div className="bg-surface-card border border-edge rounded-lg p-5">
+        <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity">
           <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-2.5">
             Closing Notes
           </h3>

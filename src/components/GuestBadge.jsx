@@ -2,8 +2,7 @@ import React from 'react';
 import { getGuestTrackRecord } from '../lib/guestTracker';
 
 /**
- * GuestBadge — Full-round pill chip displaying analyst accuracy summary.
- * Linear.app aesthetic: monochrome pill chip, 8% white opacity border.
+ * GuestBadge — Google Antigravity aesthetic: soft pill chip with elevation shadow.
  */
 export default function GuestBadge({ guestName, record, onClick, className = '' }) {
   const data = record || (guestName ? getGuestTrackRecord(guestName) : null);
@@ -20,7 +19,7 @@ export default function GuestBadge({ guestName, record, onClick, className = '' 
         e.stopPropagation();
         if (onClick) onClick(data.guestName || guestName);
       }}
-      className={`inline-flex items-center gap-1.5 text-[11px] font-normal rounded-full px-2.5 py-0.5 transition-colors bg-surface-elevated border border-edge text-dim hover:text-prime hover:border-white/20 ${className}`}
+      className={`inline-flex items-center gap-2 text-[11px] font-normal rounded-full px-3 py-1 transition-all bg-surface-elevated text-dim hover:text-prime shadow-antigravity ${className}`}
       title={
         hasEnoughData
           ? `${data.guestName} (${data.firm || 'Analyst'}): ${(data.hitRate * 100).toFixed(0)}% accuracy (${data.correctPicks}/${data.resolvedPicks} resolved). Click for track record.`
@@ -29,8 +28,8 @@ export default function GuestBadge({ guestName, record, onClick, className = '' 
     >
       {hasEnoughData ? (
         <>
-          <span className="font-mono font-medium text-prime">{(data.hitRate * 100).toFixed(0)}% win</span>
-          <span className="text-dim text-[10px] border-l border-edge pl-1.5 font-mono">
+          <span className="font-mono font-bold text-signal-buy">{(data.hitRate * 100).toFixed(0)}% win</span>
+          <span className="text-dim text-[10px] border-l border-surface-card pl-2 font-mono">
             {picksUsed} picks
           </span>
         </>

@@ -22,34 +22,34 @@ import GuestModal from './components/GuestModal';
 import DigestView from './components/DigestView';
 import LandingPage from './components/LandingPage';
 
-/* ── Linear.app CSS System Tokens ── */
+/* ── Google Antigravity System Tokens ── */
 const THEME = `
 :root {
-  /* ——— Surfaces (Linear.app Tiered Dark Aesthetic) ——— */
-  --c-surface:          12 12 13;      /* #0C0C0D — Base background */
-  --c-surface-card:     23 24 26;      /* #17181A — Card / panel surface */
-  --c-surface-elevated: 28 29 31;      /* #1C1D1F — Elevated surface (chips, dropdowns) */
+  /* ——— Surfaces (Google Antigravity Soft Charcoal & Slate) ——— */
+  --c-surface:          30 31 34;      /* #1E1F22 — Base background (faint warmth) */
+  --c-surface-card:     42 44 49;      /* #2A2C31 — Card / panel surface */
+  --c-surface-elevated: 48 50 57;      /* #303239 — Elevated surface (dropdowns, modals) */
 
-  /* ——— Borders (8% white opacity — barely visible) ——— */
-  --c-edge:             255 255 255 / 0.08;
+  /* ——— Borders (Minimal to none — depth comes from soft elevation shadows) ——— */
+  --c-edge:             255 255 255 / 0.04;
 
   /* ——— Text ——— */
-  --c-prime:            237 237 237;   /* #EDEDED — Primary display text */
-  --c-dim:              138 143 152;   /* #8A8F98 — Muted grey secondary text */
-  --c-faint:            138 143 152 / 0.6;
+  --c-prime:            227 227 227;   /* #E3E3E3 — Soft off-white primary text */
+  --c-dim:              154 160 166;   /* #9AA0A6 — Soft muted grey secondary text */
+  --c-faint:            154 160 166 / 0.6;
 
-  /* ——— Accent (Our existing Steel Blue) ——— */
-  --c-accent:           22 99 146;     /* #166392 — Steel blue accent */
-  --c-accent-hover:     56 139 253;    /* #388BFD — Bright blue hover */
-  --c-accent-muted:     22 99 146 / 0.2;
+  /* ——— Accent (Google Soft Muted Blue #8AB4F8) ——— */
+  --c-accent:           138 180 248;   /* #8AB4F8 — Soft Google dark mode blue */
+  --c-accent-hover:     168 199 250;   /* #A8C7FA — Soft blue hover */
+  --c-accent-muted:     138 180 248 / 0.15;
 
-  /* ——— Functional Status Colours (Strictly for real status meaning) ——— */
-  --c-signal-buy:       46 160 67;     /* #2EA043 — Win / Buy status */
-  --c-signal-watch:     210 153 34;    /* #D29922 — Caution / Watch status */
-  --c-signal-avoid:     248 81 73;     /* #F85149 — Loss / Avoid status */
+  /* ——— Functional Status Colours (Antigravity Soft Tint Pattern) ——— */
+  --c-signal-buy:       129 201 149;   /* #81C995 — Soft muted green */
+  --c-signal-watch:     253 226 147;   /* #FDE293 — Soft muted yellow */
+  --c-signal-avoid:     242 139 130;   /* #F28B82 — Soft muted red */
 
   /* ——— Danger ——— */
-  --c-danger:           248 81 73;     /* #F85149 */
+  --c-danger:           242 139 130;   /* #F28B82 */
 }
 `;
 

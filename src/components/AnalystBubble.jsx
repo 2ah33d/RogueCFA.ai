@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * AnalystBubble — Linear.app aesthetic: monochrome 8px card, pill chips, clean typography.
+ * AnalystBubble — Google Antigravity aesthetic: 16px radius, soft elevation shadow, soft tint status pill.
  */
 export default function AnalystBubble({
   guestName,
@@ -20,14 +20,14 @@ export default function AnalystBubble({
     <button
       type="button"
       onClick={() => onSelectGuest && onSelectGuest(guestName)}
-      className={`w-full text-left group bg-surface-card border border-edge hover:border-white/20 rounded-lg p-4 transition-all hover:shadow-linear-hover ${className}`}
+      className={`w-full text-left group bg-surface-card rounded-2xl p-5 shadow-antigravity hover:shadow-antigravity-hover transition-all ${className}`}
       title={`View ${guestName}'s track record`}
     >
       <div className="flex items-start justify-between gap-4">
         {/* Left: Identity */}
-        <div className="flex items-start gap-3 min-w-0">
+        <div className="flex items-start gap-3.5 min-w-0">
           {/* Avatar initial */}
-          <div className="w-9 h-9 rounded-lg bg-surface-elevated border border-edge text-prime font-semibold flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-surface-elevated text-prime font-semibold flex items-center justify-center flex-shrink-0 shadow-inner">
             <span className="text-prime font-semibold text-sm">
               {guestName.charAt(0).toUpperCase()}
             </span>
@@ -41,7 +41,7 @@ export default function AnalystBubble({
               {firm || 'BNN MarketCall Guest'}
             </p>
             {episodeFocus && (
-              <span className="inline-flex items-center mt-1.5 text-xs text-dim bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-full font-sans">
+              <span className="inline-flex items-center mt-2 text-xs text-dim bg-surface-elevated px-3 py-0.5 rounded-full font-sans">
                 {episodeFocus}
               </span>
             )}
@@ -57,27 +57,19 @@ export default function AnalystBubble({
           )}
 
           {hasStats ? (
-            <div className="space-y-0.5 font-mono">
-              <div className="flex items-baseline justify-end gap-1">
-                <span
-                  className={`text-base font-bold ${
-                    trackRecord.hitRate >= 0.6
-                      ? 'text-signal-buy'
-                      : trackRecord.hitRate <= 0.4
-                        ? 'text-signal-avoid'
-                        : 'text-signal-watch'
-                  }`}
-                >
+            <div className="space-y-1 font-mono">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-signal-buy/15">
+                <span className="text-sm font-bold text-signal-buy">
                   {(trackRecord.hitRate * 100).toFixed(0)}%
                 </span>
-                <span className="text-[11px] text-dim">win rate</span>
+                <span className="text-[10px] text-signal-buy/80 font-normal">win rate</span>
               </div>
-              <div className="text-[11px] text-dim">
-                {trackRecord.correctPicks}/{trackRecord.resolvedPicks} picks
+              <div className="text-[11px] text-dim block mt-0.5">
+                {trackRecord.correctPicks}/{trackRecord.resolvedPicks} picks evaluated
               </div>
             </div>
           ) : (
-            <span className="inline-flex items-center text-xs text-dim font-normal bg-surface-elevated border border-edge px-2.5 py-1 rounded-full">
+            <span className="inline-flex items-center text-xs text-dim font-normal bg-surface-elevated px-3 py-1 rounded-full">
               Track Record
             </span>
           )}
@@ -85,11 +77,11 @@ export default function AnalystBubble({
       </div>
 
       {/* Bottom hint */}
-      <div className="mt-3 pt-2 border-t border-edge flex items-center justify-between font-sans">
+      <div className="mt-4 pt-3 border-t border-surface-elevated/40 flex items-center justify-between font-sans">
         <span className="text-xs text-dim">
           Click to view full analyst profile &amp; pick history
         </span>
-        <svg className="w-3.5 h-3.5 text-dim group-hover:text-prime transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-dim group-hover:text-prime transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
         </svg>
       </div>

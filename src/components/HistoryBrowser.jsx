@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 /**
- * HistoryBrowser.jsx — Linear.app aesthetic: pill trigger, 8px dropdown, monochrome palette.
+ * HistoryBrowser.jsx — Google Antigravity aesthetic: rounded-2xl dropdown, soft shadow elevation.
  */
 export default function HistoryBrowser({ selectedDate, onSelectDigest, className = '' }) {
   const [history, setHistory] = useState([]);
@@ -63,18 +63,18 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-2 px-3.5 py-1 bg-surface border border-edge hover:border-white/20 rounded-full text-prime font-medium transition-colors"
+            className="flex items-center gap-2.5 px-4 py-1.5 bg-surface-elevated hover:bg-surface-card rounded-full text-prime font-medium shadow-antigravity transition-all"
           >
             <span className="font-mono text-xs font-medium">{selectedDate || (currentSelection ? currentSelection.episodeDate : 'Latest')}</span>
-            <span className="text-[10px] text-dim font-mono bg-surface-elevated border border-edge px-2 py-0.5 rounded-full">
+            <span className="text-[10px] text-dim font-mono bg-surface px-2 py-0.5 rounded-full">
               {history.length} Saved
             </span>
             <span className="text-dim text-[10px]">▼</span>
           </button>
 
           {isOpen && (
-            <div className="absolute right-0 sm:right-auto sm:left-0 mt-1.5 w-72 max-h-80 overflow-y-auto bg-surface-elevated border border-edge rounded-lg shadow-linear-hover z-40 py-1 divide-y divide-edge">
-              <div className="px-3 py-2 bg-surface text-[10px] uppercase font-semibold text-dim tracking-wider">
+            <div className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-72 max-h-80 overflow-y-auto bg-surface-elevated rounded-2xl shadow-antigravity-elevated z-40 p-2 divide-y divide-surface-card font-sans">
+              <div className="px-3 py-2 text-[10px] uppercase font-semibold text-dim tracking-wider">
                 Select Episode Date (Last 30 Days)
               </div>
               {history.map((item, idx) => {
@@ -97,15 +97,15 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
                         onSelectDigest(item);
                       }
                     }}
-                    className={`w-full text-left px-3 py-2.5 hover:bg-surface-card transition-colors flex items-start justify-between gap-2 ${
-                      isSelected ? 'bg-surface-card text-prime font-medium border-l-2 border-white/40' : 'text-dim'
+                    className={`w-full text-left px-3 py-2.5 rounded-xl hover:bg-surface-card transition-colors flex items-start justify-between gap-2 ${
+                      isSelected ? 'bg-surface-card text-prime font-medium' : 'text-dim'
                     }`}
                   >
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono text-prime text-xs font-medium">{item.episodeDate}</span>
                         {isSelected && (
-                          <span className="text-[9px] bg-surface-elevated text-dim font-medium px-1.5 py-0.5 rounded-full border border-edge">
+                          <span className="text-[9px] bg-accent/15 text-accent font-semibold px-2 py-0.5 rounded-full">
                             ACTIVE
                           </span>
                         )}

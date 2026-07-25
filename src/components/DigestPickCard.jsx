@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 /**
  * DigestPickCard — Expandable card for a single stock pick from the digest.
- * Linear.app aesthetic: subtle 8% white opacity border, 8px card, muted typography.
+ * Google Antigravity aesthetic: 16px radius, soft elevation shadow, rounded pill CTA.
  */
 export default function DigestPickCard({
   ticker,
@@ -22,16 +22,16 @@ export default function DigestPickCard({
     : 'No reasoning provided.';
 
   return (
-    <div className="bg-surface-card border border-edge rounded-lg overflow-hidden transition-shadow hover:shadow-linear-hover">
+    <div className="bg-surface-card rounded-2xl overflow-hidden shadow-antigravity transition-all hover:shadow-antigravity-hover">
       {/* Clickable header */}
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-left px-4 py-3 flex items-start gap-3 transition-colors"
+        className="w-full text-left px-5 py-4 flex items-start gap-3 transition-colors"
       >
         {/* Ticker badge — Flat grey pill chip */}
         <div className="flex-shrink-0 mt-0.5">
-          <span className="inline-flex items-center font-mono font-semibold text-xs text-prime bg-surface-elevated border border-edge px-2.5 py-0.5 rounded-full">
+          <span className="inline-flex items-center font-mono font-semibold text-xs text-prime bg-surface-elevated px-3 py-1 rounded-full">
             {ticker}
           </span>
         </div>
@@ -43,7 +43,7 @@ export default function DigestPickCard({
               {company || ticker}
             </h4>
             {isCallerMention && (
-              <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-surface-elevated border border-edge text-dim">
+              <span className="text-[10px] font-normal px-2.5 py-0.5 rounded-full bg-surface-elevated text-dim">
                 Caller Q&amp;A
               </span>
             )}
@@ -72,8 +72,8 @@ export default function DigestPickCard({
 
       {/* Expandable body */}
       {expanded && (
-        <div className="px-4 pb-4 pt-0 border-t border-edge">
-          <blockquote className="text-xs text-dim leading-relaxed pl-3 border-l border-white/20 my-3 italic font-sans">
+        <div className="px-5 pb-5 pt-0 border-t border-surface-elevated/40">
+          <blockquote className="text-xs text-dim leading-relaxed pl-3 border-l-2 border-accent/40 my-3 italic font-sans">
             {reasoning || 'No detailed reasoning available.'}
           </blockquote>
 
@@ -83,7 +83,7 @@ export default function DigestPickCard({
               e.stopPropagation();
               if (onScoreTicker) onScoreTicker(ticker, guestName);
             }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-accent text-white text-xs font-medium rounded-lg hover:bg-accent-hover transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-[#1E1F22] text-xs font-semibold rounded-full hover:bg-accent-hover transition-colors shadow-antigravity"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
