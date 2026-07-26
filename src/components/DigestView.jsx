@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getKeys, getYoutubeKey, getGroqKey, getProvider, getDigestCache, saveDigestCache } from '../lib/storage';
 import { getGuestTrackRecord } from '../lib/guestTracker';
+import { calculateDigestCost } from '../lib/tokenPricing';
 import AnalystBubble from './AnalystBubble';
 import DigestPickCard from './DigestPickCard';
 import HistoryBrowser from './HistoryBrowser';
@@ -530,6 +531,13 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   };
 
   /* ── Digest loaded ── */
+  const activeProviderKey = getProvider();
+  const costInfo = calculateDigestCost(
+    activeProviderKey,
+    digest?.inputTokens || digest?.usage?.input_tokens || 4850,
+    digest?.outputTokens || digest?.usage?.output_tokens || 420
+  );
+
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in font-sans">
       {/* Header bar */}
@@ -675,8 +683,11 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               </div>
 
               <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
-                <span className="text-dim">Digest Cost</span>
-                <span className="font-semibold text-prime">~$0.04</span>
+                <div className="flex flex-col">
+                  <span className="text-dim">Digest Cost</span>
+                  <span className="text-[10px] text-dim/70 font-normal">{costInfo.providerName}</span>
+                </div>
+                <span className="font-semibold text-prime">{costInfo.formattedCost}</span>
               </div>
 
               <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
