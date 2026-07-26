@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 /**
  * AnalystBubble — Google Antigravity aesthetic: 16px radius, soft elevation shadow, soft tint status pill.
+ * Renders the YouTube episode broadcast thumbnail (with analyst headshot) if videoId or thumbnailUrl is available.
+ * If no thumbnail is present, removes the single-letter avatar square.
  */
 export default function AnalystBubble({
   guestName,
@@ -9,12 +11,18 @@ export default function AnalystBubble({
   episodeFocus,
   date,
   trackRecord,
+  videoId,
+  thumbnailUrl,
   onSelectGuest,
   className = '',
 }) {
+  const [imgError, setImgError] = useState(false);
+
   if (!guestName) return null;
 
   const hasStats = trackRecord && trackRecord.resolvedPicks >= 3 && trackRecord.hitRate !== null;
+  const thumb = thumbnailUrl || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null);
+  const showThumb = Boolean(thumb && !imgError);
 
   return (
     <button
@@ -26,12 +34,17 @@ export default function AnalystBubble({
       <div className="flex items-start justify-between gap-4">
         {/* Left: Identity */}
         <div className="flex items-start gap-3.5 min-w-0">
-          {/* Avatar initial */}
-          <div className="w-10 h-10 rounded-xl bg-surface-elevated text-prime font-semibold flex items-center justify-center flex-shrink-0 shadow-inner">
-            <span className="text-prime font-semibold text-sm">
-              {guestName.charAt(0).toUpperCase()}
-            </span>
-          </div>
+          {/* YouTube Episode Broadcast Thumbnail (contains Analyst Headshot) */}
+          {showThumb && (
+            <div className="w-14 h-14 rounded-xl overflow-hidden bg-surface-elevated flex-shrink-0 shadow-inner border border-surface-elevated/40">
+              <img
+                src={thumb}
+                alt={`${guestName} BNN MarketCall`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={() => setImgError(true)}
+              />
+            </div>
+          )}
 
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-prime truncate group-hover:text-white transition-colors">
@@ -41,7 +54,7 @@ export default function AnalystBubble({
               {firm || 'BNN MarketCall Guest'}
             </p>
             {episodeFocus && (
-              <span className="inline-flex items-center mt-2 text-xs text-dim bg-surface-elevated px-3 py-0.5 rounded-full">
+              <span className="inline-flex items-center mt-2 text-xs text-dim bg-surface-elevated px-3 py-0.5 rounded-full font-medium">
                 {episodeFocus}
               </span>
             )}

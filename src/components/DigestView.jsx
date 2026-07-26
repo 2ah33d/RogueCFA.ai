@@ -656,6 +656,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             episodeFocus={digest.episodeFocus}
             date={videoInfo?.episodeDate || todayStr}
             trackRecord={trackRecord}
+            videoId={videoInfo?.videoId}
             onSelectGuest={onSelectGuest}
           />
 
