@@ -1,10 +1,11 @@
 /**
  * Token Pricing Utility — Exact LLM API cost calculations per provider.
  * Rates based on current official API pricing ($ per 1M tokens):
- * - Gemini 1.5 Flash: $0.075 / 1M input, $0.30 / 1M output
- * - Claude 3.5 Sonnet: $3.00 / 1M input, $15.00 / 1M output
- * - Groq (Llama 3.3 70B): $0.59 / 1M input, $0.79 / 1M output
- * - OpenAI (GPT-4o-mini): $0.15 / 1M input, $0.60 / 1M output
+ * - Gemini 1.5 Flash: $0.075 / 1M input, $0.30 / 1M output (~$0.00049/digest)
+ * - Claude 3.5 Haiku: $0.80 / 1M input, $4.00 / 1M output (~$0.0055/digest)
+ * - Claude 3.5 Sonnet: $3.00 / 1M input, $15.00 / 1M output (~$0.0208/score)
+ * - Groq (Llama 3.3 70B): $0.59 / 1M input, $0.79 / 1M output (~$0.00319/digest)
+ * - OpenAI (GPT-4o-mini): $0.15 / 1M input, $0.60 / 1M output (~$0.00098/digest)
  */
 
 export const PROVIDER_RATES = {
@@ -14,6 +15,11 @@ export const PROVIDER_RATES = {
     outputPerM: 0.30,
   },
   claude: {
+    name: 'Claude 3.5 Haiku',
+    inputPerM: 0.80,
+    outputPerM: 4.00,
+  },
+  claudeSonnet: {
     name: 'Claude 3.5 Sonnet',
     inputPerM: 3.00,
     outputPerM: 15.00,
@@ -41,7 +47,6 @@ export function calculateDigestCost(providerKey = 'gemini', inputTokens = 4850, 
   const outputCost = (outputTokens / 1000000) * rates.outputPerM;
   const total = inputCost + outputCost;
 
-  // Format cost cleanly: $0.00045 for Gemini/Groq, $0.0208 for Claude
   let formattedCost;
   if (total < 0.001) {
     formattedCost = `$${total.toFixed(5)}`;
