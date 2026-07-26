@@ -162,8 +162,9 @@ function extractTextFromResponse(data) {
 /* ── Claude ── */
 async function callClaude(key, systemPrompt, userPrompt) {
   const models = [
-    'claude-sonnet-5',
-    'claude-3-5-sonnet-latest'
+    'claude-3-5-sonnet-latest',
+    'claude-haiku-4-5-20251001',
+    'claude-haiku-4-5',
   ];
 
   let lastErr = null;

@@ -15,7 +15,7 @@ export const PROVIDER_RATES = {
     outputPerM: 0.30,
   },
   claude: {
-    name: 'Claude 3.5 Haiku',
+    name: 'Claude Haiku (claude-haiku-4-5)',
     inputPerM: 0.80,
     outputPerM: 4.00,
   },
