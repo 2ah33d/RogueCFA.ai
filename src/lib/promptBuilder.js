@@ -156,11 +156,12 @@ function detectSignalConflicts(tickerData, alphaData, mathResult, positionInRang
    Math score is pre-calculated. LLM explains it.
    ──────────────────────────────────────────── */
 
-export function buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticker, guestName = null) {
-  const { profile, quote, recommendation, news } = tickerData;
+export function buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticker = '', guestName = null) {
+  const { profile, quote, recommendation, news } = tickerData || {};
   const period = HOLD_PERIODS[holdPeriod] || HOLD_PERIODS['6M'];
   const overview = alphaData?.overview || null;
   const earnings = alphaData?.earnings || null;
+  const safeTicker = String(ticker || profile?.ticker || quote?.symbol || '').trim().toUpperCase();
 
   /* Check BNN MarketCall Analyst Track Record & Optimal Horizon */
   const effectiveGuest = guestName || tickerData?.guest || null;
@@ -172,10 +173,10 @@ export function buildPrompt(tickerData, alphaData, mathResult, holdPeriod, ticke
 
   /* Canadian Market Identity Detection */
   const isTSX =
-    ticker.toUpperCase().endsWith('.TO') ||
-    ticker.toUpperCase().endsWith('.V') ||
-    profile?.exchange?.toUpperCase().includes('TORONTO') ||
-    profile?.exchange?.toUpperCase().includes('TSX') ||
+    safeTicker.endsWith('.TO') ||
+    safeTicker.endsWith('.V') ||
+    (profile?.exchange || '').toUpperCase().includes('TORONTO') ||
+    (profile?.exchange || '').toUpperCase().includes('TSX') ||
     profile?.currency === 'CAD' ||
     profile?.country === 'CA';
 
@@ -251,7 +252,7 @@ Respond ONLY with valid JSON matching this exact schema. No preamble, no markdow
 
 
   /* ── User prompt ── */
-  const upperTicker = ticker.toUpperCase();
+  const upperTicker = safeTicker;
   let userPrompt = `AVAILABLE DATA (use only this, infer nothing):
 
 COMPANY PROFILE:

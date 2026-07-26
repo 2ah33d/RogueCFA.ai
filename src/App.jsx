@@ -131,7 +131,7 @@ export default function App() {
           }
 
           const calc = calculateScore(finnhubData, alphaData, holdPeriod);
-          const { systemPrompt, userPrompt } = buildPrompt(finnhubData, alphaData, calc, holdPeriod);
+          const { systemPrompt, userPrompt } = buildPrompt(finnhubData, alphaData, calc, holdPeriod, ticker);
           const llmResult = await scoreWithLLM(provider, llmApiKey, systemPrompt, userPrompt);
 
           const scorecardData = {
