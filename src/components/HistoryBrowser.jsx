@@ -40,7 +40,7 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-xs text-dim">
+      <div className="flex items-center gap-2 text-xs text-dim font-sans">
         <span className="w-1.5 h-1.5 rounded-full bg-dim animate-ping" />
         <span>Loading history...</span>
       </div>
@@ -54,7 +54,7 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
   const currentSelection = history.find((h) => h.episodeDate === selectedDate) || history[0];
 
   return (
-    <div className={`relative text-xs ${className}`}>
+    <div className={`relative text-xs font-sans ${className}`}>
       <div className="flex items-center gap-2">
         <span className="text-dim text-[11px] uppercase tracking-wider font-semibold">
           Date:
@@ -65,8 +65,8 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
             onClick={() => setIsOpen(!isOpen)}
             className="flex items-center gap-2.5 px-4 py-1.5 bg-surface-elevated hover:bg-surface-card rounded-full text-prime font-medium shadow-antigravity transition-all"
           >
-            <span className="font-mono text-xs font-medium">{selectedDate || (currentSelection ? currentSelection.episodeDate : 'Latest')}</span>
-            <span className="text-[10px] text-dim font-mono bg-surface px-2 py-0.5 rounded-full">
+            <span className="text-xs font-semibold text-prime">{selectedDate || (currentSelection ? currentSelection.episodeDate : 'Latest')}</span>
+            <span className="text-[10px] text-dim bg-surface px-2 py-0.5 rounded-full font-medium">
               {history.length} Saved
             </span>
             <span className="text-dim text-[10px]">▼</span>
@@ -103,18 +103,18 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
                   >
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-prime text-xs font-medium">{item.episodeDate}</span>
+                        <span className="text-prime text-xs font-semibold">{item.episodeDate}</span>
                         {isSelected && (
                           <span className="text-[9px] bg-accent/15 text-accent font-semibold px-2 py-0.5 rounded-full">
                             ACTIVE
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-dim truncate max-w-[180px] mt-0.5 font-sans">
+                      <p className="text-[11px] text-dim truncate max-w-[180px] mt-0.5">
                         {guestName}
                       </p>
                     </div>
-                    <span className="text-[10px] text-dim shrink-0 mt-0.5 font-mono">
+                    <span className="text-[10px] text-dim shrink-0 mt-0.5 font-medium">
                       {pickCount} pick{pickCount === 1 ? '' : 's'}
                     </span>
                   </button>

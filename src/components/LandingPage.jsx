@@ -20,7 +20,7 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
         </div>
 
         {/* Muted One-line Subhead */}
-        <p className="text-xs sm:text-sm text-dim max-w-xl mx-auto leading-relaxed">
+        <p className="text-xs sm:text-sm text-dim max-w-xl mx-auto leading-relaxed font-sans">
           BNN Bloomberg&apos;s daily MarketCall broadcast compressed into structured, trackable digests for retail investors who don&apos;t have 45 minutes a day.
         </p>
 
@@ -41,17 +41,17 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
         {/* ── Primary Visual: Split View (Before / After Transformation) ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left pt-6">
           {/* Left: Raw Broadcast Representation */}
-          <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity flex flex-col justify-between space-y-4">
+          <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity flex flex-col justify-between space-y-4 font-sans">
             <div>
               <div className="flex items-center justify-between text-xs text-dim pb-3 border-b border-surface-elevated/40">
-                <span className="font-mono text-[11px] uppercase tracking-wider">RAW BROADCAST</span>
-                <span className="font-mono text-[11px] text-dim">45:00 · BNN Bloomberg</span>
+                <span className="font-semibold text-[11px] uppercase tracking-wider">RAW BROADCAST</span>
+                <span className="font-medium text-[11px] text-dim">45:00 · BNN Bloomberg</span>
               </div>
               <div className="mt-4 space-y-3">
                 <div className="h-32 bg-surface-elevated rounded-xl p-4 flex flex-col justify-between shadow-inner">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-dim bg-surface px-2.5 py-0.5 rounded-full">LIVE VIDEO STREAM</span>
-                    <span className="text-[10px] font-mono text-dim">45:00 / 45:00</span>
+                    <span className="text-[10px] font-semibold text-dim bg-surface px-2.5 py-0.5 rounded-full">LIVE VIDEO STREAM</span>
+                    <span className="text-[10px] font-medium text-dim">45:00 / 45:00</span>
                   </div>
                   <p className="text-xs text-dim italic line-clamp-3 leading-relaxed">
                     &ldquo;So we really like Keyera here, dividend yield is strong, energy infrastructure is rebounding... but caller on line 3 wants to know about Tourmaline...&rdquo;
@@ -61,7 +61,7 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
                   <div className="h-2 w-full bg-surface-elevated rounded-full overflow-hidden">
                     <div className="h-full w-full bg-dim/40 rounded-full" />
                   </div>
-                  <div className="flex justify-between text-[10px] font-mono text-dim">
+                  <div className="flex justify-between text-[10px] font-medium text-dim">
                     <span>00:00</span>
                     <span>Talking Head Broadcast</span>
                     <span>45:00</span>
@@ -75,11 +75,11 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
           </div>
 
           {/* Right: Compressed Structured Digest Card */}
-          <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity flex flex-col justify-between space-y-4">
+          <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity flex flex-col justify-between space-y-4 font-sans">
             <div>
               <div className="flex items-center justify-between text-xs text-dim pb-3 border-b border-surface-elevated/40">
-                <span className="font-mono text-[11px] uppercase tracking-wider">STRUCTURED DIGEST</span>
-                <span className="font-mono text-[11px] text-signal-buy bg-signal-buy/15 px-2.5 py-0.5 rounded-full font-semibold">2-MIN READ</span>
+                <span className="font-semibold text-[11px] uppercase tracking-wider">STRUCTURED DIGEST</span>
+                <span className="font-semibold text-[11px] text-signal-buy bg-signal-buy/15 px-2.5 py-0.5 rounded-full">2-MIN READ</span>
               </div>
               <div className="mt-4 space-y-3">
                 <div>
@@ -87,13 +87,13 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
                   <div className="text-xs text-dim">Senior Portfolio Manager · Ninepoint Partners</div>
                 </div>
                 <div className="text-xs text-prime leading-relaxed bg-surface-elevated p-4 rounded-xl shadow-inner">
-                  <span className="text-dim block text-[10px] font-mono uppercase mb-1">Market Outlook</span>
+                  <span className="text-dim block text-[10px] font-semibold uppercase mb-1">Market Outlook</span>
                   Nuttall sees Canadian energy infrastructure names trading at compressed multiples despite strong Q2 free cash flow generation.
                 </div>
                 <div className="bg-surface-elevated p-4 rounded-xl shadow-inner">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-prime">KEY · Keyera Corp (TSX)</span>
-                    <span className="text-xs font-mono font-bold text-signal-buy bg-signal-buy/15 px-2 py-0.5 rounded-full">+26.8% return</span>
+                    <span className="font-semibold text-xs text-prime">KEY · Keyera Corp (TSX)</span>
+                    <span className="text-xs font-semibold text-signal-buy bg-signal-buy/15 px-2.5 py-0.5 rounded-full">+26.8% return</span>
                   </div>
                   <p className="text-xs text-dim mt-1.5 leading-relaxed">
                     High dividend coverage, low balance sheet leverage, beneficiary of Western Canadian gas egress expansion.
@@ -119,18 +119,18 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
           </p>
         </div>
 
-        {/* Plain text row with subtle dividers — NO nested bordered boxes! */}
+        {/* Plain text row with subtle dividers */}
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 py-4 text-xs font-sans text-prime">
           <button
             type="button"
             onClick={() => onSelectGuest && onSelectGuest('Eric Nuttall')}
             className="hover:text-white transition-colors cursor-pointer"
           >
-            <span className="font-medium text-prime">Eric Nuttall</span>
+            <span className="font-semibold text-prime">Eric Nuttall</span>
             <span className="text-dim mx-2">·</span>
-            <span className="font-mono text-signal-buy font-semibold">89% win rate</span>
+            <span className="font-semibold text-signal-buy">89% win rate</span>
             <span className="text-dim mx-2">·</span>
-            <span className="font-mono text-dim">9 picks</span>
+            <span className="text-dim font-medium">9 picks</span>
           </button>
 
           <span className="text-dim/30 hidden sm:inline">|</span>
@@ -140,11 +140,11 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
             onClick={() => onSelectGuest && onSelectGuest('Brian Acker')}
             className="hover:text-white transition-colors cursor-pointer"
           >
-            <span className="font-medium text-prime">Brian Acker</span>
+            <span className="font-semibold text-prime">Brian Acker</span>
             <span className="text-dim mx-2">·</span>
-            <span className="font-mono text-signal-buy font-semibold">83% win rate</span>
+            <span className="font-semibold text-signal-buy">83% win rate</span>
             <span className="text-dim mx-2">·</span>
-            <span className="font-mono text-dim">12 picks</span>
+            <span className="text-dim font-medium">12 picks</span>
           </button>
 
           <span className="text-dim/30 hidden sm:inline">|</span>
@@ -154,11 +154,11 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
             onClick={() => onSelectGuest && onSelectGuest('Christine Poole')}
             className="hover:text-white transition-colors cursor-pointer"
           >
-            <span className="font-medium text-prime">Christine Poole</span>
+            <span className="font-semibold text-prime">Christine Poole</span>
             <span className="text-dim mx-2">·</span>
-            <span className="font-mono text-signal-buy font-semibold">80% win rate</span>
+            <span className="font-semibold text-signal-buy">80% win rate</span>
             <span className="text-dim mx-2">·</span>
-            <span className="font-mono text-dim">10 picks</span>
+            <span className="text-dim font-medium">10 picks</span>
           </button>
 
           <span className="text-dim/30 hidden sm:inline">|</span>
@@ -168,11 +168,11 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
             onClick={() => onSelectGuest && onSelectGuest('John Stephenson')}
             className="hover:text-white transition-colors cursor-pointer"
           >
-            <span className="font-medium text-prime">John Stephenson</span>
+            <span className="font-semibold text-prime">John Stephenson</span>
             <span className="text-dim mx-2">·</span>
-            <span className="font-mono text-signal-buy font-semibold">78% win rate</span>
+            <span className="font-semibold text-signal-buy">78% win rate</span>
             <span className="text-dim mx-2">·</span>
-            <span className="font-mono text-dim">14 picks</span>
+            <span className="text-dim font-medium">14 picks</span>
           </button>
         </div>
       </section>
@@ -190,7 +190,7 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-2">
-            <span className="font-mono text-xs font-bold text-accent block">01</span>
+            <span className="text-xs font-bold text-accent block">01</span>
             <h4 className="text-sm font-semibold text-prime">Transcribe Broadcast</h4>
             <p className="text-xs text-dim leading-relaxed">
               Automated audio pipeline captures BNN Bloomberg&apos;s daily MarketCall episodes from YouTube and RSS feeds into full text transcripts.
@@ -198,7 +198,7 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
           </div>
 
           <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-2">
-            <span className="font-mono text-xs font-bold text-accent block">02</span>
+            <span className="text-xs font-bold text-accent block">02</span>
             <h4 className="text-sm font-semibold text-prime">Extract Picks &amp; Q&amp;A</h4>
             <p className="text-xs text-dim leading-relaxed">
               Zero-LLM scraper extracts review tables directly from source articles to record historical entry prices, return tables, and review dates.
@@ -206,7 +206,7 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
           </div>
 
           <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-2">
-            <span className="font-mono text-xs font-bold text-accent block">03</span>
+            <span className="text-xs font-bold text-accent block">03</span>
             <h4 className="text-sm font-semibold text-prime">Grade Analyst Records</h4>
             <p className="text-xs text-dim leading-relaxed">
               Benchmark-adjusted alpha (S&amp;P/TSX &amp; S&amp;P 500) and Bayesian shrinkage compute objective accuracy scores over time.
@@ -241,7 +241,7 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
               <span className="text-sm font-semibold text-prime">Eric Nuttall</span>
               <span className="text-xs text-dim block">Ninepoint Partners · Senior Portfolio Manager</span>
             </div>
-            <span className="font-mono text-xs text-dim bg-surface-elevated px-3 py-1 rounded-full">
+            <span className="text-xs font-medium text-dim bg-surface-elevated px-3 py-1 rounded-full">
               Episode: 2026-07-24
             </span>
           </div>
@@ -261,8 +261,8 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
             </h5>
             <div className="bg-surface-elevated rounded-xl p-4 space-y-2 shadow-inner">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-prime">KEY · Keyera Corp (TSX)</span>
-                <span className="font-mono text-xs text-signal-buy font-bold bg-signal-buy/15 px-2.5 py-0.5 rounded-full">+26.8% Total Return</span>
+                <span className="text-xs font-bold text-prime">KEY · Keyera Corp (TSX)</span>
+                <span className="text-xs text-signal-buy font-semibold bg-signal-buy/15 px-2.5 py-0.5 rounded-full">+26.8% Total Return</span>
               </div>
               <p className="text-xs text-dim leading-relaxed">
                 Strong Q2 cash flow results, 6.2% dividend yield backed by long-term take-or-pay contracts, and key exposure to Western Canadian natural gas processing infrastructure.

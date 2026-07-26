@@ -19,7 +19,7 @@ export default function GuestBadge({ guestName, record, onClick, className = '' 
         e.stopPropagation();
         if (onClick) onClick(data.guestName || guestName);
       }}
-      className={`inline-flex items-center gap-2 text-[11px] font-normal rounded-full px-3 py-1 transition-all bg-surface-elevated text-dim hover:text-prime shadow-antigravity ${className}`}
+      className={`inline-flex items-center gap-2 text-[11px] font-sans font-normal rounded-full px-3 py-1 transition-all bg-surface-elevated text-dim hover:text-prime shadow-antigravity ${className}`}
       title={
         hasEnoughData
           ? `${data.guestName} (${data.firm || 'Analyst'}): ${(data.hitRate * 100).toFixed(0)}% accuracy (${data.correctPicks}/${data.resolvedPicks} resolved). Click for track record.`
@@ -28,15 +28,15 @@ export default function GuestBadge({ guestName, record, onClick, className = '' 
     >
       {hasEnoughData ? (
         <>
-          <span className="font-mono font-bold text-signal-buy">{(data.hitRate * 100).toFixed(0)}% win</span>
-          <span className="text-dim text-[10px] border-l border-surface-card pl-2 font-mono">
+          <span className="font-semibold text-signal-buy">{(data.hitRate * 100).toFixed(0)}% win</span>
+          <span className="text-dim text-[10px] border-l border-surface-card pl-2 font-medium">
             {picksUsed} picks
           </span>
         </>
       ) : (
         <>
           <span className="font-normal text-dim">Track Record</span>
-          <span className="text-dim font-mono text-[10px]">({picksUsed})</span>
+          <span className="text-dim text-[10px] font-medium">({picksUsed})</span>
         </>
       )}
     </button>

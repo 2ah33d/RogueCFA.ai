@@ -22,7 +22,7 @@ export default function DigestPickCard({
     : 'No reasoning provided.';
 
   return (
-    <div className="bg-surface-card rounded-2xl overflow-hidden shadow-antigravity transition-all hover:shadow-antigravity-hover">
+    <div className="bg-surface-card rounded-2xl overflow-hidden shadow-antigravity transition-all hover:shadow-antigravity-hover font-sans">
       {/* Clickable header */}
       <button
         type="button"
@@ -31,7 +31,7 @@ export default function DigestPickCard({
       >
         {/* Ticker badge — Flat grey pill chip */}
         <div className="flex-shrink-0 mt-0.5">
-          <span className="inline-flex items-center font-mono font-semibold text-xs text-prime bg-surface-elevated px-3 py-1 rounded-full">
+          <span className="inline-flex items-center font-bold text-xs text-prime bg-surface-elevated px-3 py-1 rounded-full">
             {ticker}
           </span>
         </div>
@@ -49,7 +49,7 @@ export default function DigestPickCard({
             )}
           </div>
           {!expanded && (
-            <p className="text-xs text-dim leading-relaxed line-clamp-2 font-sans">
+            <p className="text-xs text-dim leading-relaxed line-clamp-2">
               {preview}
             </p>
           )}
@@ -73,7 +73,7 @@ export default function DigestPickCard({
       {/* Expandable body */}
       {expanded && (
         <div className="px-5 pb-5 pt-0 border-t border-surface-elevated/40">
-          <blockquote className="text-xs text-dim leading-relaxed pl-3 border-l-2 border-accent/40 my-3 italic font-sans">
+          <blockquote className="text-xs text-dim leading-relaxed pl-3 border-l-2 border-accent/40 my-3 italic">
             {reasoning || 'No detailed reasoning available.'}
           </blockquote>
 
