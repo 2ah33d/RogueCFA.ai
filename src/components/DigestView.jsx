@@ -313,14 +313,14 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         </div>
 
         {/* Skeleton cards */}
-        <div className="bg-surface-card border border-edge rounded-2xl p-5">
+        <div className="bg-surface-card rounded-2xl p-5 shadow-antigravity">
           <div className="h-4 bg-surface-elevated rounded w-48 mb-3" />
           <div className="h-3 bg-surface-elevated rounded w-32 mb-4" />
           <div className="h-12 bg-surface-elevated rounded w-full" />
         </div>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface-card border border-edge rounded-xl p-4">
+            <div key={i} className="bg-surface-card rounded-xl p-4 shadow-antigravity">
               <div className="flex gap-3">
                 <div className="h-8 w-16 bg-surface-elevated rounded-lg" />
                 <div className="flex-1 space-y-2">
@@ -568,7 +568,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-shrink-0 rounded-lg overflow-hidden shadow-inner border border-surface-elevated/40 hover:border-accent/40 transition-colors"
+              className="flex-shrink-0 rounded-lg overflow-hidden shadow-inner transition-colors"
               title={videoInfo?.videoTitle || 'Watch Full Episode'}
             >
               <img

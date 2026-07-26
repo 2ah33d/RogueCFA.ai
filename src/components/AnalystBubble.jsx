@@ -61,7 +61,7 @@ export default function AnalystBubble({
 
         {/* Episode Focus — Clean Card Tag (No malformed oval wrapping) */}
         {episodeFocus && (
-          <div className="text-xs text-dim bg-surface-elevated/60 px-3 py-2 rounded-xl border border-surface-elevated/40 leading-relaxed font-sans text-left">
+          <div className="text-xs text-dim bg-surface-elevated/60 px-3 py-2 rounded-xl leading-relaxed font-sans text-left">
             <span className="text-[10px] uppercase font-semibold text-dim block mb-0.5 tracking-wider">Episode Focus</span>
             {episodeFocus}
           </div>

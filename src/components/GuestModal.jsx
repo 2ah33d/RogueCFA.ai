@@ -293,7 +293,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 10 }}
         transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-        className={`bg-surface-card rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-antigravity-elevated overflow-hidden border border-edge ${className}`}
+        className={`bg-surface-card rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-antigravity-elevated overflow-hidden ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}

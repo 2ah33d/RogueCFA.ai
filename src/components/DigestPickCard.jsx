@@ -70,7 +70,7 @@ export default function DigestPickCard({
           transition={{ type: 'spring', stiffness: 260, damping: 26 }}
           whileHover={{ scale: 1.01, y: -2 }}
           whileTap={{ scale: 0.99 }}
-          className="bg-surface-card rounded-2xl overflow-hidden shadow-antigravity font-sans cursor-pointer group border border-edge/40"
+          className="bg-surface-card rounded-2xl overflow-hidden shadow-antigravity font-sans cursor-pointer group"
           onClick={handleOpen}
           role="button"
           tabIndex={0}
@@ -116,7 +116,7 @@ export default function DigestPickCard({
         </motion.div>
       ) : (
         /* Placeholder in list layout to prevent height jump when item morphs out */
-        <div className="h-[88px] w-full rounded-2xl bg-surface-card/30 border border-edge/20 opacity-50" />
+        <div className="h-[88px] w-full rounded-2xl bg-surface-card/30 opacity-50" />
       )}
 
       {/* Expanded Modal Overlay via Portal */}
@@ -140,7 +140,7 @@ export default function DigestPickCard({
                 key="pick-expanded-panel"
                 layoutId={layoutKey}
                 transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-                className="relative z-10 w-full max-w-xl bg-surface-card rounded-2xl p-6 sm:p-8 shadow-antigravity-elevated overflow-hidden font-sans border border-edge/60"
+                className="relative z-10 w-full max-w-xl bg-surface-card rounded-2xl p-6 sm:p-8 shadow-antigravity-elevated overflow-hidden font-sans"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
