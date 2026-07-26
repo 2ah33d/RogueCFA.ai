@@ -329,7 +329,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 text-xs font-semibold bg-accent text-[#1E1F22] rounded-full transition-colors shadow-antigravity"
+            className="px-5 py-2 text-xs font-semibold bg-accent text-accent-text rounded-full transition-colors shadow-antigravity"
           >
             Close Panel
           </button>

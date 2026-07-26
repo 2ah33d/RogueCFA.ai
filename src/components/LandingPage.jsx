@@ -29,7 +29,7 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
           <button
             type="button"
             onClick={() => onLaunchTool('score')}
-            className="inline-flex items-center gap-2 px-8 py-3.5 bg-accent text-[#1E1F22] hover:bg-accent-hover text-sm font-semibold rounded-full transition-all shadow-antigravity"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-accent text-accent-text hover:bg-accent-hover text-sm font-semibold rounded-full transition-all shadow-antigravity"
           >
             Launch Tool
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -293,7 +293,7 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
           <button
             type="button"
             onClick={() => onLaunchTool('score')}
-            className="inline-flex items-center gap-2 px-8 py-3.5 bg-accent text-[#1E1F22] hover:bg-accent-hover text-sm font-semibold rounded-full transition-all shadow-antigravity"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-accent text-accent-text hover:bg-accent-hover text-sm font-semibold rounded-full transition-all shadow-antigravity"
           >
             Launch RogueCFA Tool
           </button>

@@ -132,7 +132,7 @@ export default function KeySetup({ onComplete, className = '' }) {
 
           <button
             type="submit"
-            className="w-full py-3 bg-accent text-[#1E1F22] text-xs font-semibold rounded-full hover:bg-accent-hover transition-colors mt-3 shadow-antigravity"
+            className="w-full py-3 bg-accent text-accent-text text-xs font-semibold rounded-full hover:bg-accent-hover transition-colors mt-3 shadow-antigravity"
           >
             Save Keys &amp; Continue
           </button>

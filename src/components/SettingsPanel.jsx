@@ -169,7 +169,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                   <button
                     type="button"
                     onClick={() => setIsEditingKeys(true)}
-                    className="text-xs font-semibold text-[#1E1F22] bg-accent hover:bg-accent-hover px-4 py-1.5 rounded-full transition-colors shadow-antigravity"
+                    className="text-xs font-semibold text-accent-text bg-accent hover:bg-accent-hover px-4 py-1.5 rounded-full transition-colors shadow-antigravity"
                   >
                     Edit Credentials
                   </button>
@@ -246,7 +246,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                   <div className="flex items-center gap-3 pt-4">
                     <button
                       type="submit"
-                      className="px-6 py-2.5 bg-accent text-[#1E1F22] text-xs font-semibold rounded-full hover:bg-accent-hover transition-colors shadow-antigravity"
+                      className="px-6 py-2.5 bg-accent text-accent-text text-xs font-semibold rounded-full hover:bg-accent-hover transition-colors shadow-antigravity"
                     >
                       Save Credentials
                     </button>

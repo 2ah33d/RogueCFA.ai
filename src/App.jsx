@@ -40,10 +40,19 @@ const THEME = `
   --c-dim:              154 160 166;   /* #9AA0A6 — Soft muted grey secondary text */
   --c-faint:            110 115 122 / 0.5;  /* #6E737B — Soft dimmed placeholder text */
 
-  /* ——— Accent (Google Soft Muted Blue #8AB4F8) ——— */
-  --c-accent:           138 180 248;   /* #8AB4F8 — Soft Google dark mode blue */
-  --c-accent-hover:     168 199 250;   /* #A8C7FA — Soft blue hover */
+  /* ——— Accent Theme — Switchable between Logo Royal Blue (#2563EB) & Soft Google Blue (#8AB4F8) ——— */
+  /* [CURRENT EXPERIMENTAL]: Logo Brand Royal Blue (#2563EB) with crisp white text */
+  --c-accent:           37 99 235;     /* #2563EB — Logo Royal Blue */
+  --c-accent-hover:     29 78 216;     /* #1D4ED8 — Darker Blue Hover */
+  --c-accent-muted:     37 99 235 / 0.18;
+  --c-accent-text:      255 255 255;   /* #FFFFFF — Crisp White Button Text for High Readability */
+
+  /* [TO REVERT BACK TO SOFT GOOGLE BLUE]: Uncomment lines below & comment out above:
+  --c-accent:           138 180 248;   / * #8AB4F8 * /
+  --c-accent-hover:     168 199 250;   / * #A8C7FA * /
   --c-accent-muted:     138 180 248 / 0.15;
+  --c-accent-text:      30 31 34;      / * #1E1F22 * /
+  */
 
   /* ——— Functional Status Colours (Antigravity Soft Tint Pattern) ——— */
   --c-signal-buy:       129 201 149;   /* #81C995 — Soft muted green */

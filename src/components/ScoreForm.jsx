@@ -140,7 +140,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
               type="submit"
               disabled={loading}
               className="w-full sm:w-auto px-8 py-3.5
-                         bg-accent text-[#1E1F22] text-sm font-semibold rounded-full
+                         bg-accent text-accent-text text-sm font-semibold rounded-full
                          hover:bg-accent-hover transition-all shadow-antigravity
                          disabled:opacity-50 disabled:cursor-not-allowed
                          flex items-center justify-center gap-2 min-w-[140px]"

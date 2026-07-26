@@ -498,7 +498,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               type="button"
               onClick={fetchDigest}
               className="inline-flex items-center gap-2 px-6 py-3
-                         bg-accent text-[#1E1F22] text-xs font-semibold rounded-full
+                         bg-accent text-accent-text text-xs font-semibold rounded-full
                          shadow-antigravity hover:bg-accent-hover transition-all"
             >
               Check Newer / Generate Today&apos;s Digest

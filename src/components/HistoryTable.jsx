@@ -68,7 +68,7 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
           <button
             onClick={handleUpdateOutcomes}
             disabled={loadingOutcomes}
-            className="px-4 py-2 bg-accent text-[#1E1F22] text-xs font-semibold rounded-full hover:bg-accent-hover transition-all shadow-antigravity disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 bg-accent text-accent-text text-xs font-semibold rounded-full hover:bg-accent-hover transition-all shadow-antigravity disabled:opacity-50 flex items-center gap-2"
           >
             {loadingOutcomes ? (
               <>

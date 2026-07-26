@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 /**
  * DigestPickCard — Premium Framer Motion layoutId morphing.
  * 1. Scrolls original card smoothly to vertical center of screen on click.
- * 2. Shared layoutId morphs the bubble container directly into the centered expanded view.
- * 3. Soft background backdrop (bg-[#1E1F22]/75 + backdrop-blur-md) maintains dark-mode warm aesthetic.
+ * 2. Shared layoutId morphs the bubble container directly from its top-left origin.
+ * 3. Expands wider (max-w-2xl) with high-readability text (text-base) and equal margins.
+ * 4. Toned down ambient backdrop (bg-[#1E1F22]/55 + backdrop-blur-[3px]).
  */
 export default function DigestPickCard({
   ticker,
@@ -32,10 +33,10 @@ export default function DigestPickCard({
     if (cardRef.current) {
       cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    /* 2. Trigger shared layout morph after short delay */
+    /* 2. Trigger shared layout morph from top-left origin after short delay */
     setTimeout(() => {
       setExpanded(true);
-    }, 90);
+    }, 80);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -124,23 +125,24 @@ export default function DigestPickCard({
         <AnimatePresence>
           {expanded && (
             <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-              {/* Soft Theme Backdrop — #1E1F22/75 + backdrop-blur-md (No pitch-black block) */}
+              {/* Toned down soft backdrop: subtle 55% opacity & light 3px blur */}
               <motion.div
                 key="pick-backdrop"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
-                className="fixed inset-0 bg-[#1E1F22]/75 backdrop-blur-md"
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="fixed inset-0 bg-[#1E1F22]/55 backdrop-blur-[3px]"
                 onClick={handleClose}
               />
 
-              {/* Expanded Card — Morphs directly from original card bounds */}
+              {/* Expanded Card — Morphs directly from original card bounds top-left origin */}
               <motion.div
                 key="pick-expanded-panel"
                 layoutId={layoutKey}
+                style={{ transformOrigin: '0% 0%' }}
                 transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-                className="relative z-10 w-full max-w-xl bg-surface-card rounded-2xl p-6 sm:p-8 shadow-antigravity-elevated overflow-hidden font-sans"
+                className="relative z-10 w-full max-w-2xl bg-surface-card rounded-2xl p-7 sm:p-9 shadow-antigravity-elevated overflow-hidden font-sans mx-auto"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
@@ -149,10 +151,10 @@ export default function DigestPickCard({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   transition={{ delay: 0.08, duration: 0.2 }}
-                  className="flex items-start justify-between gap-4 mb-5"
+                  className="flex items-start justify-between gap-4 mb-6"
                 >
                   <div className="flex items-start gap-3">
-                    <span className="inline-flex items-center font-bold text-sm text-prime bg-surface-elevated px-4 py-1.5 rounded-full mt-0.5 flex-shrink-0">
+                    <span className="inline-flex items-center font-bold text-base text-prime bg-surface-elevated px-4 py-1.5 rounded-full mt-0.5 flex-shrink-0">
                       {ticker}
                     </span>
                     <div>
@@ -179,18 +181,18 @@ export default function DigestPickCard({
                   </button>
                 </motion.div>
 
-                {/* Reasoning Content — Fades in smoothly as box expands */}
+                {/* High Readability Reasoning Text (text-base, text-prime) */}
                 <motion.blockquote
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   transition={{ delay: 0.12, duration: 0.22 }}
-                  className="text-sm text-prime leading-relaxed pl-4 border-l-2 border-accent/40 mb-6 font-sans"
+                  className="text-base text-prime leading-relaxed pl-5 border-l-4 border-accent mb-7 font-sans font-normal"
                 >
                   {reasoning || 'No detailed reasoning available.'}
                 </motion.blockquote>
 
-                {/* CTA Button */}
+                {/* Primary CTA Button — text-accent-text dynamically adapts to Logo Blue or Google Soft Blue */}
                 <motion.button
                   type="button"
                   initial={{ opacity: 0, y: 8 }}
@@ -202,7 +204,7 @@ export default function DigestPickCard({
                     handleClose();
                     if (onScoreTicker) onScoreTicker(ticker, guestName);
                   }}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-accent text-[#1E1F22] text-sm font-semibold rounded-full hover:bg-accent-hover transition-colors shadow-antigravity"
+                  className="inline-flex items-center gap-2 px-7 py-3 bg-accent text-accent-text text-sm font-semibold rounded-full hover:bg-accent-hover transition-colors shadow-antigravity"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
