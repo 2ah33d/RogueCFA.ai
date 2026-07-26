@@ -532,11 +532,13 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
   /* ── Digest loaded ── */
   const activeProviderKey = getProvider();
+  const realUsage = digest?.usage || null;
   const costInfo = calculateDigestCost(
     activeProviderKey,
-    digest?.inputTokens || digest?.usage?.input_tokens || 4850,
-    digest?.outputTokens || digest?.usage?.output_tokens || 420
+    realUsage?.input_tokens || digest?.inputTokens || 4850,
+    realUsage?.output_tokens || digest?.outputTokens || 420
   );
+  const isEstimated = !realUsage;
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in font-sans">
@@ -559,20 +561,38 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             Check Newer
           </button>
         </div>
-        {videoInfo?.videoId && (
-          <a
-            href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-dim hover:text-prime transition-colors flex items-center gap-1.5 font-medium"
-          >
-            <svg className="w-3.5 h-3.5 text-dim" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
-              <path fill="rgb(var(--c-surface))" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-            </svg>
-            Watch Full Episode
-          </a>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Video thumbnail in header bar */}
+          {videoInfo?.videoId && (
+            <a
+              href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 rounded-lg overflow-hidden shadow-inner border border-surface-elevated/40 hover:border-accent/40 transition-colors"
+              title={videoInfo?.videoTitle || 'Watch Full Episode'}
+            >
+              <img
+                src={`https://img.youtube.com/vi/${videoInfo.videoId}/mqdefault.jpg`}
+                alt="Episode thumbnail"
+                className="w-28 h-auto object-cover hover:scale-105 transition-transform duration-300"
+              />
+            </a>
+          )}
+          {videoInfo?.videoId && (
+            <a
+              href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-dim hover:text-prime transition-colors flex items-center gap-1.5 font-medium"
+            >
+              <svg className="w-3.5 h-3.5 text-dim" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
+                <path fill="rgb(var(--c-surface))" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+              </svg>
+              Watch Full Episode
+            </a>
+          )}
+        </div>
       </div>
 
       {/* 2-Column Dashboard Grid */}
@@ -664,7 +684,6 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             episodeFocus={digest.episodeFocus}
             date={videoInfo?.episodeDate || todayStr}
             trackRecord={trackRecord}
-            videoId={videoInfo?.videoId}
             onSelectGuest={onSelectGuest}
           />
 
@@ -685,7 +704,9 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
                 <div className="flex flex-col">
                   <span className="text-dim">Digest Cost</span>
-                  <span className="text-[10px] text-dim/70 font-normal">{costInfo.providerName}</span>
+                  <span className="text-[10px] text-dim/70 font-normal">
+                    {costInfo.providerName}{isEstimated ? ' (est.)' : ''}
+                  </span>
                 </div>
                 <span className="font-semibold text-prime">{costInfo.formattedCost}</span>
               </div>

@@ -21,6 +21,7 @@ import MarketCallBar from './components/MarketCallBar';
 import GuestModal from './components/GuestModal';
 import DigestView from './components/DigestView';
 import LandingPage from './components/LandingPage';
+import NavPill from './components/NavPill';
 
 /* ── Google Antigravity System Tokens ── */
 const THEME = `
@@ -211,48 +212,7 @@ export default function App() {
               </span>
             </div>
 
-            <nav className="flex items-center gap-1 bg-surface-card p-1 rounded-full shadow-inner text-xs">
-              <button
-                onClick={() => setActiveTab('landing')}
-                className={`px-4 py-1.5 rounded-full transition-all font-medium ${
-                  activeTab === 'landing'
-                    ? 'bg-surface-elevated text-prime font-semibold shadow-antigravity'
-                    : 'text-dim hover:text-prime'
-                }`}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveTab('score')}
-                className={`px-4 py-1.5 rounded-full transition-all font-medium ${
-                  activeTab === 'score'
-                    ? 'bg-surface-elevated text-prime font-semibold shadow-antigravity'
-                    : 'text-dim hover:text-prime'
-                }`}
-              >
-                Score Ticker
-              </button>
-              <button
-                onClick={() => setActiveTab('digest')}
-                className={`px-4 py-1.5 rounded-full transition-all font-medium ${
-                  activeTab === 'digest'
-                    ? 'bg-surface-elevated text-prime font-semibold shadow-antigravity'
-                    : 'text-dim hover:text-prime'
-                }`}
-              >
-                Latest Picks
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`px-4 py-1.5 rounded-full transition-all font-medium ${
-                  activeTab === 'history'
-                    ? 'bg-surface-elevated text-prime font-semibold shadow-antigravity'
-                    : 'text-dim hover:text-prime'
-                }`}
-              >
-                Score History
-              </button>
-            </nav>
+            <NavPill activeTab={activeTab} onTabChange={setActiveTab} />
 
             <button
               onClick={() => setShowSettings(true)}

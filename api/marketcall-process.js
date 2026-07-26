@@ -241,12 +241,19 @@ export default async function handler(req, res) {
     /* ── Step 6: Build prompt & call LLM ── */
     const { systemPrompt, userPrompt } = buildDigestPrompt(cleanedTranscript, selectedVideo.videoTitle);
     const rawLLMResponse = await callLLM(provider, llmKey, systemPrompt, userPrompt, timer);
-    const digest = extractJSON(rawLLMResponse);
+    const llmText = typeof rawLLMResponse === 'string' ? rawLLMResponse : rawLLMResponse.text;
+    const llmUsage = typeof rawLLMResponse === 'object' ? rawLLMResponse.usage : null;
+    const digest = extractJSON(llmText);
 
     if (!digest || !digest.guest) {
       const errMsg = `LLM returned an unparseable digest.${groqDiagnosticMsg}`;
       await updateJob(jobId, 'error', null, errMsg);
       return res.status(200).json({ jobId, status: 'error', error: errMsg });
+    }
+
+    /* Attach real token usage so frontend can show actual costs */
+    if (llmUsage) {
+      digest.usage = llmUsage;
     }
 
     /* ── Success ── */

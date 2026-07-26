@@ -565,7 +565,7 @@ export async function callLLM(provider, key, systemPrompt, userPrompt, timer) {
       throw new Error(`Unknown provider: ${provider}`);
   }
   timer?.end('LLM synthesis');
-  return result;
+  return result; /* { text: string, usage: { input_tokens, output_tokens } } */
 }
 
 async function callGemini(key, systemPrompt, userPrompt) {
@@ -593,7 +593,15 @@ async function callGemini(key, systemPrompt, userPrompt) {
   const parts = data.candidates?.[0]?.content?.parts;
   if (Array.isArray(parts)) {
     const textPart = parts.find((p) => typeof p.text === 'string');
-    if (textPart) return textPart.text;
+    if (textPart) {
+      const usage = data.usageMetadata
+        ? {
+            input_tokens: data.usageMetadata.promptTokenCount || 0,
+            output_tokens: data.usageMetadata.candidatesTokenCount || 0,
+          }
+        : null;
+      return { text: textPart.text, usage };
+    }
   }
   throw new Error('Gemini returned no text content.');
 }
@@ -626,7 +634,15 @@ async function callClaude(key, systemPrompt, userPrompt) {
     if (response.ok) {
       const data = await response.json();
       const textBlock = data.content?.find((b) => b.type === 'text');
-      if (textBlock) return textBlock.text;
+      if (textBlock) {
+        const usage = data.usage
+          ? {
+              input_tokens: data.usage.input_tokens || 0,
+              output_tokens: data.usage.output_tokens || 0,
+            }
+          : null;
+        return { text: textBlock.text, usage };
+      }
       throw new Error('Claude returned no text content.');
     }
 
@@ -672,7 +688,14 @@ async function callOpenAI(key, systemPrompt, userPrompt) {
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  const text = data.choices?.[0]?.message?.content || '';
+  const usage = data.usage
+    ? {
+        input_tokens: data.usage.prompt_tokens || 0,
+        output_tokens: data.usage.completion_tokens || 0,
+      }
+    : null;
+  return { text, usage };
 }
 
 /* ════════════════════════════════════════════════════════════════

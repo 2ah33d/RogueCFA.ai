@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 /**
  * AnalystBubble — Google Antigravity aesthetic: 16px radius, soft elevation shadow, soft tint status pill.
- * Renders the YouTube episode broadcast thumbnail (with analyst headshot) if videoId or thumbnailUrl is available.
  * Clean, non-malformed layout for firm names and multi-line episode focus topics.
+ * Video thumbnail is rendered in the DigestView header bar instead.
  */
 export default function AnalystBubble({
   guestName,
@@ -11,18 +11,12 @@ export default function AnalystBubble({
   episodeFocus,
   date,
   trackRecord,
-  videoId,
-  thumbnailUrl,
   onSelectGuest,
   className = '',
 }) {
-  const [imgError, setImgError] = useState(false);
-
   if (!guestName) return null;
 
   const hasStats = trackRecord && trackRecord.resolvedPicks >= 3 && trackRecord.hitRate !== null;
-  const thumb = thumbnailUrl || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null);
-  const showThumb = Boolean(thumb && !imgError);
 
   return (
     <button
@@ -34,27 +28,13 @@ export default function AnalystBubble({
       <div className="space-y-3">
         {/* Top Header: Identity & Win Rate Badge */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
-            {/* YouTube Broadcast Thumbnail (Analyst Headshot) */}
-            {showThumb && (
-              <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-elevated flex-shrink-0 shadow-inner border border-surface-elevated/40 mt-0.5">
-                <img
-                  src={thumb}
-                  alt={`${guestName} BNN MarketCall`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  onError={() => setImgError(true)}
-                />
-              </div>
-            )}
-
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-prime group-hover:text-white transition-colors leading-snug">
-                {guestName}
-              </h3>
-              <p className="text-xs text-dim leading-relaxed mt-0.5">
-                {firm || 'BNN MarketCall Guest'}
-              </p>
-            </div>
+          <div className="min-w-0 text-left">
+            <h3 className="text-sm font-semibold text-prime group-hover:text-white transition-colors leading-snug">
+              {guestName}
+            </h3>
+            <p className="text-xs text-dim leading-relaxed mt-0.5 text-left">
+              {firm || 'BNN MarketCall Guest'}
+            </p>
           </div>
 
           {/* Right: Date & Win Rate badge */}
@@ -81,7 +61,7 @@ export default function AnalystBubble({
 
         {/* Episode Focus — Clean Card Tag (No malformed oval wrapping) */}
         {episodeFocus && (
-          <div className="text-xs text-dim bg-surface-elevated/60 px-3 py-2 rounded-xl border border-surface-elevated/40 leading-relaxed font-sans">
+          <div className="text-xs text-dim bg-surface-elevated/60 px-3 py-2 rounded-xl border border-surface-elevated/40 leading-relaxed font-sans text-left">
             <span className="text-[10px] uppercase font-semibold text-dim block mb-0.5 tracking-wider">Episode Focus</span>
             {episodeFocus}
           </div>

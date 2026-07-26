@@ -73,12 +73,19 @@ export default async function handler(req, res) {
 
       const { systemPrompt, userPrompt } = buildDigestPrompt(cleanedTranscript, clientVideoTitle || '');
       const rawLLMResponse = await callLLM(provider, llmKey, systemPrompt, userPrompt, timer);
-      const digest = extractJSON(rawLLMResponse);
+      const llmText = typeof rawLLMResponse === 'string' ? rawLLMResponse : rawLLMResponse.text;
+      const llmUsage = typeof rawLLMResponse === 'object' ? rawLLMResponse.usage : null;
+      const digest = extractJSON(llmText);
 
       if (!digest || !digest.guest) {
         return res.status(422).json({
           error: 'LLM returned an unparseable digest. Try again.',
         });
+      }
+
+      /* Attach usage to digest so frontend can show real costs */
+      if (llmUsage) {
+        digest.usage = llmUsage;
       }
 
       return res.status(200).json({

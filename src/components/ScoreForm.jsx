@@ -69,7 +69,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
             placeholder="AAPL, MSFT, SHOP"
             disabled={loading}
             className="w-full px-4 py-3 bg-surface-elevated rounded-xl
-                       text-prime text-base font-bold font-sans placeholder:font-normal placeholder:italic placeholder:text-dim/35 placeholder:tracking-normal
+                       text-prime text-base font-bold font-sans placeholder:font-normal placeholder:text-dim/35 placeholder:tracking-normal
                        focus:outline-none focus:ring-1 focus:ring-accent/50 transition-all
                        disabled:opacity-50 tracking-wide shadow-inner"
             autoComplete="off"

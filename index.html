@@ -55,6 +55,45 @@
       /* Pre-React background to prevent flash */
       body { background-color: #1E1F22; color: #E3E3E3; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
       #root { min-height: 100vh; }
+
+      /* ── Pick Card Modal Animations ── */
+      @keyframes pickModalEnter {
+        from { opacity: 0; transform: scale(0.85) translateY(12px); }
+        to   { opacity: 1; transform: scale(1) translateY(0); }
+      }
+      @keyframes pickModalExit {
+        from { opacity: 1; transform: scale(1) translateY(0); }
+        to   { opacity: 0; transform: scale(0.9) translateY(8px); }
+      }
+      @keyframes backdropEnter {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      @keyframes backdropExit {
+        from { opacity: 1; }
+        to   { opacity: 0; }
+      }
+      .pick-modal-enter {
+        animation: pickModalEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      .pick-modal-exit {
+        animation: pickModalExit 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+      }
+      .pick-modal-backdrop-enter {
+        animation: backdropEnter 0.25s ease-out both;
+      }
+      .pick-modal-backdrop-exit {
+        animation: backdropExit 0.2s ease-in both;
+      }
+
+      /* ── Fade-in utility ── */
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-out both;
+      }
     </style>
   </head>
   <body class="font-sans antialiased bg-surface text-prime">
