@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
- * DigestPickCard — Expandable card for a single stock pick from the digest.
- * Framer Motion spring physics pop out the modal from the card's exact position on screen.
- * Portal rendering ensures 100% viewport coverage.
+ * DigestPickCard — Premium Framer Motion layoutId morphing.
+ * 1. Scrolls original card smoothly to vertical center of screen on click.
+ * 2. Shared layoutId morphs the bubble container directly into the centered expanded view.
+ * 3. Soft background backdrop (bg-[#1E1F22]/75 + backdrop-blur-md) maintains dark-mode warm aesthetic.
  */
 export default function DigestPickCard({
   ticker,
@@ -18,7 +19,7 @@ export default function DigestPickCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef(null);
-  const [originStyle, setOriginStyle] = useState(null);
+  const layoutKey = `pick-card-${ticker}-${index}`;
 
   const preview = reasoning
     ? reasoning.length > 100
@@ -27,13 +28,14 @@ export default function DigestPickCard({
     : 'No reasoning provided.';
 
   const handleOpen = useCallback(() => {
+    /* 1. Scroll card smoothly to vertical center of screen */
     if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
-      setOriginStyle({
-        transformOrigin: `${rect.left + rect.width / 2}px ${rect.top + rect.height / 2}px`,
-      });
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    setExpanded(true);
+    /* 2. Trigger shared layout morph after short delay */
+    setTimeout(() => {
+      setExpanded(true);
+    }, 90);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -60,88 +62,101 @@ export default function DigestPickCard({
 
   return (
     <>
-      {/* Collapsed card */}
-      <motion.div
-        ref={cardRef}
-        whileHover={{ scale: 1.01, y: -2 }}
-        whileTap={{ scale: 0.99 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        className="bg-surface-card rounded-2xl overflow-hidden shadow-antigravity font-sans cursor-pointer group"
-        onClick={handleOpen}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpen(); } }}
-      >
-        <div className="w-full text-left px-5 py-5 flex items-start gap-4">
-          {/* Ticker badge */}
-          <div className="flex-shrink-0 mt-0.5">
-            <span className="inline-flex items-center font-bold text-sm text-prime bg-surface-elevated px-4 py-1.5 rounded-full">
-              {ticker}
-            </span>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <h4 className="text-base font-medium text-prime truncate">
-                {company || ticker}
-              </h4>
-              {isCallerMention && (
-                <span className="text-[10px] font-normal px-2.5 py-0.5 rounded-full bg-surface-elevated text-dim">
-                  Caller Q&amp;A
-                </span>
-              )}
+      {/* Collapsed card — morph origin */}
+      {!expanded ? (
+        <motion.div
+          ref={cardRef}
+          layoutId={layoutKey}
+          transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+          whileHover={{ scale: 1.01, y: -2 }}
+          whileTap={{ scale: 0.99 }}
+          className="bg-surface-card rounded-2xl overflow-hidden shadow-antigravity font-sans cursor-pointer group border border-edge/40"
+          onClick={handleOpen}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpen(); } }}
+        >
+          <div className="w-full text-left px-5 py-5 flex items-start gap-4">
+            {/* Ticker badge */}
+            <div className="flex-shrink-0 mt-0.5">
+              <span className="inline-flex items-center font-bold text-sm text-prime bg-surface-elevated px-4 py-1.5 rounded-full">
+                {ticker}
+              </span>
             </div>
-            <p className="text-sm text-dim leading-relaxed line-clamp-2">
-              {preview}
-            </p>
-          </div>
 
-          {/* Expand icon */}
-          <div className="flex-shrink-0 mt-1.5">
-            <svg
-              className="w-5 h-5 text-dim group-hover:text-prime transition-colors"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-      </motion.div>
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <h4 className="text-base font-medium text-prime truncate">
+                  {company || ticker}
+                </h4>
+                {isCallerMention && (
+                  <span className="text-[10px] font-normal px-2.5 py-0.5 rounded-full bg-surface-elevated text-dim">
+                    Caller Q&amp;A
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-dim leading-relaxed line-clamp-2">
+                {preview}
+              </p>
+            </div>
 
-      {/* Fullscreen Portal Modal with Framer Motion AnimatePresence */}
+            {/* Expand icon */}
+            <div className="flex-shrink-0 mt-1.5">
+              <svg
+                className="w-5 h-5 text-dim group-hover:text-prime transition-colors"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        /* Placeholder in list layout to prevent height jump when item morphs out */
+        <div className="h-[88px] w-full rounded-2xl bg-surface-card/30 border border-edge/20 opacity-50" />
+      )}
+
+      {/* Expanded Modal Overlay via Portal */}
       {createPortal(
         <AnimatePresence>
           {expanded && (
-            <motion.div
-              key="pick-modal-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8 bg-black/65 backdrop-blur-md"
-              onClick={handleClose}
-            >
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+              {/* Soft Theme Backdrop — #1E1F22/75 + backdrop-blur-md (No pitch-black block) */}
               <motion.div
-                key="pick-modal-panel"
-                initial={{ opacity: 0, scale: 0.75, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.85, y: 10 }}
-                transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-                style={originStyle || undefined}
-                className="relative w-full max-w-lg bg-surface-card rounded-2xl p-6 sm:p-7 shadow-antigravity-elevated overflow-hidden font-sans border border-edge"
+                key="pick-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className="fixed inset-0 bg-[#1E1F22]/75 backdrop-blur-md"
+                onClick={handleClose}
+              />
+
+              {/* Expanded Card — Morphs directly from original card bounds */}
+              <motion.div
+                key="pick-expanded-panel"
+                layoutId={layoutKey}
+                transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                className="relative z-10 w-full max-w-xl bg-surface-card rounded-2xl p-6 sm:p-8 shadow-antigravity-elevated overflow-hidden font-sans border border-edge/60"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Modal header */}
-                <div className="flex items-start justify-between gap-4 mb-5">
+                {/* Header */}
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ delay: 0.08, duration: 0.2 }}
+                  className="flex items-start justify-between gap-4 mb-5"
+                >
                   <div className="flex items-start gap-3">
                     <span className="inline-flex items-center font-bold text-sm text-prime bg-surface-elevated px-4 py-1.5 rounded-full mt-0.5 flex-shrink-0">
                       {ticker}
                     </span>
                     <div>
-                      <h3 className="text-lg font-semibold text-prime leading-snug">
+                      <h3 className="text-xl font-bold text-prime leading-snug">
                         {company || ticker}
                       </h3>
                       {isCallerMention && (
@@ -155,37 +170,48 @@ export default function DigestPickCard({
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-dim hover:text-prime hover:bg-surface-elevated transition-all"
+                    className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-dim hover:text-prime hover:bg-surface-elevated transition-colors"
                     aria-label="Close"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
-                </div>
+                </motion.div>
 
-                {/* Modal body */}
-                <blockquote className="text-sm text-prime leading-relaxed pl-4 border-l-2 border-accent/40 mb-6 font-sans">
+                {/* Reasoning Content — Fades in smoothly as box expands */}
+                <motion.blockquote
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ delay: 0.12, duration: 0.22 }}
+                  className="text-sm text-prime leading-relaxed pl-4 border-l-2 border-accent/40 mb-6 font-sans"
+                >
                   {reasoning || 'No detailed reasoning available.'}
-                </blockquote>
+                </motion.blockquote>
 
-                <button
+                {/* CTA Button */}
+                <motion.button
                   type="button"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ delay: 0.15, duration: 0.22 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleClose();
                     if (onScoreTicker) onScoreTicker(ticker, guestName);
                   }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-[#1E1F22] text-sm font-semibold rounded-full hover:bg-accent-hover transition-colors shadow-antigravity"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-accent text-[#1E1F22] text-sm font-semibold rounded-full hover:bg-accent-hover transition-colors shadow-antigravity"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                           d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                   Score This Pick
-                </button>
+                </motion.button>
               </motion.div>
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>,
         document.body
