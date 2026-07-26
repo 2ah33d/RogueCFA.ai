@@ -602,8 +602,7 @@ async function callClaude(key, systemPrompt, userPrompt) {
   const models = [
     'claude-haiku-4-5-20251001',
     'claude-haiku-4-5',
-    'claude-3-5-haiku-20241022',
-    'claude-3-5-sonnet-latest',
+    'claude-sonnet-5',
   ];
 
   let lastErr = null;

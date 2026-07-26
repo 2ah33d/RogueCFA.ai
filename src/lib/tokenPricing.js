@@ -20,7 +20,7 @@ export const PROVIDER_RATES = {
     outputPerM: 4.00,
   },
   claudeSonnet: {
-    name: 'Claude 3.5 Sonnet',
+    name: 'Claude 5 Sonnet (claude-sonnet-5)',
     inputPerM: 3.00,
     outputPerM: 15.00,
   },
