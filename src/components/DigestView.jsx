@@ -531,10 +531,10 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
   /* ── Digest loaded ── */
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6 animate-fade-in font-sans">
+    <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in font-sans">
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-card p-4 rounded-2xl shadow-antigravity">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-dim">
             MarketCall Digest
           </h2>
@@ -545,7 +545,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           <button
             type="button"
             onClick={handleRefreshFull}
-            className="text-xs font-medium text-dim hover:text-prime px-3 py-1 rounded-full bg-surface-elevated transition-colors flex items-center gap-1"
+            className="text-xs font-medium text-dim hover:text-prime px-3 py-1 rounded-full bg-surface-elevated transition-colors flex items-center gap-1 shadow-antigravity"
             title="Check YouTube for a newer episode"
           >
             Check Newer
@@ -556,7 +556,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-dim hover:text-prime transition-colors flex items-center gap-1 font-medium"
+            className="text-xs text-dim hover:text-prime transition-colors flex items-center gap-1.5 font-medium"
           >
             <svg className="w-3.5 h-3.5 text-dim" viewBox="0 0 24 24" fill="currentColor">
               <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
@@ -567,96 +567,137 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         )}
       </div>
 
-      {/* Analyst Bubble */}
-      <AnalystBubble
-        guestName={digest.guest}
-        firm={digest.firm}
-        episodeFocus={digest.episodeFocus}
-        date={videoInfo?.episodeDate || todayStr}
-        trackRecord={trackRecord}
-        onSelectGuest={onSelectGuest}
-      />
+      {/* 2-Column Dashboard Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Main Column (2/3 width) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Market Outlook */}
+          {digest.marketOutlook && (
+            <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-2.5">
+              <h3 className="text-xs font-semibold text-dim uppercase tracking-wider">
+                Market Outlook
+              </h3>
+              <p className="text-sm text-prime leading-relaxed font-sans">
+                {digest.marketOutlook}
+              </p>
+            </div>
+          )}
 
-      {/* Market Outlook */}
-      {digest.marketOutlook && (
-        <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity">
-          <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-2.5">
-            Market Outlook
-          </h3>
-          <p className="text-sm text-prime leading-relaxed font-sans">
-            {digest.marketOutlook}
-          </p>
+          {/* Picks */}
+          {Array.isArray(digest.picks) && digest.picks.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-3 flex items-center justify-between">
+                <span>Top Picks</span>
+                <span className="text-[11px] font-normal text-dim">
+                  {digest.picks.length} pick{digest.picks.length !== 1 ? 's' : ''} • Click to expand
+                </span>
+              </h3>
+              <div className="space-y-3">
+                {digest.picks.map((pick, idx) => (
+                  <DigestPickCard
+                    key={`${pick.ticker}-${idx}`}
+                    ticker={pick.ticker}
+                    company={pick.company}
+                    reasoning={pick.reasoning}
+                    guestName={digest.guest}
+                    onScoreTicker={onScoreTicker}
+                    index={idx}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Caller Mentions (Q&A) */}
+          {(Array.isArray(digest.callerMentions) && digest.callerMentions.length > 0 ? digest.callerMentions : Array.isArray(digest.caller_mentions) && digest.caller_mentions.length > 0 ? digest.caller_mentions : null) && (
+            <div>
+              <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-3 flex items-center justify-between">
+                <span>Caller Mentions (Q&amp;A)</span>
+                <span className="text-[11px] font-normal text-dim">
+                  {(digest.callerMentions || digest.caller_mentions).length} mention{(digest.callerMentions || digest.caller_mentions).length !== 1 ? 's' : ''} • Click to expand
+                </span>
+              </h3>
+              <div className="space-y-3">
+                {(digest.callerMentions || digest.caller_mentions).map((pick, idx) => (
+                  <DigestPickCard
+                    key={`caller-${pick.ticker}-${idx}`}
+                    ticker={pick.ticker}
+                    company={pick.company}
+                    reasoning={pick.reasoning}
+                    guestName={digest.guest}
+                    onScoreTicker={onScoreTicker}
+                    index={idx}
+                    isCallerMention={true}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Closing Notes */}
+          {digest.closingNotes && (
+            <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-2.5">
+              <h3 className="text-xs font-semibold text-dim uppercase tracking-wider">
+                Closing Notes
+              </h3>
+              <p className="text-sm text-dim leading-relaxed italic font-sans">
+                {digest.closingNotes}
+              </p>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Picks */}
-      {Array.isArray(digest.picks) && digest.picks.length > 0 && (
-        <div>
-          <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-3 flex items-center justify-between">
-            <span>Top Picks</span>
-            <span className="text-[11px] font-normal text-faint">
-              {digest.picks.length} pick{digest.picks.length !== 1 ? 's' : ''} • Click to expand
-            </span>
-          </h3>
-          <div className="space-y-3">
-            {digest.picks.map((pick, idx) => (
-              <DigestPickCard
-                key={`${pick.ticker}-${idx}`}
-                ticker={pick.ticker}
-                company={pick.company}
-                reasoning={pick.reasoning}
-                guestName={digest.guest}
-                onScoreTicker={onScoreTicker}
-                index={idx}
-              />
-            ))}
+        {/* Sidebar Column (1/3 width) */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* Analyst Bubble */}
+          <AnalystBubble
+            guestName={digest.guest}
+            firm={digest.firm}
+            episodeFocus={digest.episodeFocus}
+            date={videoInfo?.episodeDate || todayStr}
+            trackRecord={trackRecord}
+            onSelectGuest={onSelectGuest}
+          />
+
+          {/* Episode Info & Stats Card */}
+          <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-4 font-sans">
+            <h3 className="text-xs font-semibold text-dim uppercase tracking-wider">
+              Digest Overview
+            </h3>
+
+            <div className="space-y-3 text-xs">
+              <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
+                <span className="text-dim">Time Saved</span>
+                <span className="font-semibold text-signal-buy bg-signal-buy/15 px-2.5 py-0.5 rounded-full">
+                  45m → 2m
+                </span>
+              </div>
+
+              <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
+                <span className="text-dim">Digest Cost</span>
+                <span className="font-semibold text-prime">~$0.04</span>
+              </div>
+
+              <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
+                <span className="text-dim">Episode Date</span>
+                <span className="font-semibold text-prime">
+                  {videoInfo?.episodeDate || 'Latest'}
+                </span>
+              </div>
+            </div>
+
+            {videoInfo?.videoId && (
+              <a
+                href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 bg-surface-elevated hover:bg-surface text-dim hover:text-prime text-xs font-semibold rounded-full transition-colors shadow-antigravity flex items-center justify-center gap-2"
+              >
+                Watch Source Broadcast ↗
+              </a>
+            )}
           </div>
         </div>
-      )}
-
-      {/* Caller Mentions (Q&A) */}
-      {(Array.isArray(digest.callerMentions) && digest.callerMentions.length > 0 ? digest.callerMentions : Array.isArray(digest.caller_mentions) && digest.caller_mentions.length > 0 ? digest.caller_mentions : null) && (
-        <div>
-          <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-3 flex items-center justify-between">
-            <span>Caller Mentions (Q&amp;A)</span>
-            <span className="text-[11px] font-normal text-faint">
-              {(digest.callerMentions || digest.caller_mentions).length} mention{(digest.callerMentions || digest.caller_mentions).length !== 1 ? 's' : ''} • Click to expand
-            </span>
-          </h3>
-          <div className="space-y-3">
-            {(digest.callerMentions || digest.caller_mentions).map((pick, idx) => (
-              <DigestPickCard
-                key={`caller-${pick.ticker}-${idx}`}
-                ticker={pick.ticker}
-                company={pick.company}
-                reasoning={pick.reasoning}
-                guestName={digest.guest}
-                onScoreTicker={onScoreTicker}
-                index={idx}
-                isCallerMention={true}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Closing Notes */}
-      {digest.closingNotes && (
-        <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity">
-          <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-2.5">
-            Closing Notes
-          </h3>
-          <p className="text-sm text-dim leading-relaxed italic font-sans">
-            {digest.closingNotes}
-          </p>
-        </div>
-      )}
-
-      {/* Footer — cost / time saved callout */}
-      <div className="text-center pt-2 pb-4">
-        <p className="text-[10px] text-faint font-mono">
-          2-minute read replacing 45-minute broadcast • ~$0.04 per digest
-        </p>
       </div>
     </div>
   );

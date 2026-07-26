@@ -41,7 +41,7 @@ export default function ScoreForm({ onScore, loading, prefilledTicker = '', pref
   };
 
   return (
-    <form onSubmit={handleSubmit} className={`w-full max-w-2xl mx-auto ${className}`}>
+    <form onSubmit={handleSubmit} className={`w-full max-w-3xl mx-auto ${className}`}>
       <div className="bg-surface-card rounded-2xl p-6 md:p-8 shadow-antigravity space-y-6">
         {/* Ticker input */}
         <div>
