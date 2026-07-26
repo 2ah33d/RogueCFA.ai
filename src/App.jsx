@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   hasKeys as checkHasKeys,
   getKeys,
@@ -269,94 +270,109 @@ export default function App() {
 
         {/* ── Main content ── */}
         <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 flex flex-col items-center gap-6">
-          {activeTab === 'landing' ? (
-            <LandingPage
-              onLaunchTool={(tab = 'score') => setActiveTab(tab)}
-              onSelectTicker={(ticker, guest) => {
-                setPrefilledTicker(ticker);
-                setPrefilledGuest(guest);
-                setActiveTab('score');
-              }}
-              onSelectGuest={(guest) => setSelectedGuest(guest)}
-            />
-          ) : activeTab === 'score' ? (
-            <>
-              {/* Tool Screen: Dense, straight into function, NO HERO TITLE */}
-              <MarketCallBar
-                onSelectTicker={(ticker, guest) => {
-                  setPrefilledTicker(ticker);
-                  setPrefilledGuest(guest);
-                }}
-                onSelectGuest={(guest) => setSelectedGuest(guest)}
-              />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="w-full flex flex-col items-center gap-6"
+            >
+              {activeTab === 'landing' ? (
+                <LandingPage
+                  onLaunchTool={(tab = 'score') => setActiveTab(tab)}
+                  onSelectTicker={(ticker, guest) => {
+                    setPrefilledTicker(ticker);
+                    setPrefilledGuest(guest);
+                    setActiveTab('score');
+                  }}
+                  onSelectGuest={(guest) => setSelectedGuest(guest)}
+                />
+              ) : activeTab === 'score' ? (
+                <>
+                  {/* Tool Screen: Dense, straight into function, NO HERO TITLE */}
+                  <MarketCallBar
+                    onSelectTicker={(ticker, guest) => {
+                      setPrefilledTicker(ticker);
+                      setPrefilledGuest(guest);
+                    }}
+                    onSelectGuest={(guest) => setSelectedGuest(guest)}
+                  />
 
-              <ScoreForm
-                onScore={handleScore}
-                loading={loading}
-                prefilledTicker={prefilledTicker}
-                prefilledGuest={prefilledGuest}
-              />
+                  <ScoreForm
+                    onScore={handleScore}
+                    loading={loading}
+                    prefilledTicker={prefilledTicker}
+                    prefilledGuest={prefilledGuest}
+                  />
 
-              {scorecards.length > 1 && (
-                <ComparisonMatrix
-                  scorecards={scorecards}
-                  comparisonResult={comparisonResult}
+                  {scorecards.length > 1 && (
+                    <ComparisonMatrix
+                      scorecards={scorecards}
+                      comparisonResult={comparisonResult}
+                    />
+                  )}
+
+                  <ScorecardGrid
+                    scorecards={scorecards}
+                    loadingTickers={loadingTickers}
+                    holdPeriod={currentHoldPeriod}
+                    onSelectGuest={(guest) => setSelectedGuest(guest)}
+                  />
+                </>
+              ) : activeTab === 'digest' ? (
+                <DigestView
+                  onScoreTicker={(ticker, guest) => {
+                    setPrefilledTicker(ticker);
+                    setPrefilledGuest(guest);
+                    setActiveTab('score');
+                  }}
+                  onSelectGuest={(guest) => setSelectedGuest(guest)}
+                  onOpenSettings={() => setShowSettings(true)}
+                />
+              ) : (
+                <HistoryTab
+                  onSelectTicker={(ticker) => {
+                    setPrefilledTicker(ticker);
+                    setActiveTab('score');
+                  }}
                 />
               )}
-
-              <ScorecardGrid
-                scorecards={scorecards}
-                loadingTickers={loadingTickers}
-                holdPeriod={currentHoldPeriod}
-                onSelectGuest={(guest) => setSelectedGuest(guest)}
-              />
-            </>
-          ) : activeTab === 'digest' ? (
-            <DigestView
-              onScoreTicker={(ticker, guest) => {
-                setPrefilledTicker(ticker);
-                setPrefilledGuest(guest);
-                setActiveTab('score');
-              }}
-              onSelectGuest={(guest) => setSelectedGuest(guest)}
-              onOpenSettings={() => setShowSettings(true)}
-            />
-          ) : (
-            <HistoryTab
-              onSelectTicker={(ticker) => {
-                setPrefilledTicker(ticker);
-                setActiveTab('score');
-              }}
-            />
-          )}
+            </motion.div>
+          </AnimatePresence>
         </main>
 
         {/* ── Footer ── */}
         <Disclaimer />
 
         {/* ── Settings Drawer ── */}
-        {showSettings && (
-          <SettingsPanel
-            onClose={() => {
-              setShowSettings(false);
-              refreshKeyStatus();
-            }}
-            onKeysCleared={handleKeysCleared}
-          />
-        )}
+        <AnimatePresence>
+          {showSettings && (
+            <SettingsPanel
+              onClose={() => {
+                setShowSettings(false);
+                refreshKeyStatus();
+              }}
+              onKeysCleared={handleKeysCleared}
+            />
+          )}
+        </AnimatePresence>
 
         {/* ── Guest Analyst Modal ── */}
-        {selectedGuest && (
-          <GuestModal
-            guestName={selectedGuest}
-            onClose={() => setSelectedGuest(null)}
-            onSelectTicker={(ticker, guest) => {
-              setPrefilledTicker(ticker);
-              if (guest) setPrefilledGuest(guest);
-              setActiveTab('score');
-            }}
-          />
-        )}
+        <AnimatePresence>
+          {selectedGuest && (
+            <GuestModal
+              guestName={selectedGuest}
+              onClose={() => setSelectedGuest(null)}
+              onSelectTicker={(ticker, guest) => {
+                setPrefilledTicker(ticker);
+                if (guest) setPrefilledGuest(guest);
+                setActiveTab('score');
+              }}
+            />
+          )}
+        </AnimatePresence>
 
         {/* ── Toast Notifications ── */}
         {toasts.length > 0 && (

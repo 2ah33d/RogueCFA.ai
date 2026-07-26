@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   getKeys,
   getProvider,
@@ -106,8 +107,12 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
   };
 
   return (
-    <div
-      className={`fixed inset-0 z-50 bg-[#1E1F22] overflow-y-auto animate-fade-in font-sans text-prime ${className}`}
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 15 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+      className={`fixed inset-0 z-50 bg-[#1E1F22] overflow-y-auto font-sans text-prime ${className}`}
     >
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         {/* Header Bar */}
@@ -412,6 +417,6 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
           </p>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

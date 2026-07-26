@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { getGuestTrackRecord } from '../lib/guestTracker';
 
 /**
@@ -279,9 +280,21 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-      <div
-        className={`bg-surface-card rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-antigravity-elevated overflow-hidden ${className}`}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.92, y: 10 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+        className={`bg-surface-card rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-antigravity-elevated overflow-hidden border border-edge ${className}`}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-surface-elevated/40 flex items-center justify-between bg-surface-card">
@@ -321,7 +334,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
             Close Panel
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
