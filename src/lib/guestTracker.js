@@ -1,6 +1,51 @@
 import { getHistory } from './historyManager';
 
 const BNN_STORAGE_KEY = 'roguecfa_bnn_picks';
+const ANALYST_CACHE_KEY = 'roguecfa_analyst_scores_v2';
+const inMemoryScoreCache = new Map();
+
+/**
+ * Synchronously retrieves cached analyst record from memory / localStorage.
+ * Enables instant 0ms render without reloading animation.
+ */
+export function getCachedAnalystRecord(guestName) {
+  if (!guestName || typeof guestName !== 'string') return null;
+  const key = guestName.trim().toLowerCase();
+
+  if (inMemoryScoreCache.has(key)) {
+    return inMemoryScoreCache.get(key);
+  }
+
+  try {
+    const raw = localStorage.getItem(`${ANALYST_CACHE_KEY}_${key}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && (parsed.credibilityScore != null || parsed.hitRate != null)) {
+        inMemoryScoreCache.set(key, parsed);
+        return parsed;
+      }
+    }
+  } catch (err) {
+    // Ignore localStorage errors
+  }
+
+  return null;
+}
+
+/**
+ * Saves analyst record to memory & localStorage cache for instant access.
+ */
+export function saveCachedAnalystRecord(guestName, recordData) {
+  if (!guestName || !recordData) return;
+  const key = guestName.trim().toLowerCase();
+  inMemoryScoreCache.set(key, recordData);
+
+  try {
+    localStorage.setItem(`${ANALYST_CACHE_KEY}_${key}`, JSON.stringify(recordData));
+  } catch (err) {
+    // Ignore localStorage errors
+  }
+}
 
 /* ════════════════════════════════════════════════════════════════
    20-GUEST CURATED REGISTRY WITH LATEST 9 PICKS (ACROSS 3 EPISODES)

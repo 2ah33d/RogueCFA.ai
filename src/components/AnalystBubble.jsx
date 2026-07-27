@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getCachedAnalystRecord, saveCachedAnalystRecord } from '../lib/guestTracker';
 
 /**
  * Circular score ring component matching main scoring engine aesthetic.
@@ -7,7 +8,7 @@ function ScoreCircle({ score, loading }) {
   const RADIUS = 18;
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-  if (loading || score == null) {
+  if (loading && score == null) {
     return (
       <div className="flex flex-col items-center justify-center shrink-0">
         <div className="w-12 h-12 rounded-full border-2 border-surface-elevated border-t-dim animate-spin" />
@@ -16,7 +17,7 @@ function ScoreCircle({ score, loading }) {
     );
   }
 
-  const clamped = Math.max(0, Math.min(100, score));
+  const clamped = Math.max(0, Math.min(100, score || 0));
   const strokeOffset = CIRCUMFERENCE - (clamped / 100) * CIRCUMFERENCE;
 
   let colorClass = 'stroke-signal-buy text-signal-buy';
@@ -56,7 +57,7 @@ function ScoreCircle({ score, loading }) {
         </svg>
         {/* Score number inside circle */}
         <span className="absolute font-mono font-bold text-xs text-prime">
-          {clamped}
+          {score != null ? clamped : '--'}
         </span>
       </div>
       <span className="text-[10px] font-semibold text-dim/80 tracking-wider uppercase mt-1">
@@ -75,27 +76,32 @@ export default function AnalystBubble({
   onSelectGuest,
   className = '',
 }) {
-  const [record, setRecord] = useState(initialTrackRecord || null);
-  const [loading, setLoading] = useState(!initialTrackRecord?.credibilityScore);
+  // Synchronous 0ms cache check on initial render
+  const cached = getCachedAnalystRecord(guestName) || initialTrackRecord;
+  const [record, setRecord] = useState(cached || null);
+  const [loading, setLoading] = useState(!cached?.credibilityScore && !cached?.hitRate);
 
   useEffect(() => {
     let isMounted = true;
     if (!guestName) return;
 
-    if (initialTrackRecord && (initialTrackRecord.credibilityScore != null || initialTrackRecord.hitRate != null)) {
-      setRecord(initialTrackRecord);
+    // Check synchronous cache first
+    const existingCache = getCachedAnalystRecord(guestName) || initialTrackRecord;
+    if (existingCache && (existingCache.credibilityScore != null || existingCache.hitRate != null)) {
+      setRecord(existingCache);
       setLoading(false);
-      return;
+    } else {
+      setLoading(true);
     }
 
-    setLoading(true);
-
+    // Always fetch latest Supabase-persisted record in background to stay updated with newest past pick performance
     fetch(`/api/analyst-record?guest=${encodeURIComponent(guestName)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!isMounted) return;
         if (data && (data.credibilityScore != null || data.hitRate != null || Array.isArray(data.picks))) {
           setRecord(data);
+          saveCachedAnalystRecord(guestName, data);
         }
       })
       .catch((err) => {
@@ -147,7 +153,7 @@ export default function AnalystBubble({
           </div>
 
           {/* Credibility Score Circle Ring */}
-          <ScoreCircle score={score} loading={loading} />
+          <ScoreCircle score={score} loading={loading && score == null} />
         </div>
 
         {/* Episode Focus */}
