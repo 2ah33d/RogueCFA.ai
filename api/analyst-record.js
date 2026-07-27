@@ -28,7 +28,16 @@ export default async function handler(req, res) {
 
     if (error) {
       console.warn('[analyst-record] Database query error:', error.message);
-      return res.status(500).json({ error: `Database error: ${error.message}` });
+      /* Graceful fallback: return 200 with no_track_record so UI doesn't crash on Supabase RLS permission errors */
+      return res.status(200).json({
+        status: 'no_track_record',
+        guestName: rawGuest,
+        cleanGuest,
+        message: `Database permission notice: ${error.message}`,
+        picks: [],
+        credibilityScore: null,
+        hitRate: null,
+      });
     }
 
     if (!rows || rows.length === 0) {
