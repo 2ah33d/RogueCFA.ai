@@ -71,18 +71,18 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
 
   return (
     <div ref={dropdownRef} className={`relative text-xs font-sans ${className}`}>
-      {/* Dropdown Toggle Pill — Integrated Date + Neutral Saved Count (No blue-on-grey) */}
+      {/* Dropdown Toggle Pill — Integrated Date + Neutral Saved Count */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2.5 px-4 py-1.5 bg-surface-card hover:bg-surface-elevated border border-surface-elevated/60 rounded-full text-prime font-medium shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer group"
+        className="h-8 px-3.5 inline-flex items-center gap-2 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer group"
       >
-        <span className="text-xs font-bold text-prime">{displayDate}</span>
-        <span className="text-[11px] font-medium text-dim bg-surface-elevated px-2.5 py-0.5 rounded-full border border-edge/40">
+        <span className="text-xs font-semibold text-prime">{displayDate}</span>
+        <span className="text-[10px] font-medium text-dim bg-surface-elevated px-2 py-0.5 rounded-full">
           {history.length} Saved
         </span>
         <svg
-          className="w-3.5 h-3.5 text-dim group-hover:text-prime transition-transform duration-200"
+          className="w-3 h-3 text-dim group-hover:text-prime transition-transform duration-200"
           style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
           fill="none"
           stroke="currentColor"

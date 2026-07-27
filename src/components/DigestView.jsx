@@ -586,29 +586,29 @@ function renderScannableOutlook(text) {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 px-2 sm:px-4 animate-fade-in font-sans">
-      {/* Top Header Control Bar — Cohesive integrated layout */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-5 border-b border-surface-elevated/60">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight text-prime">
-              MarketCall Digest
-            </h1>
-            <span className="inline-flex items-center gap-1.5 text-xs text-dim font-medium bg-surface-card px-3 py-1 rounded-full border border-surface-elevated/60 shadow-sm">
+      {/* Top Header Control Bar — Harmonized single-row pill toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-surface-elevated/40">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight text-prime">
+            MarketCall Digest
+          </h1>
+
+          {/* Unified Pill Group — All 3 pills share exact h-8 height, px-3.5 padding, and bg-surface-card styling */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="h-8 px-3.5 inline-flex items-center gap-1.5 text-xs font-medium text-dim bg-surface-card rounded-full shadow-antigravity select-none shrink-0">
               <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
               BNN Bloomberg
             </span>
-          </div>
 
-          {/* Subtitle row — Cohesive matching control bar */}
-          <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
             <HistoryBrowser
               selectedDate={videoInfo?.episodeDate}
               onSelectDigest={handleSelectHistoricalDigest}
             />
+
             <button
               type="button"
               onClick={handleRefreshFull}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-surface-card hover:bg-surface-elevated border border-surface-elevated/60 rounded-full text-xs font-semibold text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              className="h-8 px-3.5 inline-flex items-center gap-1.5 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer shrink-0"
               title="Check YouTube for a newer episode"
             >
               <svg className="w-3.5 h-3.5 text-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -621,7 +621,7 @@ function renderScannableOutlook(text) {
 
         {/* Video Preview Column — Soft floating shadow, no red play button */}
         {videoInfo?.videoId && (
-          <div className="flex items-center gap-3.5 bg-surface-card p-3 rounded-2xl border border-surface-elevated/50 shadow-antigravity shrink-0">
+          <div className="flex items-center gap-3.5 bg-surface-card p-3 rounded-2xl shadow-antigravity shrink-0">
             <a
               href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
               target="_blank"
@@ -741,28 +741,28 @@ function renderScannableOutlook(text) {
             onSelectGuest={onSelectGuest}
           />
 
-          {/* Episode Info & Actionable Digest Stats Card */}
-          <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-4 font-sans border border-surface-elevated/40">
-            <h3 className="text-xs font-bold text-dim uppercase tracking-wider">
+          {/* Episode Info & Actionable Digest Stats Card — Soft elevation shadow, clean sans-serif typography */}
+          <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-4 font-sans">
+            <h3 className="text-xs font-semibold text-dim uppercase tracking-wider">
               Digest Overview
             </h3>
 
             <div className="space-y-3">
-              <div className="bg-surface-elevated/80 p-4 rounded-xl shadow-inner flex items-center justify-between border border-edge/30">
-                <span className="text-xs sm:text-sm text-dim font-semibold">Coverage Density</span>
-                <span className="text-sm sm:text-base font-bold text-prime font-mono">
+              <div className="bg-surface-elevated p-3.5 sm:p-4 rounded-xl shadow-inner flex items-center justify-between">
+                <span className="text-xs sm:text-sm text-dim font-medium">Coverage Density</span>
+                <span className="text-xs sm:text-sm font-semibold text-prime">
                   {(digest.picks?.length || 0)} Picks • {(digest.callerMentions || digest.caller_mentions || []).length} Q&amp;A
                 </span>
               </div>
 
-              <div className="bg-surface-elevated/80 p-4 rounded-xl shadow-inner flex items-center justify-between border border-edge/30">
+              <div className="bg-surface-elevated p-3.5 sm:p-4 rounded-xl shadow-inner flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-xs sm:text-sm text-dim font-semibold">Generation Cost</span>
-                  <span className="text-xs text-dim/70 font-medium">
+                  <span className="text-xs sm:text-sm text-dim font-medium">Generation Cost</span>
+                  <span className="text-[11px] text-dim/70 font-normal">
                     {costInfo.providerName}{isEstimated ? ' (est.)' : ''}
                   </span>
                 </div>
-                <span className="text-sm sm:text-base font-bold text-prime font-mono">{costInfo.formattedCost}</span>
+                <span className="text-xs sm:text-sm font-semibold text-prime">{costInfo.formattedCost}</span>
               </div>
             </div>
           </div>
