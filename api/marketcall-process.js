@@ -239,7 +239,7 @@ export default async function handler(req, res) {
     }
 
     /* ── Step 6: Build prompt & call LLM ── */
-    const { systemPrompt, userPrompt } = buildDigestPrompt(cleanedTranscript, selectedVideo.videoTitle);
+    const { systemPrompt, userPrompt } = buildDigestPrompt(cleanedTranscript, selectedVideo.videoTitle, selectedVideo.description);
     const rawLLMResponse = await callLLM(provider, llmKey, systemPrompt, userPrompt, timer);
     const llmText = typeof rawLLMResponse === 'string' ? rawLLMResponse : rawLLMResponse.text;
     const llmUsage = typeof rawLLMResponse === 'object' ? rawLLMResponse.usage : null;
@@ -249,6 +249,11 @@ export default async function handler(req, res) {
       const errMsg = `LLM returned an unparseable digest.${groqDiagnosticMsg}`;
       await updateJob(jobId, 'error', null, errMsg);
       return res.status(200).json({ jobId, status: 'error', error: errMsg });
+    }
+
+    /* Sanitize analyst name against YouTube video title & phonetic mishearing dictionary */
+    if (digest && digest.guest) {
+      digest.guest = sanitizeAnalystName(digest.guest, selectedVideo.videoTitle, selectedVideo.description);
     }
 
     /* Attach real token usage so frontend can show actual costs */

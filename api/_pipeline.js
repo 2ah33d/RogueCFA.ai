@@ -492,28 +492,106 @@ export function cleanRawTranscript(rawText) {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   YouTube Analyst Name Extraction & Phonetic Overrides
+   ════════════════════════════════════════════════════════════════ */
+
+export const PHONETIC_ANALYST_OVERRIDES = {
+  'julian nono-wamden': 'Julian Klymochko',
+  'julian nono wamden': 'Julian Klymochko',
+  'julian nono': 'Julian Klymochko',
+  'julian namboothiri': 'Julian Klymochko',
+};
+
+/**
+ * Extracts official guest analyst name directly from YouTube video title & description.
+ * Overrides phonetic audio Whisper transcription mishearings.
+ */
+export function extractAnalystFromYouTubeTitle(videoTitle, description = '') {
+  if (!videoTitle || typeof videoTitle !== 'string') return null;
+
+  const cleanTitle = decodeHTMLEntities(videoTitle).trim();
+
+  // Pattern 1: "Market Call: Julian Klymochko on U.S. equities" or "MarketCall: Eric Nuttall's Top Picks"
+  const p1 = cleanTitle.match(/market\s*call\s*[:\-–—]\s*([^'":\-–—\d\(\)]+?)(?:\s+(?:on|'s|takes|shares|talks|with|gives|top|picks|discusses)|$)/i);
+  if (p1 && p1[1]) {
+    const candidate = p1[1].trim();
+    const words = candidate.split(/\s+/);
+    if (words.length >= 2 && words.length <= 4 && !/^(today|bnn|market|call|top|picks)$/i.test(words[0])) {
+      return candidate;
+    }
+  }
+
+  // Pattern 2: "Julian Klymochko on U.S. Equities - MarketCall"
+  const p2 = cleanTitle.match(/^([^:\-–—\d\(\)]+?)\s+(?:on|takes|shares|talks|with|gives|top|picks|discusses)\s+.*(?:market\s*call)/i);
+  if (p2 && p2[1]) {
+    const candidate = p2[1].trim();
+    const words = candidate.split(/\s+/);
+    if (words.length >= 2 && words.length <= 4) {
+      return candidate;
+    }
+  }
+
+  // Pattern 3: "BNN Bloomberg MarketCall - Julian Klymochko"
+  const p3 = cleanTitle.match(/(?:market\s*call|bnn\s+bloomberg)\s*[\-–—:]\s*([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+  if (p3 && p3[1]) {
+    const candidate = p3[1].trim();
+    if (!/^(top|picks|market|call|bnn|bloomberg)$/i.test(candidate.split(/\s+/)[0])) {
+      return candidate;
+    }
+  }
+
+  // Pattern 4: Search description for "Guest: Julian Klymochko"
+  if (description && typeof description === 'string') {
+    const p4 = description.match(/(?:guest|analyst|featured|interview(?:ing)?)\s*[:\-–—]?\s*([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+    if (p4 && p4[1]) {
+      return p4[1].trim();
+    }
+  }
+
+  return null;
+}
+
+export function sanitizeAnalystName(rawGuest, videoTitle = '', description = '') {
+  if (!rawGuest) return 'BNN Bloomberg Guest';
+  const lower = rawGuest.trim().toLowerCase();
+  if (PHONETIC_ANALYST_OVERRIDES[lower]) {
+    return PHONETIC_ANALYST_OVERRIDES[lower];
+  }
+
+  const ytName = extractAnalystFromYouTubeTitle(videoTitle, description);
+  if (ytName) {
+    return ytName;
+  }
+
+  return rawGuest.trim();
+}
+
+/* ════════════════════════════════════════════════════════════════
    Digest prompt construction
    ════════════════════════════════════════════════════════════════ */
 
-export function buildDigestPrompt(transcript, videoTitle = '') {
+export function buildDigestPrompt(transcript, videoTitle = '', description = '') {
+  const officialGuest = extractAnalystFromYouTubeTitle(videoTitle, description);
+
   const systemPrompt = `You are a financial research assistant that summarizes BNN Bloomberg MarketCall episodes.
 Your job is to produce a structured digest from the provided episode transcript.
 
 STRICT RULES:
 1. ONLY reference what the guest ACTUALLY SAID in the transcript. Do NOT add outside analysis, opinion, or information not present in the transcript.
-2. Preserve the guest's SPECIFIC language and reasoning — not generic boilerplate. Instead of "the guest is bullish on energy", quote their actual logic: their stated thesis, metrics, catalysts, and price targets.
-3. Every stock pick MUST include the guest's stated reasoning (WHY they like it). A bare ticker list is worthless.
-4. Output 500–1000 words total.
-5. If the guest mentions a price target, timeframe, or specific catalyst, include it.
-6. CRITICAL DISTINCTION FOR PICKS VS CALLER Q&A:
+2. PRESERVE THE OFFICIAL GUEST NAME: ${officialGuest ? `The verified official guest name extracted from YouTube is "${officialGuest}". ALWAYS set "guest": "${officialGuest}".` : `Extract the guest's official real name from YouTube title/transcript accurately.`} Do NOT output phonetic Whisper mishearings (e.g. "Julian Nono-Wamden").
+3. Preserve the guest's SPECIFIC language and reasoning — not generic boilerplate. Instead of "the guest is bullish on energy", quote their actual logic: their stated thesis, metrics, catalysts, and price targets.
+4. Every stock pick MUST include the guest's stated reasoning (WHY they like it). A bare ticker list is worthless.
+5. Output 500–1000 words total.
+6. If the guest mentions a price target, timeframe, or specific catalyst, include it.
+7. CRITICAL DISTINCTION FOR PICKS VS CALLER Q&A:
    - "picks": MUST contain EXACTLY the guest's NEW official featured Top Picks (typically 3 stocks) introduced for today's market.
    - "callerMentions": MUST contain any additional stocks discussed by the guest when answering caller questions or viewer emails during the Q&A segment. DO NOT mix caller Q&A stocks into "picks".
-7. EXCLUDE PAST PICKS REVIEWS: Do NOT include historical "Past Picks" reviewed during the episode (where the host/guest evaluate performance from prior months, e.g. "Looking back at your picks from 6 months ago... Then: $X Now: $Y"). "picks" MUST ONLY contain NEW, CURRENT actionable Top Picks. Do NOT put past picks in "picks" or "callerMentions".
-8. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
+8. EXCLUDE PAST PICKS REVIEWS: Do NOT include historical "Past Picks" reviewed during the episode (where the host/guest evaluate performance from prior months, e.g. "Looking back at your picks from 6 months ago... Then: $X Now: $Y"). "picks" MUST ONLY contain NEW, CURRENT actionable Top Picks. Do NOT put past picks in "picks" or "callerMentions".
+9. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
 
 OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 {
-  "guest": "Full Name",
+  "guest": "${officialGuest || 'Full Name'}",
   "firm": "Firm/Title",
   "episodeFocus": "Stated theme of the episode, e.g. Technical Analysis / Energy Sector Outlook",
   "marketOutlook": "100-150 word summary of the guest's overall market view/thesis, condensed from their opening remarks. Use their actual stated logic.",
