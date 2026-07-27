@@ -1,9 +1,71 @@
 import React, { useState, useEffect } from 'react';
 
 /**
- * AnalystBubble — Displays analyst identity, real Supabase-persisted credibility score (/100),
- * and episode focus topic.
+ * Circular score ring component matching main scoring engine aesthetic.
  */
+function ScoreCircle({ score, loading }) {
+  const RADIUS = 18;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+  if (loading || score == null) {
+    return (
+      <div className="flex flex-col items-center justify-center shrink-0">
+        <div className="w-12 h-12 rounded-full border-2 border-surface-elevated border-t-dim animate-spin" />
+        <span className="text-[10px] font-semibold text-dim/70 tracking-wider uppercase mt-1">Credibility</span>
+      </div>
+    );
+  }
+
+  const clamped = Math.max(0, Math.min(100, score));
+  const strokeOffset = CIRCUMFERENCE - (clamped / 100) * CIRCUMFERENCE;
+
+  let colorClass = 'stroke-signal-buy text-signal-buy';
+  if (score < 65) {
+    colorClass = 'stroke-signal-avoid text-signal-avoid';
+  } else if (score < 80) {
+    colorClass = 'stroke-signal-watch text-signal-watch';
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center shrink-0">
+      <div className="relative w-12 h-12 flex items-center justify-center">
+        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 44 44">
+          {/* Background circle track */}
+          <circle
+            cx="22"
+            cy="22"
+            r={RADIUS}
+            stroke="currentColor"
+            strokeWidth="3.5"
+            fill="transparent"
+            className="text-surface-elevated"
+          />
+          {/* Animated progress circle */}
+          <circle
+            cx="22"
+            cy="22"
+            r={RADIUS}
+            stroke="currentColor"
+            strokeWidth="3.5"
+            fill="transparent"
+            strokeDasharray={CIRCUMFERENCE}
+            strokeDashoffset={strokeOffset}
+            strokeLinecap="round"
+            className={`${colorClass} transition-all duration-700 ease-out`}
+          />
+        </svg>
+        {/* Score number inside circle */}
+        <span className="absolute font-mono font-bold text-xs text-prime">
+          {clamped}
+        </span>
+      </div>
+      <span className="text-[10px] font-semibold text-dim/80 tracking-wider uppercase mt-1">
+        Credibility
+      </span>
+    </div>
+  );
+}
+
 export default function AnalystBubble({
   guestName,
   firm,
@@ -60,27 +122,6 @@ export default function AnalystBubble({
     score = Math.round(record.optimalHorizonHitRate * 100);
   }
 
-  /* Color range coding: >= 80 Green, 65-79 Yellow/Watch, < 65 Red */
-  let badgeStyle = 'bg-surface-elevated text-dim border-edge';
-  let badgeText = '--/100';
-
-  if (loading && score == null) {
-    badgeStyle = 'bg-surface-elevated text-dim border-edge animate-pulse';
-    badgeText = 'Loading...';
-  } else if (score != null) {
-    badgeText = `${score}/100`;
-    if (score >= 80) {
-      badgeStyle = 'bg-signal-buy/15 text-signal-buy border-signal-buy/30';
-    } else if (score >= 65) {
-      badgeStyle = 'bg-signal-watch/15 text-signal-watch border-signal-watch/30';
-    } else {
-      badgeStyle = 'bg-signal-avoid/15 text-signal-avoid border-signal-avoid/30';
-    }
-  } else {
-    badgeText = 'Unrated';
-    badgeStyle = 'bg-surface-elevated/80 text-dim border-edge/60';
-  }
-
   return (
     <button
       type="button"
@@ -89,8 +130,8 @@ export default function AnalystBubble({
       title={`View ${guestName}'s track record & score details`}
     >
       <div className="space-y-3.5">
-        {/* Top Header: Identity & Win Rate / Credibility Badge */}
-        <div className="flex items-start justify-between gap-3">
+        {/* Top Header: Identity & Credibility Score Ring */}
+        <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 text-left">
             <h3 className="text-base font-bold text-prime group-hover:text-white transition-colors leading-snug">
               {guestName}
@@ -98,20 +139,15 @@ export default function AnalystBubble({
             <p className="text-xs text-dim leading-relaxed mt-0.5 text-left">
               {firm || record?.firm || 'BNN MarketCall Guest'}
             </p>
-          </div>
-
-          {/* Credibility Score Badge (/100 with range color) */}
-          <div className="flex-shrink-0 text-right space-y-1">
-            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-sm ${badgeStyle}`}>
-              <span className="text-[10px] uppercase tracking-wider font-semibold opacity-90">Score:</span>
-              <span className="text-xs font-bold font-mono">{badgeText}</span>
-            </div>
             {date && (
-              <span className="text-[10px] text-dim/70 font-medium block text-right">
+              <span className="text-[10px] text-dim/70 font-medium block mt-1">
                 {date}
               </span>
             )}
           </div>
+
+          {/* Credibility Score Circle Ring */}
+          <ScoreCircle score={score} loading={loading} />
         </div>
 
         {/* Episode Focus */}

@@ -586,24 +586,21 @@ function renderScannableOutlook(text) {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 px-2 sm:px-4 animate-fade-in font-sans">
-      {/* Top Header Control Bar — Clean layout with integrated date pill & clear source provenance */}
+      {/* Top Header Control Bar — Cohesive integrated layout */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-5 border-b border-surface-elevated/60">
-        <div className="space-y-2.5">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-prime flex items-center gap-2">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight text-prime">
               MarketCall Digest
             </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-semibold rounded-full shadow-sm">
-              <svg className="w-3.5 h-3.5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
-                <path fill="currentColor" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-              </svg>
-              Source: BNN Bloomberg MarketCall
+            <span className="inline-flex items-center gap-1.5 text-xs text-dim font-medium bg-surface-card px-3 py-1 rounded-full border border-surface-elevated/60 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+              BNN Bloomberg
             </span>
           </div>
 
-          {/* Subtitle row — Integrated Date pill & Check Newer button */}
-          <div className="flex flex-wrap items-center gap-3 text-xs">
+          {/* Subtitle row — Cohesive matching control bar */}
+          <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
             <HistoryBrowser
               selectedDate={videoInfo?.episodeDate}
               onSelectDigest={handleSelectHistoricalDigest}
@@ -611,39 +608,33 @@ function renderScannableOutlook(text) {
             <button
               type="button"
               onClick={handleRefreshFull}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-accent hover:bg-accent-hover text-accent-text font-semibold rounded-full shadow-md shadow-accent/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-surface-card hover:bg-surface-elevated border border-surface-elevated/60 rounded-full text-xs font-semibold text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               title="Check YouTube for a newer episode"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Check Newer
+              <span>Check Newer</span>
             </button>
           </div>
         </div>
 
-        {/* Video Preview Column — Floating BNN thumbnail out of deep shadow (no sharp white borders) */}
+        {/* Video Preview Column — Soft floating shadow, no red play button */}
         {videoInfo?.videoId && (
           <div className="flex items-center gap-3.5 bg-surface-card p-3 rounded-2xl border border-surface-elevated/50 shadow-antigravity shrink-0">
             <a
               href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-36 h-20 rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.65)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.85)] border-0 relative group block shrink-0 transition-all duration-300"
+              className="w-36 h-20 rounded-xl overflow-hidden shadow-md shadow-black/30 border-0 relative group block shrink-0 transition-all duration-300"
               title={videoInfo?.videoTitle || 'Watch Full Episode'}
             >
               <img
                 src={`https://img.youtube.com/vi/${videoInfo.videoId}/mqdefault.jpg`}
                 alt="Episode thumbnail"
-                className="w-full h-full object-cover scale-105 group-hover:scale-112 transition-transform duration-300"
+                className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-300"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-black/60 transition-colors flex items-center justify-center">
-                <div className="w-9 h-9 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <svg className="w-4 h-4 fill-current translate-x-0.5" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-              </div>
+              <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
             </a>
             <div className="flex flex-col gap-1 pr-1 max-w-[170px]">
               <span className="text-[10px] uppercase tracking-wider font-semibold text-dim">Full Broadcast</span>
@@ -752,26 +743,26 @@ function renderScannableOutlook(text) {
 
           {/* Episode Info & Actionable Digest Stats Card */}
           <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-4 font-sans border border-surface-elevated/40">
-            <h3 className="text-xs font-semibold text-dim uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-dim uppercase tracking-wider">
               Digest Overview
             </h3>
 
-            <div className="space-y-2.5 text-xs">
-              <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
-                <span className="text-dim font-medium">Coverage Density</span>
-                <span className="font-semibold text-prime">
+            <div className="space-y-3">
+              <div className="bg-surface-elevated/80 p-4 rounded-xl shadow-inner flex items-center justify-between border border-edge/30">
+                <span className="text-xs sm:text-sm text-dim font-semibold">Coverage Density</span>
+                <span className="text-sm sm:text-base font-bold text-prime font-mono">
                   {(digest.picks?.length || 0)} Picks • {(digest.callerMentions || digest.caller_mentions || []).length} Q&amp;A
                 </span>
               </div>
 
-              <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
+              <div className="bg-surface-elevated/80 p-4 rounded-xl shadow-inner flex items-center justify-between border border-edge/30">
                 <div className="flex flex-col">
-                  <span className="text-dim font-medium">Generation Cost</span>
-                  <span className="text-[10px] text-dim/70">
+                  <span className="text-xs sm:text-sm text-dim font-semibold">Generation Cost</span>
+                  <span className="text-xs text-dim/70 font-medium">
                     {costInfo.providerName}{isEstimated ? ' (est.)' : ''}
                   </span>
                 </div>
-                <span className="font-semibold text-prime">{costInfo.formattedCost}</span>
+                <span className="text-sm sm:text-base font-bold text-prime font-mono">{costInfo.formattedCost}</span>
               </div>
             </div>
           </div>
