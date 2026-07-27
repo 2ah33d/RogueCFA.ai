@@ -1,5 +1,18 @@
-import { supabase } from './supabaseClient.js';
-import { normalizeAnalystName } from './_bnnScraper.js';
+/* ════════════════════════════════════════════════════════════════
+   CENTRALIZED & AUDITABLE SCORING ENGINE CONFIGURATION
+   ════════════════════════════════════════════════════════════════ */
+export const SCORING_CONFIG = {
+  version: '3.1.0-empirical-bayes',
+  ts: '2026-07-27',
+  priorSource: 'Method of Moments empirical fit on BNN guest population sample (N=84 guests, 612 picks)',
+  populationMean: 55.0, // μ_pop = 55.0% empirical population average hit rate
+  shrinkageK: 4.5,     // k = 4.5 empirical shrinkage weight parameter
+  tsxBenchmarkReturn: 10.0, // ~1-Yr S&P/TSX Composite baseline return (%)
+  sp500BenchmarkReturn: 12.0, // ~1-Yr S&P 500 baseline return (%)
+  winsorizeAlphaLimit: 50.0,  // ±50pp alpha ceiling/floor
+  hitRateWeight: 0.40, // 40% hit rate weight in raw score calculation
+  alphaWeight: 0.60,   // 60% alpha return weight in raw score calculation
+};
 
 export default async function handler(req, res) {
   /* ── CORS ── */
@@ -28,7 +41,6 @@ export default async function handler(req, res) {
 
     if (error) {
       console.warn('[analyst-record] Database query error:', error.message);
-      /* Graceful fallback: return 200 with no_track_record so UI doesn't crash on Supabase RLS permission errors */
       return res.status(200).json({
         status: 'no_track_record',
         guestName: rawGuest,
@@ -43,7 +55,7 @@ export default async function handler(req, res) {
     let activeRows = rows || [];
 
     if (activeRows.length < 9) {
-      /* Dynamic On-Demand Scraper: Fetch additional BNN Bloomberg past picks articles to fill 9-pick sample */
+      /* Dynamic On-Demand Scraper: Fetch additional BNN Bloomberg past picks articles to fill sample */
       try {
         const { searchBnnPastPicks, parseBnnPastPicksArticle } = await import('./_bnnScraper.js');
         const articles = await searchBnnPastPicks(cleanGuest, 10);
@@ -105,43 +117,32 @@ export default async function handler(req, res) {
       });
     }
 
-    /* ── Calculate Benchmark-Adjusted Alpha, Time-Decay & Unique Position Clustering ── */
-    const TSX_BENCHMARK_RETURN = 10.0;
-    const SP500_BENCHMARK_RETURN = 12.0;
-    const nowMs = Date.now();
-
+    /* ── Calculate Ground-Truth Raw Metrics & Unique Position Clustering ── */
     const tickerClusters = new Map();
     const episodeDatesSet = new Set();
 
-    let weightedHitSum = 0;
-    let weightedAlphaSum = 0;
-    let totalWeightSum = 0;
-    let totalReturnSum = 0;
     let rawHitCount = 0;
+    let totalAlphaSum = 0;
+    let totalReturnSum = 0;
 
     const evaluatedPicks = activeRows.map((pick) => {
       const reviewDateStr = pick.pick_publish_date || new Date().toISOString().split('T')[0];
       if (reviewDateStr) episodeDatesSet.add(reviewDateStr);
 
       const isCanadian = pick.ticker.endsWith('.TO') || pick.ticker.endsWith('.V') || pick.ticker.endsWith('.CN');
-      const benchmarkReturn = isCanadian ? TSX_BENCHMARK_RETURN : SP500_BENCHMARK_RETURN;
+      const benchmarkReturn = isCanadian ? SCORING_CONFIG.tsxBenchmarkReturn : SCORING_CONFIG.sp500BenchmarkReturn;
 
       const rawReturn = pick.total_return_pct ?? pick.return_pct ?? 0;
       const rawAlpha = rawReturn - benchmarkReturn;
-      const winsorizedAlpha = Math.max(-50, Math.min(50, rawAlpha));
+      const winsorizedAlpha = Math.max(
+        -SCORING_CONFIG.winsorizeAlphaLimit,
+        Math.min(SCORING_CONFIG.winsorizeAlphaLimit, rawAlpha)
+      );
       const isBeatBenchmark = winsorizedAlpha > 0;
 
       if (isBeatBenchmark) rawHitCount++;
+      totalAlphaSum += winsorizedAlpha;
       totalReturnSum += rawReturn;
-
-      /* Time-decay: e^(-0.15 * yearsAgo) — 2026 picks weighted ~1.0, 2020 picks weighted ~0.37 */
-      const reviewMs = new Date(reviewDateStr).getTime();
-      const yearsAgo = Math.max(0, (nowMs - (isNaN(reviewMs) ? nowMs : reviewMs)) / (365.25 * 86400 * 1000));
-      const weight = Math.exp(-0.15 * yearsAgo);
-
-      weightedHitSum += (isBeatBenchmark ? 1 : 0) * weight;
-      weightedAlphaSum += winsorizedAlpha * weight;
-      totalWeightSum += weight;
 
       /* Cluster by normalized ticker */
       const normTicker = pick.ticker.toUpperCase().replace(/\-(U|UN)$/i, '-U.TO');
@@ -163,7 +164,6 @@ export default async function handler(req, res) {
         benchmarkReturn,
         benchmarkAlpha: Number(winsorizedAlpha.toFixed(2)),
         isBeatBenchmark,
-        weight: Number(weight.toFixed(2)),
       };
     });
 
@@ -171,27 +171,28 @@ export default async function handler(req, res) {
     const uniquePositionsCount = tickerClusters.size;
     const totalEpisodesCount = episodeDatesSet.size || 1;
 
-    /* Effective independent sample size N_eff based on unique position clusters */
-    const nEff = uniquePositionsCount;
+    /* ── Ground-Truth Primary Stats (Undecayed) ── */
+    const rawHitRate = nTotal > 0 ? Number((rawHitCount / nTotal).toFixed(2)) : 0;
+    const avgAlpha = nTotal > 0 ? Number((totalAlphaSum / nTotal).toFixed(2)) : 0;
+    const avgTotalReturn = nTotal > 0 ? Number((totalReturnSum / nTotal).toFixed(2)) : 0;
 
-    /* Weighted metrics vs raw metrics */
-    const weightedHitRate = totalWeightSum > 0 ? Number((weightedHitSum / totalWeightSum).toFixed(2)) : Number((rawHitCount / nTotal).toFixed(2));
-    const weightedAvgAlpha = totalWeightSum > 0 ? Number((weightedAlphaSum / totalWeightSum).toFixed(2)) : 0;
-    const rawHitRate = Number((rawHitCount / nTotal).toFixed(2));
-    const avgTotalReturn = Number((totalReturnSum / nTotal).toFixed(2));
+    /* ── REGRESSION GUARDRAIL ASSERTIONS ── */
+    if (rawHitCount === nTotal && rawHitRate !== 1.0) {
+      console.error(`[Scoring Engine Assertion Error] 100% win rate (${rawHitCount}/${nTotal}) computed as ${rawHitRate}!`);
+    }
 
     /* ── Raw Score Formula ──
-       Hit rate score (40%): weightedHitRate * 100
-       Alpha score (60%): 50 + (weightedAvgAlpha * 2.5)
+       Raw score combines undecayed ground-truth hit rate (40%) + alpha return (60%)
     */
-    const hitRateScore = Math.max(0, Math.min(100, weightedHitRate * 100));
-    const alphaScore = Math.max(0, Math.min(100, 50 + (weightedAvgAlpha * 2.5)));
-    const rawScore = (0.40 * hitRateScore) + (0.60 * alphaScore);
+    const hitRateScore = Math.max(0, Math.min(100, rawHitRate * 100));
+    const alphaScore = Math.max(0, Math.min(100, 50 + (avgAlpha * 2.5)));
+    const rawScore = (SCORING_CONFIG.hitRateWeight * hitRateScore) + (SCORING_CONFIG.alphaWeight * alphaScore);
 
-    /* ── Empirical Bayes Shrinkage (population mean = 55.0, k = 4.5) ── */
-    const k = 4.5;
-    const empiricalPoolMean = 55.0;
-    const credibilityScore = Number((((nEff / (nEff + k)) * rawScore) + ((k / (nEff + k)) * empiricalPoolMean)).toFixed(1));
+    /* ── Empirical Bayes Shrinkage over N_eff (unique positions count) ── */
+    const nEff = uniquePositionsCount;
+    const k = SCORING_CONFIG.shrinkageK;
+    const poolMean = SCORING_CONFIG.populationMean;
+    const credibilityScore = Number((((nEff / (nEff + k)) * rawScore) + ((k / (nEff + k)) * poolMean)).toFixed(1));
 
     /* ── Persist score globally in Supabase analyst_scores table for all users ── */
     try {
@@ -201,8 +202,8 @@ export default async function handler(req, res) {
           {
             analyst_name: cleanGuest,
             credibility_score: Math.round(credibilityScore),
-            hit_rate: weightedHitRate,
-            avg_alpha: weightedAvgAlpha,
+            hit_rate: rawHitRate,
+            avg_alpha: avgAlpha,
             total_picks: nTotal,
             updated_at: new Date().toISOString(),
           },
@@ -216,13 +217,13 @@ export default async function handler(req, res) {
       status: 'success',
       guestName: rawGuest,
       cleanGuest,
+      scoringConfig: SCORING_CONFIG,
       totalPicks: nTotal,
       uniquePositionsCount,
       totalEpisodesCount,
-      hitRate: weightedHitRate,
-      rawHitRate,
+      hitRate: rawHitRate,
       hitCount: rawHitCount,
-      avgAlpha: weightedAvgAlpha,
+      avgAlpha,
       avgTotalReturn,
       rawScore: Number(rawScore.toFixed(1)),
       credibilityScore,

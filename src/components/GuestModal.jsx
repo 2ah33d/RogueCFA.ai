@@ -172,7 +172,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                 >
                   {(record.hitRate * 100).toFixed(0)}%
                 </span>
-                <span className="text-[11px] text-dim">{record.hitCount || record.correctPicks || 0} winning picks (decayed)</span>
+                <span className="text-[11px] text-dim">{record.hitCount || record.correctPicks || 0} winning picks</span>
               </>
             ) : (
               <span className="text-xs font-normal text-dim italic mt-1 block">Pending</span>
@@ -197,7 +197,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
             {record.credibilityScore != null ? (
               <>
                 <span className="text-xl font-bold text-prime mt-0.5 block tabular-nums">{record.credibilityScore}/100</span>
-                <span className="text-[11px] text-dim">Empirical Bayes Shrinkage</span>
+                <span className="text-[11px] text-dim">Empirical Bayes (N_eff = {record.uniquePositionsCount || '—'})</span>
               </>
             ) : hasEnoughData ? (
               <>
