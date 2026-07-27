@@ -133,16 +133,15 @@ export function parseBnnPastPicksArticle(html, sourceUrl, fallbackAnalystName = 
 
   if (!analystName) analystName = 'BNN Analyst';
 
-  /* Attempt to locate pick review date in text (supports full month names like April, September, or abbreviations) */
+  /* Parse pick review date: Prioritize article URL date (/YYYY/MM/DD/) for exact review date, with fallback to in-text date */
   let pickPublishDate = new Date().toISOString().split('T')[0];
-  const dateMatch = /(?:PAST|TOP)\s+PICKS:?\s*([A-Za-z]+\.?\s*\d{1,2},?\s*\d{4}|\d{4}-\d{2}-\d{2})/i.exec(articleText);
-  if (dateMatch && dateMatch[1]) {
-    pickPublishDate = parseDateToIso(dateMatch[1]);
+  const urlDateMatch = /\/(\d{4})\/(\d{2})\/(\d{2})\//.exec(sourceUrl);
+  if (urlDateMatch) {
+    pickPublishDate = `${urlDateMatch[1]}-${urlDateMatch[2]}-${urlDateMatch[3]}`;
   } else {
-    /* Fallback: parse date from article URL if formatted as /YYYY/MM/DD/ */
-    const urlDateMatch = /\/(\d{4})\/(\d{2})\/(\d{2})\//.exec(sourceUrl);
-    if (urlDateMatch) {
-      pickPublishDate = `${urlDateMatch[1]}-${urlDateMatch[2]}-${urlDateMatch[3]}`;
+    const dateMatch = /(?:PAST|TOP)\s+PICKS:?\s*([A-Za-z]+\.?\s*\d{1,2},?\s*\d{4}|\d{4}-\d{2}-\d{2})/i.exec(articleText);
+    if (dateMatch && dateMatch[1]) {
+      pickPublishDate = parseDateToIso(dateMatch[1]);
     }
   }
 
