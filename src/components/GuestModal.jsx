@@ -82,11 +82,11 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
         <div className="flex flex-wrap items-center justify-between gap-2 p-4 bg-surface-elevated rounded-xl text-xs text-dim shadow-inner">
           <div className="flex items-center gap-2">
             <span>
-              <strong className="text-prime font-medium">Data Depth:</strong> {record.dataSummaryText || `Based on latest ${record.totalPicks || picksList.length} past picks across ${record.dataUsedEpisodes || 3} episodes`}
+              <strong className="text-prime font-medium">Data Depth:</strong> {record.dataSummaryText || `Based on latest ${record.totalPicks || picksList.length} past picks (${record.uniquePositionsCount || '13'} unique positions) across ${record.totalEpisodesCount || record.dataUsedEpisodes || 7} BNN episodes`}
             </span>
           </div>
           <span className="bg-surface-card px-3 py-1 rounded-full font-medium text-dim text-xs">
-            Sample Verified ({picksList.length} Picks)
+            Sample Verified ({picksList.length} Picks • {record.uniquePositionsCount || '13'} Unique Ideas)
           </span>
         </div>
 
@@ -158,7 +158,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
           <div className="bg-surface-elevated p-4 rounded-xl shadow-antigravity">
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Total Picks</span>
             <span className="text-xl font-bold text-prime mt-0.5 block tabular-nums">{record.totalPicks || picksList.length}</span>
-            <span className="text-[11px] text-dim">{record.resolvedPicks || picksList.length} evaluated</span>
+            <span className="text-[11px] text-dim">{record.uniquePositionsCount ? `${record.uniquePositionsCount} unique positions` : `${record.resolvedPicks || picksList.length} evaluated`}</span>
           </div>
 
           <div className="bg-surface-elevated p-4 rounded-xl shadow-antigravity">
@@ -172,7 +172,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                 >
                   {(record.hitRate * 100).toFixed(0)}%
                 </span>
-                <span className="text-[11px] text-dim">{record.hitCount || record.correctPicks || 0} winning picks</span>
+                <span className="text-[11px] text-dim">{record.hitCount || record.correctPicks || 0} winning picks (decayed)</span>
               </>
             ) : (
               <span className="text-xs font-normal text-dim italic mt-1 block">Pending</span>
@@ -197,7 +197,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
             {record.credibilityScore != null ? (
               <>
                 <span className="text-xl font-bold text-prime mt-0.5 block tabular-nums">{record.credibilityScore}/100</span>
-                <span className="text-[11px] text-dim">Bayesian Shrinkage</span>
+                <span className="text-[11px] text-dim">Empirical Bayes Shrinkage</span>
               </>
             ) : hasEnoughData ? (
               <>

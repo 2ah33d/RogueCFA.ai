@@ -105,25 +105,50 @@ export default async function handler(req, res) {
       });
     }
 
-    /* ── Calculate Benchmark-Adjusted Alpha & Bayesian Shrinkage ── */
-    const TSX_BENCHMARK_RETURN = 10.0; // ~1-year S&P/TSX Composite baseline return
-    const SP500_BENCHMARK_RETURN = 12.0; // ~1-year S&P 500 baseline return
+    /* ── Calculate Benchmark-Adjusted Alpha, Time-Decay & Unique Position Clustering ── */
+    const TSX_BENCHMARK_RETURN = 10.0;
+    const SP500_BENCHMARK_RETURN = 12.0;
+    const nowMs = Date.now();
 
-    let totalAlpha = 0;
-    let hitCount = 0;
+    const tickerClusters = new Map();
+    const episodeDatesSet = new Set();
+
+    let weightedHitSum = 0;
+    let weightedAlphaSum = 0;
+    let totalWeightSum = 0;
     let totalReturnSum = 0;
+    let rawHitCount = 0;
 
     const evaluatedPicks = activeRows.map((pick) => {
+      const reviewDateStr = pick.pick_publish_date || new Date().toISOString().split('T')[0];
+      if (reviewDateStr) episodeDatesSet.add(reviewDateStr);
+
       const isCanadian = pick.ticker.endsWith('.TO') || pick.ticker.endsWith('.V') || pick.ticker.endsWith('.CN');
       const benchmarkReturn = isCanadian ? TSX_BENCHMARK_RETURN : SP500_BENCHMARK_RETURN;
 
-      const rawAlpha = (pick.total_return_pct ?? pick.return_pct ?? 0) - benchmarkReturn;
-      /* Winsorize alpha at ±50pp */
+      const rawReturn = pick.total_return_pct ?? pick.return_pct ?? 0;
+      const rawAlpha = rawReturn - benchmarkReturn;
       const winsorizedAlpha = Math.max(-50, Math.min(50, rawAlpha));
+      const isBeatBenchmark = winsorizedAlpha > 0;
 
-      if (winsorizedAlpha > 0) hitCount++;
-      totalAlpha += winsorizedAlpha;
-      totalReturnSum += (pick.total_return_pct ?? pick.return_pct ?? 0);
+      if (isBeatBenchmark) rawHitCount++;
+      totalReturnSum += rawReturn;
+
+      /* Time-decay: e^(-0.15 * yearsAgo) — 2026 picks weighted ~1.0, 2020 picks weighted ~0.37 */
+      const reviewMs = new Date(reviewDateStr).getTime();
+      const yearsAgo = Math.max(0, (nowMs - (isNaN(reviewMs) ? nowMs : reviewMs)) / (365.25 * 86400 * 1000));
+      const weight = Math.exp(-0.15 * yearsAgo);
+
+      weightedHitSum += (isBeatBenchmark ? 1 : 0) * weight;
+      weightedAlphaSum += winsorizedAlpha * weight;
+      totalWeightSum += weight;
+
+      /* Cluster by normalized ticker */
+      const normTicker = pick.ticker.toUpperCase().replace(/\-(U|UN)$/i, '-U.TO');
+      if (!tickerClusters.has(normTicker)) {
+        tickerClusters.set(normTicker, []);
+      }
+      tickerClusters.get(normTicker).push(pick);
 
       return {
         id: pick.id,
@@ -133,31 +158,40 @@ export default async function handler(req, res) {
         nowPrice: pick.now_price,
         returnPct: pick.return_pct,
         totalReturnPct: pick.total_return_pct,
-        reviewDate: pick.pick_publish_date,
+        reviewDate: reviewDateStr,
         sourceUrl: pick.source_article_url,
         benchmarkReturn,
         benchmarkAlpha: Number(winsorizedAlpha.toFixed(2)),
-        isBeatBenchmark: winsorizedAlpha > 0,
+        isBeatBenchmark,
+        weight: Number(weight.toFixed(2)),
       };
     });
 
-    const n = evaluatedPicks.length;
-    const hitRate = Number((hitCount / n).toFixed(2));
-    const avgAlpha = Number((totalAlpha / n).toFixed(2));
-    const avgTotalReturn = Number((totalReturnSum / n).toFixed(2));
+    const nTotal = evaluatedPicks.length;
+    const uniquePositionsCount = tickerClusters.size;
+    const totalEpisodesCount = episodeDatesSet.size || 1;
 
-    /* ── Formula: raw_score = 0.40 * hit_rate_score + 0.60 * alpha_score ──
-       Hit rate score: 0% -> 0, 50% -> 50, 100% -> 100
-       Alpha score: -20pp -> 0, 0pp -> 50, +20pp -> 100
+    /* Effective independent sample size N_eff based on unique position clusters */
+    const nEff = uniquePositionsCount;
+
+    /* Weighted metrics vs raw metrics */
+    const weightedHitRate = totalWeightSum > 0 ? Number((weightedHitSum / totalWeightSum).toFixed(2)) : Number((rawHitCount / nTotal).toFixed(2));
+    const weightedAvgAlpha = totalWeightSum > 0 ? Number((weightedAlphaSum / totalWeightSum).toFixed(2)) : 0;
+    const rawHitRate = Number((rawHitCount / nTotal).toFixed(2));
+    const avgTotalReturn = Number((totalReturnSum / nTotal).toFixed(2));
+
+    /* ── Raw Score Formula ──
+       Hit rate score (40%): weightedHitRate * 100
+       Alpha score (60%): 50 + (weightedAvgAlpha * 2.5)
     */
-    const hitRateScore = Math.max(0, Math.min(100, hitRate * 100));
-    const alphaScore = Math.max(0, Math.min(100, 50 + (avgAlpha * 2.5)));
+    const hitRateScore = Math.max(0, Math.min(100, weightedHitRate * 100));
+    const alphaScore = Math.max(0, Math.min(100, 50 + (weightedAvgAlpha * 2.5)));
     const rawScore = (0.40 * hitRateScore) + (0.60 * alphaScore);
 
-    /* ── Bayesian Shrinkage toward cross-analyst pool mean (pool_avg = 50.0, k = 6) ── */
-    const k = 6;
-    const poolAvg = 50.0;
-    const credibilityScore = Number((((n / (n + k)) * rawScore) + ((k / (n + k)) * poolAvg)).toFixed(1));
+    /* ── Empirical Bayes Shrinkage (population mean = 55.0, k = 4.5) ── */
+    const k = 4.5;
+    const empiricalPoolMean = 55.0;
+    const credibilityScore = Number((((nEff / (nEff + k)) * rawScore) + ((k / (nEff + k)) * empiricalPoolMean)).toFixed(1));
 
     /* ── Persist score globally in Supabase analyst_scores table for all users ── */
     try {
@@ -167,9 +201,9 @@ export default async function handler(req, res) {
           {
             analyst_name: cleanGuest,
             credibility_score: Math.round(credibilityScore),
-            hit_rate: hitRate,
-            avg_alpha: avgAlpha,
-            total_picks: n,
+            hit_rate: weightedHitRate,
+            avg_alpha: weightedAvgAlpha,
+            total_picks: nTotal,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'analyst_name' }
@@ -182,13 +216,17 @@ export default async function handler(req, res) {
       status: 'success',
       guestName: rawGuest,
       cleanGuest,
-      totalPicks: n,
-      hitRate,
-      hitCount,
-      avgAlpha,
+      totalPicks: nTotal,
+      uniquePositionsCount,
+      totalEpisodesCount,
+      hitRate: weightedHitRate,
+      rawHitRate,
+      hitCount: rawHitCount,
+      avgAlpha: weightedAvgAlpha,
       avgTotalReturn,
       rawScore: Number(rawScore.toFixed(1)),
       credibilityScore,
+      dataSummaryText: `Based on latest ${nTotal} past picks (${uniquePositionsCount} unique positions) across ${totalEpisodesCount} BNN episode${totalEpisodesCount > 1 ? 's' : ''}`,
       picks: evaluatedPicks,
     });
   } catch (err) {
