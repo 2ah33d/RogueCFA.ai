@@ -42,11 +42,11 @@ export default async function handler(req, res) {
 
     let activeRows = rows || [];
 
-    if (activeRows.length === 0) {
-      /* Dynamic On-Demand Cold-Start: Scrape BNN past picks on the fly if analyst is not yet in DB */
+    if (activeRows.length < 9) {
+      /* Dynamic On-Demand Scraper: Fetch additional BNN Bloomberg past picks articles to fill 9-pick sample */
       try {
         const { searchBnnPastPicks, parseBnnPastPicksArticle } = await import('./_bnnScraper.js');
-        const articles = await searchBnnPastPicks(cleanGuest, 3);
+        const articles = await searchBnnPastPicks(cleanGuest, 10);
 
         if (articles && articles.length > 0) {
           const scrapedRows = [];

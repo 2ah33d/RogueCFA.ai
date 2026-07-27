@@ -46,58 +46,58 @@ export function parseDateToIso(dateStr) {
  * @param {number} limit - Number of recent articles to scrape (config value, default 3)
  * @returns {Promise<Array<{ url: string, title: string, pubdate: string }>>}
  */
-export async function searchBnnPastPicks(analystName, limit = 3) {
+export async function searchBnnPastPicks(analystName, limit = 10) {
   const cleanName = normalizeAnalystName(analystName);
   if (!cleanName) return [];
 
-  /* Query with guest name */
-  const query = `${cleanName} past picks`;
-  const searchUrl = `https://api.queryly.com/json.aspx?queryly_key=${QUERYLY_KEY}&query=${encodeURIComponent(query)}`;
+  /* Query with guest name across multiple search variations */
+  const queries = [`${cleanName} past picks`, `${cleanName} top picks`, cleanName];
+  const matched = [];
+  const seenUrls = new Set();
 
-  try {
-    const res = await fetch(searchUrl, {
-      headers: BROWSER_HEADERS,
-      signal: AbortSignal.timeout(8000),
-    });
+  for (const q of queries) {
+    if (matched.length >= limit) break;
+    const searchUrl = `https://api.queryly.com/json.aspx?queryly_key=${QUERYLY_KEY}&query=${encodeURIComponent(q)}`;
 
-    if (!res.ok) {
-      console.warn(`[bnnScraper] Queryly returned HTTP ${res.status}`);
-      return [];
-    }
+    try {
+      const res = await fetch(searchUrl, {
+        headers: BROWSER_HEADERS,
+        signal: AbortSignal.timeout(8000),
+      });
 
-    const data = await res.json();
-    const items = data.items || [];
-    const matched = [];
-    const seenUrls = new Set();
+      if (!res.ok) continue;
 
-    /* Scan up to 15 search results to ensure we collect 'limit' written articles */
-    for (const item of items) {
-      if (!item || !item.link) continue;
-      let fullUrl = item.link.startsWith('/') ? `https://www.bnnbloomberg.ca${item.link}` : item.link;
+      const data = await res.json();
+      const items = data.items || [];
 
-      if (seenUrls.has(fullUrl)) continue;
-      seenUrls.add(fullUrl);
+      /* Scan up to 50 search results to collect written articles */
+      for (const item of items) {
+        if (!item || !item.link) continue;
+        let fullUrl = item.link.startsWith('/') ? `https://www.bnnbloomberg.ca${item.link}` : item.link;
 
-      /* Ignore video player links (/video/shows/...) which contain no body text */
-      if (fullUrl.includes('/video/shows/')) continue;
+        if (seenUrls.has(fullUrl)) continue;
+        seenUrls.add(fullUrl);
 
-      const title = item.title || '';
-      /* Match articles titled Top Picks, Past Picks, or guest name articles */
-      if (/past\s+picks|top\s+picks/i.test(title) || /past\s+picks|top\s+picks/i.test(fullUrl) || title.toLowerCase().includes(cleanName.toLowerCase())) {
-        matched.push({
-          url: fullUrl,
-          title,
-          pubdate: item.pubdate || '',
-        });
-        if (matched.length >= limit) break;
+        /* Ignore video player links (/video/shows/...) which contain no body text */
+        if (fullUrl.includes('/video/shows/')) continue;
+
+        const title = item.title || '';
+        /* Match articles titled Top Picks, Past Picks, or guest name articles */
+        if (/past\s+picks|top\s+picks/i.test(title) || /past\s+picks|top\s+picks/i.test(fullUrl) || title.toLowerCase().includes(cleanName.toLowerCase())) {
+          matched.push({
+            url: fullUrl,
+            title,
+            pubdate: item.pubdate || '',
+          });
+          if (matched.length >= limit) break;
+        }
       }
+    } catch (err) {
+      console.warn(`[bnnScraper] Search for query "${q}" failed:`, err.message);
     }
-
-    return matched;
-  } catch (err) {
-    console.warn('[bnnScraper] Search failed:', err.message);
-    return [];
   }
+
+  return matched;
 }
 
 /**
