@@ -2,16 +2,17 @@
    CENTRALIZED & AUDITABLE SCORING ENGINE CONFIGURATION
    ════════════════════════════════════════════════════════════════ */
 export const SCORING_CONFIG = {
-  version: '3.1.0-empirical-bayes',
+  version: '3.2.0-empirical-bayes',
   ts: '2026-07-27',
-  priorSource: 'Method of Moments empirical fit on BNN guest population sample (N=84 guests, 612 picks)',
-  populationMean: 55.0, // μ_pop = 55.0% empirical population average hit rate
-  shrinkageK: 4.5,     // k = 4.5 empirical shrinkage weight parameter
-  tsxBenchmarkReturn: 10.0, // ~1-Yr S&P/TSX Composite baseline return (%)
-  sp500BenchmarkReturn: 12.0, // ~1-Yr S&P 500 baseline return (%)
-  winsorizeAlphaLimit: 50.0,  // ±50pp alpha ceiling/floor
-  hitRateWeight: 0.40, // 40% hit rate weight in raw score calculation
-  alphaWeight: 0.60,   // 60% alpha return weight in raw score calculation
+  priorSource: 'heuristic prior (k=4.5, mu_pop=50.0) — empirical population calibration pending full dataset ingestion',
+  weightsSource: 'hand-chosen baseline (40% win consistency / 60% risk-adjusted alpha return)',
+  populationMean: 50.0, // μ_pop prior baseline (50%)
+  shrinkageK: 4.5,     // k shrinkage weight parameter
+  tsxAnnualBenchmarkRate: 8.0,   // ~8.0% annual S&P/TSX Composite baseline return
+  sp500AnnualBenchmarkRate: 10.0, // ~10.0% annual S&P 500 baseline return
+  winsorizeAlphaLimit: 50.0,   // ±50pp alpha ceiling/floor
+  hitRateWeight: 0.40, // 40% win consistency weight in raw score calculation (hand-chosen)
+  alphaWeight: 0.60,   // 60% alpha return weight in raw score calculation (hand-chosen)
 };
 
 export default async function handler(req, res) {
@@ -117,7 +118,8 @@ export default async function handler(req, res) {
       });
     }
 
-    /* ── Calculate Ground-Truth Raw Metrics & Unique Position Clustering ── */
+    /* ── Calculate Holding-Period Matched Benchmark Returns & Alpha ── */
+    const nowMs = Date.now();
     const tickerClusters = new Map();
     const episodeDatesSet = new Set();
 
@@ -130,10 +132,22 @@ export default async function handler(req, res) {
       if (reviewDateStr) episodeDatesSet.add(reviewDateStr);
 
       const isCanadian = pick.ticker.endsWith('.TO') || pick.ticker.endsWith('.V') || pick.ticker.endsWith('.CN');
-      const benchmarkReturn = isCanadian ? SCORING_CONFIG.tsxBenchmarkReturn : SCORING_CONFIG.sp500BenchmarkReturn;
+      const annualBenchmarkRate = isCanadian
+        ? SCORING_CONFIG.tsxAnnualBenchmarkRate
+        : SCORING_CONFIG.sp500AnnualBenchmarkRate;
+
+      /* Calculate holding period in years from review date to now */
+      const reviewMs = new Date(reviewDateStr).getTime();
+      const validReviewMs = isNaN(reviewMs) ? nowMs : reviewMs;
+      const holdingYears = Math.max(0.01, (nowMs - validReviewMs) / (365.25 * 86400 * 1000));
+
+      /* Period-matched benchmark return compounded over holding period */
+      const periodBenchmarkReturn = Number(
+        ((Math.pow(1 + annualBenchmarkRate / 100, holdingYears) - 1) * 100).toFixed(2)
+      );
 
       const rawReturn = pick.total_return_pct ?? pick.return_pct ?? 0;
-      const rawAlpha = rawReturn - benchmarkReturn;
+      const rawAlpha = rawReturn - periodBenchmarkReturn;
       const winsorizedAlpha = Math.max(
         -SCORING_CONFIG.winsorizeAlphaLimit,
         Math.min(SCORING_CONFIG.winsorizeAlphaLimit, rawAlpha)
@@ -160,8 +174,8 @@ export default async function handler(req, res) {
         returnPct: pick.return_pct,
         totalReturnPct: pick.total_return_pct,
         reviewDate: reviewDateStr,
-        sourceUrl: pick.source_article_url,
-        benchmarkReturn,
+        holdingYears: Number(holdingYears.toFixed(2)),
+        benchmarkReturn: periodBenchmarkReturn,
         benchmarkAlpha: Number(winsorizedAlpha.toFixed(2)),
         isBeatBenchmark,
       };
@@ -176,9 +190,12 @@ export default async function handler(req, res) {
     const avgAlpha = nTotal > 0 ? Number((totalAlphaSum / nTotal).toFixed(2)) : 0;
     const avgTotalReturn = nTotal > 0 ? Number((totalReturnSum / nTotal).toFixed(2)) : 0;
 
-    /* ── REGRESSION GUARDRAIL ASSERTIONS ── */
-    if (rawHitCount === nTotal && rawHitRate !== 1.0) {
-      console.error(`[Scoring Engine Assertion Error] 100% win rate (${rawHitCount}/${nTotal}) computed as ${rawHitRate}!`);
+    /* ── STRICT GENERALIZED GUARDRAIL ASSERTION FOR ALL ANALYSTS ── */
+    const expectedHitRate = nTotal > 0 ? Number((rawHitCount / nTotal).toFixed(2)) : 0;
+    if (Math.abs(rawHitRate - expectedHitRate) > 0.001) {
+      const errMsg = `[Scoring Engine Integrity Failure] Computed rawHitRate (${rawHitRate}) diverges from ground-truth raw table win ratio (${rawHitCount}/${nTotal} = ${expectedHitRate}).`;
+      console.error(errMsg);
+      throw new Error(errMsg);
     }
 
     /* ── Raw Score Formula ──
