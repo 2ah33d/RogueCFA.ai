@@ -63,13 +63,13 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-2.5 px-4 py-1.5 bg-surface-elevated hover:bg-surface-card rounded-full text-prime font-medium shadow-antigravity transition-all"
+            className="flex items-center gap-2 px-3.5 py-1.5 bg-surface-elevated hover:bg-surface-card border border-accent/30 hover:border-accent/60 rounded-full text-prime font-medium shadow-antigravity transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
             <span className="text-xs font-semibold text-prime">{selectedDate || (currentSelection ? currentSelection.episodeDate : 'Latest')}</span>
-            <span className="text-[10px] text-dim bg-surface px-2 py-0.5 rounded-full font-medium">
+            <span className="text-[10px] font-semibold text-accent bg-accent/15 border border-accent/20 px-2 py-0.5 rounded-full">
               {history.length} Saved
             </span>
-            <span className="text-dim text-[10px]">▼</span>
+            <span className="text-accent text-[10px] transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
           </button>
 
           {isOpen && (

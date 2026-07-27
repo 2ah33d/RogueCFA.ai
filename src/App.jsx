@@ -207,7 +207,7 @@ export default function App() {
           className="w-full border-b border-surface-card/40 bg-surface/80
                       backdrop-blur-md sticky top-0 z-30 shadow-antigravity"
         >
-          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
             <div
               className="flex items-center gap-3 cursor-pointer select-none group"
               onClick={() => setActiveTab('landing')}
@@ -278,7 +278,7 @@ export default function App() {
         </header>
 
         {/* ── Main content ── */}
-        <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 flex flex-col items-center gap-6">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col items-center gap-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}

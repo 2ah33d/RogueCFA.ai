@@ -530,6 +530,80 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     }
   };
 
+/**
+ * Helper to render Market Outlook with maximum scannability:
+ * 1. Pulls out a top TL;DR takeaway banner for skimmers.
+ * 2. Bolds high-signal finance claims automatically.
+ * 3. Splits text into short 2-3 sentence digestible paragraphs.
+ */
+function renderScannableOutlook(text) {
+  if (!text) return null;
+
+  // Split into sentences
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  const tldrText = sentences.length > 1 ? sentences[0].trim() : null;
+  const remainingSentences = sentences.length > 1 ? sentences.slice(1) : sentences;
+
+  // Group remaining sentences into 2 short paragraphs
+  const midPoint = Math.ceil(remainingSentences.length / 2);
+  const paragraph1 = remainingSentences.slice(0, midPoint).join(' ').trim();
+  const paragraph2 = remainingSentences.slice(midPoint).join(' ').trim();
+
+  // Helper to bold key financial claims & signal phrases
+  const highlightKeyClaims = (str) => {
+    if (!str) return '';
+    const keyPatterns = [
+      /AI capex[^,.]*/gi,
+      /bull market[s]?[^,.]*/gi,
+      /bull run[^,.]*/gi,
+      /5\.5 years/gi,
+      /3\.7-3\.8 years/gi,
+      /short-term volatility/gi,
+      /strong Q2 earnings/gi,
+      /geopolitical shocks/gi,
+      /monetization uncertainty/gi,
+      /interest rates/gi,
+      /energy sector/gi,
+    ];
+
+    let highlighted = str;
+    keyPatterns.forEach((pattern) => {
+      highlighted = highlighted.replace(pattern, (match) => `<strong class="font-semibold text-white bg-accent/15 px-1 py-0.5 rounded">${match}</strong>`);
+    });
+
+    return { __html: highlighted };
+  };
+
+  return (
+    <div className="space-y-4 font-sans">
+      {/* TL;DR Highlight Banner */}
+      {tldrText && (
+        <div className="bg-accent/10 border-l-4 border-accent p-4 rounded-r-2xl shadow-sm">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/20 px-2 py-0.5 rounded-full">
+              TL;DR Key Takeaway
+            </span>
+          </div>
+          <p
+            className="text-sm sm:text-base font-medium text-prime leading-relaxed"
+            dangerouslySetInnerHTML={highlightKeyClaims(tldrText)}
+          />
+        </div>
+      )}
+
+      {/* Main scannable body text split into paragraphs */}
+      <div className="space-y-3 text-sm sm:text-base text-dim leading-relaxed font-normal">
+        {paragraph1 && (
+          <p dangerouslySetInnerHTML={highlightKeyClaims(paragraph1)} />
+        )}
+        {paragraph2 && (
+          <p dangerouslySetInnerHTML={highlightKeyClaims(paragraph2)} />
+        )}
+      </div>
+    </div>
+  );
+}
+
   /* ── Digest loaded ── */
   const activeProviderKey = getProvider();
   const realUsage = digest?.usage || null;
@@ -542,54 +616,76 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 px-2 sm:px-4 animate-fade-in font-sans">
-      {/* Top Header Control Bar — Clean layout outside card bubble */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-surface-elevated/40">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-dim">
-            MarketCall Digest
-          </h2>
-          <HistoryBrowser
-            selectedDate={videoInfo?.episodeDate}
-            onSelectDigest={handleSelectHistoricalDigest}
-          />
-          <button
-            type="button"
-            onClick={handleRefreshFull}
-            className="text-xs font-medium text-dim hover:text-prime px-3 py-1.5 rounded-full bg-surface-elevated transition-colors flex items-center gap-1.5 shadow-antigravity"
-            title="Check YouTube for a newer episode"
-          >
-            Check Newer
-          </button>
+      {/* Top Header Control Bar — Clean layout with date under title & clear source provenance */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-5 border-b border-surface-elevated/60">
+        <div className="space-y-2.5">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-prime flex items-center gap-2">
+              MarketCall Digest
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-semibold rounded-full shadow-sm">
+              <svg className="w-3.5 h-3.5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
+                <path fill="currentColor" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+              </svg>
+              Source: BNN Bloomberg MarketCall
+            </span>
+          </div>
+
+          {/* Subtitle row under MarketCall Digest title */}
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <HistoryBrowser
+              selectedDate={videoInfo?.episodeDate}
+              onSelectDigest={handleSelectHistoricalDigest}
+            />
+            <button
+              type="button"
+              onClick={handleRefreshFull}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-accent hover:bg-accent-hover text-accent-text font-semibold rounded-full shadow-md shadow-accent/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              title="Check YouTube for a newer episode"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Check Newer
+            </button>
+          </div>
         </div>
 
-        {/* Video Preview Column — Thumbnail with Watch Full Episode button directly underneath */}
+        {/* Video Preview Column — Larger BNN thumbnail with play button overlay */}
         {videoInfo?.videoId && (
-          <div className="flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-3 bg-surface-card p-2.5 rounded-2xl border border-surface-elevated/60 shadow-antigravity shrink-0">
             <a
               href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-32 h-18 rounded-xl overflow-hidden shadow-md border border-edge/60 relative group block shrink-0"
+              className="w-36 h-20 rounded-xl overflow-hidden shadow-md border border-edge/60 relative group block shrink-0"
               title={videoInfo?.videoTitle || 'Watch Full Episode'}
             >
               <img
                 src={`https://img.youtube.com/vi/${videoInfo.videoId}/mqdefault.jpg`}
                 alt="Episode thumbnail"
-                className="w-full h-full object-cover scale-110 group-hover:scale-115 transition-transform duration-300"
+                className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-300"
               />
+              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <svg className="w-4 h-4 fill-current translate-x-0.5" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
             </a>
-            <a
-              href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-dim hover:text-white transition-colors flex items-center gap-1 font-medium"
-            >
-              <svg className="w-3 h-3 text-red-500" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
-                <path fill="rgb(var(--c-surface))" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-              </svg>
-              Watch Full Episode ↗
-            </a>
+            <div className="flex flex-col gap-1 pr-2 max-w-[170px]">
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-dim">Full Broadcast</span>
+              <a
+                href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-prime hover:text-accent transition-colors flex items-center gap-1 leading-snug line-clamp-2"
+              >
+                Watch Episode ↗
+              </a>
+            </div>
           </div>
         )}
       </div>
@@ -598,15 +694,13 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Main Column (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Market Outlook — Expanded font size & breathing room */}
+          {/* Market Outlook — Expanded font size & scannable layout */}
           {digest.marketOutlook && (
-            <div className="bg-surface-card rounded-2xl p-6 sm:p-7 shadow-antigravity space-y-3 border border-surface-elevated/40">
-              <h3 className="text-xs font-semibold text-dim uppercase tracking-wider">
-                Market Outlook
+            <div className="bg-surface-card rounded-2xl p-6 sm:p-7 shadow-antigravity space-y-4 border border-surface-elevated/40">
+              <h3 className="text-xs font-semibold text-dim uppercase tracking-wider flex items-center gap-2">
+                <span>Market Outlook</span>
               </h3>
-              <p className="text-base sm:text-lg text-prime leading-relaxed font-normal">
-                {digest.marketOutlook}
-              </p>
+              {renderScannableOutlook(digest.marketOutlook)}
             </div>
           )}
 
@@ -661,7 +755,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             </div>
           )}
 
-          {/* Closing Notes — Expanded font size & breathing room */}
+          {/* Closing Notes */}
           {digest.closingNotes && (
             <div className="bg-surface-card rounded-2xl p-6 sm:p-7 shadow-antigravity space-y-3 border border-surface-elevated/40">
               <h3 className="text-xs font-semibold text-dim uppercase tracking-wider">
@@ -693,16 +787,6 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             </h3>
 
             <div className="space-y-2.5 text-xs">
-              <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-dim font-medium">Reading Efficiency</span>
-                  <span className="text-[10px] text-dim/70">35-min audio condensed</span>
-                </div>
-                <span className="font-semibold text-signal-buy bg-signal-buy/15 border border-signal-buy/20 px-2.5 py-1 rounded-full">
-                  45m → 2m read
-                </span>
-              </div>
-
               <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
                 <span className="text-dim font-medium">Coverage Density</span>
                 <span className="font-semibold text-prime">

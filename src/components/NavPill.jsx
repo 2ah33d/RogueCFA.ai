@@ -24,14 +24,14 @@ export default function NavPill({ activeTab, onTabChange }) {
             type="button"
             onClick={() => onTabChange(tab.key)}
             className={`relative px-4 py-1.5 rounded-full font-medium transition-colors duration-200 flex items-center justify-center select-none ${
-              isActive ? 'text-prime font-semibold' : 'text-dim hover:text-prime'
+              isActive ? 'text-accent-text font-semibold' : 'text-dim hover:text-prime'
             }`}
           >
             {isActive && (
               <motion.div
                 layoutId="activeNavPill"
                 initial={false}
-                className="absolute inset-0 rounded-full bg-surface-elevated shadow-antigravity"
+                className="absolute inset-0 rounded-full bg-accent shadow-md shadow-accent/25"
                 transition={{
                   type: 'spring',
                   stiffness: 380,

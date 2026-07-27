@@ -22,14 +22,14 @@ export default function AnalystBubble({
     <button
       type="button"
       onClick={() => onSelectGuest && onSelectGuest(guestName)}
-      className={`w-full text-left group bg-surface-card rounded-2xl p-5 shadow-antigravity hover:shadow-antigravity-hover transition-all font-sans ${className}`}
+      className={`w-full text-left group bg-surface-card rounded-2xl p-5 shadow-antigravity hover:shadow-antigravity-hover border border-surface-elevated/40 hover:border-accent/40 transition-all font-sans cursor-pointer ${className}`}
       title={`View ${guestName}'s track record`}
     >
       <div className="space-y-3">
         {/* Top Header: Identity & Win Rate Badge */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 text-left">
-            <h3 className="text-sm font-semibold text-prime group-hover:text-white transition-colors leading-snug">
+            <h3 className="text-sm font-bold text-prime group-hover:text-white transition-colors leading-snug">
               {guestName}
             </h3>
             <p className="text-xs text-dim leading-relaxed mt-0.5 text-left">
@@ -58,18 +58,21 @@ export default function AnalystBubble({
                   </span>
                   <span className="text-[10px] text-signal-buy/80 font-semibold">win</span>
                 </div>
-              ) : !trackRecord?.credibilityScore && (
-                <span className="inline-flex items-center text-[10px] text-dim font-normal bg-surface-elevated px-2.5 py-0.5 rounded-full">
-                  Track Record
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] text-accent font-semibold bg-accent/15 border border-accent/30 px-3 py-1 rounded-full group-hover:bg-accent/25 transition-all">
+                  <span>Track Record</span>
+                  <svg className="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Episode Focus — Clean Card Tag (No malformed oval wrapping) */}
+        {/* Episode Focus */}
         {episodeFocus && (
-          <div className="text-xs text-dim bg-surface-elevated/60 px-3 py-2 rounded-xl leading-relaxed font-sans text-left">
+          <div className="text-xs text-dim bg-surface-elevated/60 px-3 py-2 rounded-xl leading-relaxed font-sans text-left border border-edge">
             <span className="text-[10px] uppercase font-semibold text-dim block mb-0.5 tracking-wider">Episode Focus</span>
             {episodeFocus}
           </div>
@@ -77,10 +80,10 @@ export default function AnalystBubble({
       </div>
 
       {/* Bottom hint */}
-      <div className="mt-4 pt-3 border-t border-surface-elevated/40 flex items-center justify-between text-xs text-dim">
-        <span>Click to view full analyst profile &amp; pick history</span>
-        <svg className="w-4 h-4 text-dim group-hover:text-prime transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+      <div className="mt-4 pt-3 border-t border-surface-elevated/40 flex items-center justify-between text-xs text-dim group-hover:text-accent transition-colors">
+        <span className="font-medium">View full analyst profile &amp; pick history</span>
+        <svg className="w-4 h-4 text-accent group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </div>
     </button>
