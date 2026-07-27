@@ -23,7 +23,7 @@
   "crons": [
     {
       "path": "/api/marketcall-process",
-      "schedule": "0 19 * * 1-5"
+      "schedule": "0 21 * * 1-5"
     }
   ],
   "rewrites": [

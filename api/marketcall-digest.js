@@ -15,6 +15,7 @@ import {
   buildDigestPrompt,
   callLLM,
   extractJSON,
+  getLatestMarketCallDateStr,
 } from './_pipeline.js';
 
 export const config = { maxDuration: 60 };
@@ -24,7 +25,7 @@ export const config = { maxDuration: 60 };
  * 10-minute windows for dedup: retries in the same window reuse the same job.
  */
 function generateJobId(episodeDate) {
-  const dateStr = episodeDate || new Date().toISOString().split('T')[0];
+  const dateStr = episodeDate || getLatestMarketCallDateStr();
   const windowKey = Math.floor(Date.now() / 600000);
   const hash = (windowKey * 2654435761 >>> 0).toString(36).slice(0, 4);
   return `mc-${dateStr}-${hash}`;
@@ -102,7 +103,7 @@ export default async function handler(req, res) {
        Fast path B: Check Supabase cache for today's digest
        — returns in < 1s if a previous run already completed
        ══════════════════════════════════════════ */
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLatestMarketCallDateStr();
 
     try {
       const { data: cached } = await supabase

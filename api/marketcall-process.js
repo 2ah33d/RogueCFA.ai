@@ -21,6 +21,7 @@ import {
   buildDigestPrompt,
   callLLM,
   extractJSON,
+  getLatestMarketCallDateStr,
 } from './_pipeline.js';
 
 export const config = { maxDuration: 300 };
@@ -29,7 +30,7 @@ export const config = { maxDuration: 300 };
  * Generate a deterministic job ID (same logic as digest route).
  */
 function generateJobId(episodeDate) {
-  const dateStr = episodeDate || new Date().toISOString().split('T')[0];
+  const dateStr = episodeDate || getLatestMarketCallDateStr();
   const windowKey = Math.floor(Date.now() / 600000);
   const hash = (windowKey * 2654435761 >>> 0).toString(36).slice(0, 4);
   return `mc-${dateStr}-${hash}`;
@@ -75,7 +76,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'LLM key and provider are required.' });
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLatestMarketCallDateStr();
   const jobId = isDebug ? `debug-${Date.now()}` : generateJobId(todayStr);
 
   /* ── Check if this job is already completed (skip if debug) ── */

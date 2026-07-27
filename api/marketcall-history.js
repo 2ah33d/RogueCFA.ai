@@ -37,6 +37,20 @@ export default async function handler(req, res) {
 
     for (const row of data || []) {
       const dateKey = row.episode_date || row.result?.episodeDate || 'unknown';
+
+      /* Filter out weekend dates (MarketCall only airs Monday-Friday) */
+      if (dateKey && dateKey !== 'unknown') {
+        const dateObj = new Date(`${dateKey}T12:00:00Z`);
+        const dayOfWeek = dateObj.getUTCDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue; // Skip 0 (Sun) & 6 (Sat)
+      }
+
+      /* Filter out malformed phonetic mishearings from prior Whisper runs */
+      const guestName = (row.result?.digest?.guest || '').toLowerCase();
+      if (guestName.includes('nono-wamden') || guestName.includes('nono wamden')) {
+        continue;
+      }
+
       if (!seenDates.has(dateKey)) {
         seenDates.add(dateKey);
         uniqueHistory.push({

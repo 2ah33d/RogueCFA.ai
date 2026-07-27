@@ -1,10 +1,21 @@
 /* ════════════════════════════════════════════════════════════════
-   /api/_pipeline.js
-   Shared pipeline functions for MarketCall digest generation.
-   Prefixed with underscore so Vercel does NOT expose it as a route.
+   Date Utilities (Weekend Guard for BNN MarketCall broadcasts)
    ════════════════════════════════════════════════════════════════ */
 
-const BNN_CHANNEL_ID = 'UCo7DCnBKIHEtJNSQbFXFJnA';
+/**
+ * Returns latest weekday date string (YYYY-MM-DD).
+ * MarketCall only airs Mon-Fri. If invoked on Sat/Sun, resolves to Friday.
+ */
+export function getLatestMarketCallDateStr(d = new Date()) {
+  const dateObj = new Date(d);
+  const day = dateObj.getUTCDay();
+  if (day === 6) { // Saturday -> Friday
+    dateObj.setUTCDate(dateObj.getUTCDate() - 1);
+  } else if (day === 0) { // Sunday -> Friday
+    dateObj.setUTCDate(dateObj.getUTCDate() - 2);
+  }
+  return dateObj.toISOString().split('T')[0];
+}
 
 /* ════════════════════════════════════════════════════════════════
    Timing instrumentation
