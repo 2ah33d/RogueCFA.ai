@@ -506,9 +506,10 @@ STRICT RULES:
 4. Output 500–1000 words total.
 5. If the guest mentions a price target, timeframe, or specific catalyst, include it.
 6. CRITICAL DISTINCTION FOR PICKS VS CALLER Q&A:
-   - "picks": MUST contain EXACTLY the guest's official featured Top Picks (typically 3 stocks) introduced by the guest/host at the start or during the official Top Picks segment.
+   - "picks": MUST contain EXACTLY the guest's NEW official featured Top Picks (typically 3 stocks) introduced for today's market.
    - "callerMentions": MUST contain any additional stocks discussed by the guest when answering caller questions or viewer emails during the Q&A segment. DO NOT mix caller Q&A stocks into "picks".
-7. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
+7. EXCLUDE PAST PICKS REVIEWS: Do NOT include historical "Past Picks" reviewed during the episode (where the host/guest evaluate performance from prior months, e.g. "Looking back at your picks from 6 months ago... Then: $X Now: $Y"). "picks" MUST ONLY contain NEW, CURRENT actionable Top Picks. Do NOT put past picks in "picks" or "callerMentions".
+8. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
 
 OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 {
@@ -539,7 +540,7 @@ OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 ${transcript}
 ---END TRANSCRIPT---
 
-Produce the structured digest following the exact JSON format specified. Remember: "picks" must ONLY contain the official featured Top Picks (usually 3), while all caller Q&A stock discussions belong in "callerMentions".`;
+Produce the structured digest following the exact JSON format specified. Remember: "picks" must ONLY contain NEW official featured Top Picks (usually 3), EXCLUDING any past picks reviews from prior months. All caller Q&A stock discussions belong in "callerMentions".`;
 
   return { systemPrompt, userPrompt };
 }

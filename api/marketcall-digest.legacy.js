@@ -742,7 +742,8 @@ STRICT RULES:
 3. Every stock pick MUST include the guest's stated reasoning (WHY they like it). A bare ticker list is worthless.
 4. Output 500–1000 words total.
 5. If the guest mentions a price target, timeframe, or specific catalyst, include it.
-6. If there are caller Q&A segments, capture any meaningful insights in the closing notes.
+6. EXCLUDE PAST PICKS REVIEWS: Do NOT include historical "Past Picks" reviewed during the episode (where the host/guest evaluate performance from prior months, e.g. "Looking back at your picks from 6 months ago... Then: $X Now: $Y"). "picks" MUST ONLY contain NEW, CURRENT actionable Top Picks for today's market.
+7. If there are caller Q&A segments, capture any meaningful insights in callerMentions or closing notes.
 
 OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 {

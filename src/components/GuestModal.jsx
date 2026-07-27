@@ -91,7 +91,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
         </div>
 
         {/* Horizon Specialist Card */}
-        {record.optimalHorizonKey && (
+        {record.optimalHorizonKey && (record.optimalHorizonHitRate != null || record.hitRate != null) && (
           <div className="p-5 bg-surface-elevated rounded-2xl space-y-4 shadow-antigravity">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
@@ -108,7 +108,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
               <div className="bg-signal-buy/15 px-4 py-2.5 rounded-2xl text-center sm:text-right shrink-0">
                 <span className="text-[11px] text-signal-buy/80 uppercase font-medium block">Optimal Win Rate</span>
                 <span className="text-2xl font-bold font-mono text-signal-buy">
-                  {((record.optimalHorizonHitRate || record.hitRate || 0.83) * 100).toFixed(0)}%
+                  {((record.optimalHorizonHitRate ?? record.hitRate ?? 0) * 100).toFixed(0)}%
                 </span>
                 <span className="text-xs font-mono font-medium text-signal-buy block">
                   +{record.optimalHorizonReturn >= 0 ? '' : ''}{record.optimalHorizonReturn || record.avgReturn}% Avg Return
