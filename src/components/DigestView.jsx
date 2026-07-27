@@ -586,25 +586,26 @@ function renderScannableOutlook(text) {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 px-2 sm:px-4 animate-fade-in font-sans">
-      {/* Top Header Control Bar — Harmonized single-row pill toolbar */}
+      {/* Top Header Control Bar — Clean 2-row layout */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-surface-elevated/40">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight text-prime">
-            MarketCall Digest
-          </h1>
-
-          {/* Unified Pill Group — All 3 pills share exact h-8 height, px-3.5 padding, and bg-surface-card styling */}
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="space-y-2">
+          {/* Row 1: Title + BNN Bloomberg Source Pill */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight text-prime">
+              MarketCall Digest
+            </h1>
             <span className="h-8 px-3.5 inline-flex items-center gap-1.5 text-xs font-medium text-dim bg-surface-card rounded-full shadow-antigravity select-none shrink-0">
               <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
               BNN Bloomberg
             </span>
+          </div>
 
+          {/* Row 2 (Under Title & Source Pill): Date Selector Pill & Check Newer Pill */}
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
             <HistoryBrowser
               selectedDate={videoInfo?.episodeDate}
               onSelectDigest={handleSelectHistoricalDigest}
             />
-
             <button
               type="button"
               onClick={handleRefreshFull}
