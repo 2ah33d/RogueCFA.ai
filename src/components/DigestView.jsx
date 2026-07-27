@@ -533,8 +533,8 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 /**
  * Helper to render Market Outlook with maximum scannability:
  * 1. Pulls out a top TL;DR takeaway banner for skimmers.
- * 2. Bolds high-signal finance claims automatically.
- * 3. Splits text into short 2-3 sentence digestible paragraphs.
+ * 2. Splits text into short, well-spaced paragraphs with clean executive typography.
+ * 3. NO artificial regex word highlights.
  */
 function renderScannableOutlook(text) {
   if (!text) return null;
@@ -549,56 +549,26 @@ function renderScannableOutlook(text) {
   const paragraph1 = remainingSentences.slice(0, midPoint).join(' ').trim();
   const paragraph2 = remainingSentences.slice(midPoint).join(' ').trim();
 
-  // Helper to bold key financial claims & signal phrases
-  const highlightKeyClaims = (str) => {
-    if (!str) return '';
-    const keyPatterns = [
-      /AI capex[^,.]*/gi,
-      /bull market[s]?[^,.]*/gi,
-      /bull run[^,.]*/gi,
-      /5\.5 years/gi,
-      /3\.7-3\.8 years/gi,
-      /short-term volatility/gi,
-      /strong Q2 earnings/gi,
-      /geopolitical shocks/gi,
-      /monetization uncertainty/gi,
-      /interest rates/gi,
-      /energy sector/gi,
-    ];
-
-    let highlighted = str;
-    keyPatterns.forEach((pattern) => {
-      highlighted = highlighted.replace(pattern, (match) => `<strong class="font-semibold text-white bg-accent/15 px-1 py-0.5 rounded">${match}</strong>`);
-    });
-
-    return { __html: highlighted };
-  };
-
   return (
     <div className="space-y-4 font-sans">
-      {/* TL;DR Highlight Banner */}
+      {/* TL;DR Summary Box */}
       {tldrText && (
-        <div className="bg-accent/10 border-l-4 border-accent p-4 rounded-r-2xl shadow-sm">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/20 px-2 py-0.5 rounded-full">
+        <div className="bg-surface-elevated/70 border-l-4 border-accent p-4 rounded-r-2xl shadow-sm space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/15 px-2.5 py-0.5 rounded-full">
               TL;DR Key Takeaway
             </span>
           </div>
-          <p
-            className="text-sm sm:text-base font-medium text-prime leading-relaxed"
-            dangerouslySetInnerHTML={highlightKeyClaims(tldrText)}
-          />
+          <p className="text-sm sm:text-base font-medium text-prime leading-relaxed">
+            {tldrText}
+          </p>
         </div>
       )}
 
-      {/* Main scannable body text split into paragraphs */}
+      {/* Main body text split cleanly into paragraphs */}
       <div className="space-y-3 text-sm sm:text-base text-dim leading-relaxed font-normal">
-        {paragraph1 && (
-          <p dangerouslySetInnerHTML={highlightKeyClaims(paragraph1)} />
-        )}
-        {paragraph2 && (
-          <p dangerouslySetInnerHTML={highlightKeyClaims(paragraph2)} />
-        )}
+        {paragraph1 && <p>{paragraph1}</p>}
+        {paragraph2 && <p>{paragraph2}</p>}
       </div>
     </div>
   );
@@ -616,7 +586,7 @@ function renderScannableOutlook(text) {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 px-2 sm:px-4 animate-fade-in font-sans">
-      {/* Top Header Control Bar — Clean layout with date under title & clear source provenance */}
+      {/* Top Header Control Bar — Clean layout with integrated date pill & clear source provenance */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-5 border-b border-surface-elevated/60">
         <div className="space-y-2.5">
           <div className="flex flex-wrap items-center gap-3">
@@ -632,7 +602,7 @@ function renderScannableOutlook(text) {
             </span>
           </div>
 
-          {/* Subtitle row under MarketCall Digest title */}
+          {/* Subtitle row — Integrated Date pill & Check Newer button */}
           <div className="flex flex-wrap items-center gap-3 text-xs">
             <HistoryBrowser
               selectedDate={videoInfo?.episodeDate}
@@ -652,36 +622,36 @@ function renderScannableOutlook(text) {
           </div>
         </div>
 
-        {/* Video Preview Column — Larger BNN thumbnail with play button overlay */}
+        {/* Video Preview Column — Floating BNN thumbnail out of deep shadow (no sharp white borders) */}
         {videoInfo?.videoId && (
-          <div className="flex items-center gap-3 bg-surface-card p-2.5 rounded-2xl border border-surface-elevated/60 shadow-antigravity shrink-0">
+          <div className="flex items-center gap-3.5 bg-surface-card p-3 rounded-2xl border border-surface-elevated/50 shadow-antigravity shrink-0">
             <a
               href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-36 h-20 rounded-xl overflow-hidden shadow-md border border-edge/60 relative group block shrink-0"
+              className="w-36 h-20 rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.65)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.85)] border-0 relative group block shrink-0 transition-all duration-300"
               title={videoInfo?.videoTitle || 'Watch Full Episode'}
             >
               <img
                 src={`https://img.youtube.com/vi/${videoInfo.videoId}/mqdefault.jpg`}
                 alt="Episode thumbnail"
-                className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-300"
+                className="w-full h-full object-cover scale-105 group-hover:scale-112 transition-transform duration-300"
               />
-              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                <div className="w-8 h-8 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-black/60 transition-colors flex items-center justify-center">
+                <div className="w-9 h-9 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <svg className="w-4 h-4 fill-current translate-x-0.5" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 </div>
               </div>
             </a>
-            <div className="flex flex-col gap-1 pr-2 max-w-[170px]">
+            <div className="flex flex-col gap-1 pr-1 max-w-[170px]">
               <span className="text-[10px] uppercase tracking-wider font-semibold text-dim">Full Broadcast</span>
               <a
                 href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs font-semibold text-prime hover:text-accent transition-colors flex items-center gap-1 leading-snug line-clamp-2"
+                className="text-xs font-semibold text-prime hover:text-white transition-colors flex items-center gap-1 leading-snug line-clamp-2"
               >
                 Watch Episode ↗
               </a>
