@@ -1,44 +1,84 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 /**
- * AnalystBubble — Displays analyst identity, credibility score (/100 color coded), and episode focus topic.
- * Neutral arrow cue for viewing full profile.
+ * AnalystBubble — Displays analyst identity, real Supabase-persisted credibility score (/100),
+ * and episode focus topic.
  */
 export default function AnalystBubble({
   guestName,
   firm,
   episodeFocus,
   date,
-  trackRecord,
+  trackRecord: initialTrackRecord,
   onSelectGuest,
   className = '',
 }) {
+  const [record, setRecord] = useState(initialTrackRecord || null);
+  const [loading, setLoading] = useState(!initialTrackRecord?.credibilityScore);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!guestName) return;
+
+    if (initialTrackRecord && (initialTrackRecord.credibilityScore != null || initialTrackRecord.hitRate != null)) {
+      setRecord(initialTrackRecord);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    fetch(`/api/analyst-record?guest=${encodeURIComponent(guestName)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isMounted) return;
+        if (data && (data.credibilityScore != null || data.hitRate != null || Array.isArray(data.picks))) {
+          setRecord(data);
+        }
+      })
+      .catch((err) => {
+        console.warn('[AnalystBubble] Failed to fetch analyst record:', err.message);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [guestName, initialTrackRecord]);
+
   if (!guestName) return null;
 
-  /* Calculate overall credibility score (/100) */
+  /* Calculate overall credibility score (/100) from real data */
   let score = null;
-  if (trackRecord?.credibilityScore != null) {
-    score = trackRecord.credibilityScore;
-  } else if (trackRecord?.hitRate != null) {
-    score = Math.round(trackRecord.hitRate * 100);
-  } else if (trackRecord?.optimalHorizonHitRate != null) {
-    score = Math.round(trackRecord.optimalHorizonHitRate * 100);
-  } else {
-    /* Fallback baseline calculation derived from guest name hashing for full coverage */
-    const hash = guestName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    score = 72 + (hash % 19); // Generates a realistic 72 - 90 range for MarketCall guest baseline
+  if (record?.credibilityScore != null) {
+    score = Math.round(record.credibilityScore);
+  } else if (record?.hitRate != null) {
+    score = Math.round(record.hitRate * 100);
+  } else if (record?.optimalHorizonHitRate != null) {
+    score = Math.round(record.optimalHorizonHitRate * 100);
   }
 
   /* Color range coding: >= 80 Green, 65-79 Yellow/Watch, < 65 Red */
-  let badgeStyle = 'bg-signal-buy/15 text-signal-buy border-signal-buy/30';
-  let badgeLabel = 'High Credibility';
+  let badgeStyle = 'bg-surface-elevated text-dim border-edge';
+  let badgeText = '--/100';
 
-  if (score < 65) {
-    badgeStyle = 'bg-signal-avoid/15 text-signal-avoid border-signal-avoid/30';
-    badgeLabel = 'Caution';
-  } else if (score < 80) {
-    badgeStyle = 'bg-signal-watch/15 text-signal-watch border-signal-watch/30';
-    badgeLabel = 'Moderate';
+  if (loading && score == null) {
+    badgeStyle = 'bg-surface-elevated text-dim border-edge animate-pulse';
+    badgeText = 'Loading...';
+  } else if (score != null) {
+    badgeText = `${score}/100`;
+    if (score >= 80) {
+      badgeStyle = 'bg-signal-buy/15 text-signal-buy border-signal-buy/30';
+    } else if (score >= 65) {
+      badgeStyle = 'bg-signal-watch/15 text-signal-watch border-signal-watch/30';
+    } else {
+      badgeStyle = 'bg-signal-avoid/15 text-signal-avoid border-signal-avoid/30';
+    }
+  } else {
+    badgeText = 'Unrated';
+    badgeStyle = 'bg-surface-elevated/80 text-dim border-edge/60';
   }
 
   return (
@@ -56,7 +96,7 @@ export default function AnalystBubble({
               {guestName}
             </h3>
             <p className="text-xs text-dim leading-relaxed mt-0.5 text-left">
-              {firm || 'BNN MarketCall Guest'}
+              {firm || record?.firm || 'BNN MarketCall Guest'}
             </p>
           </div>
 
@@ -64,7 +104,7 @@ export default function AnalystBubble({
           <div className="flex-shrink-0 text-right space-y-1">
             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-sm ${badgeStyle}`}>
               <span className="text-[10px] uppercase tracking-wider font-semibold opacity-90">Score:</span>
-              <span className="text-xs font-bold font-mono">{score}/100</span>
+              <span className="text-xs font-bold font-mono">{badgeText}</span>
             </div>
             {date && (
               <span className="text-[10px] text-dim/70 font-medium block text-right">

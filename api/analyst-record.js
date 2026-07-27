@@ -159,6 +159,25 @@ export default async function handler(req, res) {
     const poolAvg = 50.0;
     const credibilityScore = Number((((n / (n + k)) * rawScore) + ((k / (n + k)) * poolAvg)).toFixed(1));
 
+    /* ── Persist score globally in Supabase analyst_scores table for all users ── */
+    try {
+      await supabase
+        .from('analyst_scores')
+        .upsert(
+          {
+            analyst_name: cleanGuest,
+            credibility_score: Math.round(credibilityScore),
+            hit_rate: hitRate,
+            avg_alpha: avgAlpha,
+            total_picks: n,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'analyst_name' }
+        );
+    } catch (upsertErr) {
+      console.warn('[analyst-record] Supabase analyst_scores upsert notice:', upsertErr.message);
+    }
+
     return res.status(200).json({
       status: 'success',
       guestName: rawGuest,
