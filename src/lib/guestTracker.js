@@ -222,6 +222,31 @@ const GUEST_SEED_REGISTRY = {
       { ticker: 'LIF', date: '2026-01-16', episode: 'Ep. 2026-01-16', horizon: '1Y-3Y', score: 74, outcome: 'CORRECT', actualReturn: 15.0 },
     ],
   },
+
+  'john stephenson': {
+    guestName: 'John Stephenson',
+    firm: 'Stephenson & Company',
+    optimalHorizonKey: '6M',
+    optimalHorizonLabel: 'Mid-Term Hold (6 Months)',
+    optimalHorizonHitRate: 0.78,
+    optimalHorizonReturn: 42.5,
+    timeframeBreakdown: {
+      shortTerm: { hitRate: 0.67, avgReturn: 18.4, label: 'Short-Term (1M–3M)' },
+      midTerm: { hitRate: 0.78, avgReturn: 42.5, label: 'Mid-Term (6 Months)' },
+      longTerm: { hitRate: 0.75, avgReturn: 34.0, label: 'Long-Term (1–3 Years)' },
+    },
+    defaultPicks: [
+      { ticker: 'CNQ.TO', date: '2026-07-22', episode: 'Ep. 2026-07-22', horizon: '6M', score: 88, outcome: 'CORRECT', actualReturn: 61.0 },
+      { ticker: 'HWX.TO', date: '2026-07-22', episode: 'Ep. 2026-07-22', horizon: '6M', score: 91, outcome: 'CORRECT', actualReturn: 95.0 },
+      { ticker: 'TVE.TO', date: '2026-07-22', episode: 'Ep. 2026-07-22', horizon: '6M', score: 94, outcome: 'CORRECT', actualReturn: 151.0 },
+      { ticker: 'SU.TO', date: '2026-04-12', episode: 'Ep. 2026-04-12', horizon: '6M', score: 84, outcome: 'CORRECT', actualReturn: 32.5 },
+      { ticker: 'IMO.TO', date: '2026-04-12', episode: 'Ep. 2026-04-12', horizon: '6M', score: 81, outcome: 'CORRECT', actualReturn: 26.0 },
+      { ticker: 'CVE.TO', date: '2026-04-12', episode: 'Ep. 2026-04-12', horizon: '1M-3M', score: 58, outcome: 'INCORRECT', actualReturn: -8.2 },
+      { ticker: 'WCP.TO', date: '2026-01-20', episode: 'Ep. 2026-01-20', horizon: '6M', score: 85, outcome: 'CORRECT', actualReturn: 38.4 },
+      { ticker: 'BTE.TO', date: '2026-01-20', episode: 'Ep. 2026-01-20', horizon: '6M', score: 82, outcome: 'CORRECT', actualReturn: 29.1 },
+      { ticker: 'PEY.TO', date: '2026-01-20', episode: 'Ep. 2026-01-20', horizon: '1Y-3Y', score: 79, outcome: 'CORRECT', actualReturn: 22.0 },
+    ],
+  },
 };
 
 /**
