@@ -40,7 +40,59 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!rows || rows.length === 0) {
+    let activeRows = rows || [];
+
+    if (activeRows.length === 0) {
+      /* Dynamic On-Demand Cold-Start: Scrape BNN past picks on the fly if analyst is not yet in DB */
+      try {
+        const { searchBnnPastPicks, parseBnnPastPicksArticle } = await import('./_bnnScraper.js');
+        const articles = await searchBnnPastPicks(cleanGuest, 3);
+
+        if (articles && articles.length > 0) {
+          const scrapedRows = [];
+          for (const article of articles) {
+            try {
+              const response = await fetch(article.url, {
+                headers: {
+                  'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                },
+                signal: AbortSignal.timeout(8000),
+              });
+              if (!response.ok) continue;
+              const html = await response.text();
+              const parsed = parseBnnPastPicksArticle(html, article.url, cleanGuest);
+              if (parsed && parsed.length > 0) {
+                scrapedRows.push(...parsed);
+              }
+            } catch (artErr) {
+              console.warn(`[analyst-record] Article scrape warning (${article.url}):`, artErr.message);
+            }
+          }
+
+          if (scrapedRows.length > 0) {
+            /* Upsert scraped rows into Supabase */
+            const { data: inserted, error: insertErr } = await supabase
+              .from('analyst_track_record')
+              .upsert(scrapedRows, {
+                onConflict: 'analyst_name, ticker, pick_publish_date',
+                ignoreDuplicates: true,
+              })
+              .select();
+
+            if (!insertErr && inserted && inserted.length > 0) {
+              activeRows = inserted;
+            } else {
+              activeRows = scrapedRows;
+            }
+          }
+        }
+      } catch (csErr) {
+        console.warn('[analyst-record] Inline cold-start error:', csErr.message);
+      }
+    }
+
+    if (!activeRows || activeRows.length === 0) {
       return res.status(200).json({
         status: 'no_track_record',
         guestName: rawGuest,
@@ -61,7 +113,7 @@ export default async function handler(req, res) {
     let hitCount = 0;
     let totalReturnSum = 0;
 
-    const evaluatedPicks = rows.map((pick) => {
+    const evaluatedPicks = activeRows.map((pick) => {
       const isCanadian = pick.ticker.endsWith('.TO') || pick.ticker.endsWith('.V') || pick.ticker.endsWith('.CN');
       const benchmarkReturn = isCanadian ? TSX_BENCHMARK_RETURN : SP500_BENCHMARK_RETURN;
 
