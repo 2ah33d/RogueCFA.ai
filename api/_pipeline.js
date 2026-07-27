@@ -579,15 +579,20 @@ Your job is to produce a structured digest from the provided episode transcript.
 STRICT RULES:
 1. ONLY reference what the guest ACTUALLY SAID in the transcript. Do NOT add outside analysis, opinion, or information not present in the transcript.
 2. PRESERVE THE OFFICIAL GUEST NAME: ${officialGuest ? `The verified official guest name extracted from YouTube is "${officialGuest}". ALWAYS set "guest": "${officialGuest}".` : `Extract the guest's official real name from YouTube title/transcript accurately.`} Do NOT output phonetic Whisper mishearings (e.g. "Julian Nono-Wamden").
-3. Preserve the guest's SPECIFIC language and reasoning — not generic boilerplate. Instead of "the guest is bullish on energy", quote their actual logic: their stated thesis, metrics, catalysts, and price targets.
-4. Every stock pick MUST include the guest's stated reasoning (WHY they like it). A bare ticker list is worthless.
-5. Output 500–1000 words total.
-6. If the guest mentions a price target, timeframe, or specific catalyst, include it.
-7. CRITICAL DISTINCTION FOR PICKS VS CALLER Q&A:
+3. NORMALIZE ALL NAMES — this transcript comes from automatic speech-to-text and WILL contain phonetic errors in company names, tickers, and people's names. Before writing any field:
+   - For every company/stock mentioned, silently resolve it to its real, correct company name and ticker using your own knowledge of public markets (e.g. "Barrick Gould" → Barrick Gold / ABX; a garbled ticker spoken aloud like "boy alphabet" → Alphabet / GOOGL).
+   - Do the same for any person named in the transcript (other analysts, hosts, companies' executives, etc.), not just the guest.
+   - If you cannot confidently resolve a name, keep the closest plausible real match — never invent a company or person that doesn't exist, and never leave an obvious phonetic garble in the output.
+   - Write ONLY the corrected forms in every output field. Do not mention or explain the correction inline in the prose.
+4. Preserve the guest's SPECIFIC language and reasoning — not generic boilerplate. Instead of "the guest is bullish on energy", quote their actual logic: their stated thesis, metrics, catalysts, and price targets.
+5. Every stock pick MUST include the guest's stated reasoning (WHY they like it). A bare ticker list is worthless.
+6. Output 500–1000 words total.
+7. If the guest mentions a price target, timeframe, or specific catalyst, include it.
+8. CRITICAL DISTINCTION FOR PICKS VS CALLER Q&A:
    - "picks": MUST contain EXACTLY the guest's NEW official featured Top Picks (typically 3 stocks) introduced for today's market.
    - "callerMentions": MUST contain any additional stocks discussed by the guest when answering caller questions or viewer emails during the Q&A segment. DO NOT mix caller Q&A stocks into "picks".
-8. EXCLUDE PAST PICKS REVIEWS: Do NOT include historical "Past Picks" reviewed during the episode (where the host/guest evaluate performance from prior months, e.g. "Looking back at your picks from 6 months ago... Then: $X Now: $Y"). "picks" MUST ONLY contain NEW, CURRENT actionable Top Picks. Do NOT put past picks in "picks" or "callerMentions".
-9. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
+9. EXCLUDE PAST PICKS REVIEWS: Do NOT include historical "Past Picks" reviewed during the episode. "picks" MUST ONLY contain NEW, CURRENT actionable Top Picks.
+10. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
 
 OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 {
@@ -609,7 +614,14 @@ OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
       "reasoning": "60-120 words condensing what the guest said about this stock when answering a caller question (buy/sell/hold stance, technicals/fundamentals, risks or valuation concerns)."
     }
   ],
-  "closingNotes": "Optional 50-100 words. Any general macro risks or concluding thoughts the guest mentioned. Empty string if none."
+  "closingNotes": "Optional 50-100 words. Any general macro risks or concluding thoughts the guest mentioned. Empty string if none.",
+  "corrections": [
+    {
+      "heard": "phonetic text from transcript",
+      "corrected": "actual name/ticker",
+      "type": "ticker|company|person"
+    }
+  ]
 }`;
 
   const userPrompt = `Here is the transcript from today's BNN Bloomberg MarketCall episode${videoTitle ? ` titled "${videoTitle}"` : ''}:
