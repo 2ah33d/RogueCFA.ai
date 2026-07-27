@@ -102,15 +102,15 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                   Performs Best With: <span className="text-signal-buy font-semibold">{record.optimalHorizonLabel}</span>
                 </h4>
                 <p className="text-xs text-dim mt-0.5">
-                  {record.guestName}'s picks show superior accuracy on the <strong className="text-prime font-mono">{record.optimalHorizonKey}</strong> holding term.
+                  {record.guestName}'s picks show superior accuracy on the <strong className="text-prime font-semibold">{record.optimalHorizonKey}</strong> holding term.
                 </p>
               </div>
               <div className="bg-signal-buy/15 px-4 py-2.5 rounded-2xl text-center sm:text-right shrink-0">
                 <span className="text-[11px] text-signal-buy/80 uppercase font-medium block">Optimal Win Rate</span>
-                <span className="text-2xl font-bold font-mono text-signal-buy">
+                <span className="text-2xl font-bold text-signal-buy tabular-nums">
                   {((record.optimalHorizonHitRate ?? record.hitRate ?? 0) * 100).toFixed(0)}%
                 </span>
-                <span className="text-xs font-mono font-medium text-signal-buy block">
+                <span className="text-xs font-semibold text-signal-buy block tabular-nums">
                   +{record.optimalHorizonReturn >= 0 ? '' : ''}{record.optimalHorizonReturn || record.avgReturn}% Avg Return
                 </span>
               </div>
@@ -121,30 +121,30 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
               <div className="grid grid-cols-3 gap-3 pt-3 border-t border-surface-card text-xs">
                 <div className={`p-3 rounded-xl ${record.optimalHorizonKey === '1M-3M' ? 'bg-surface-card shadow-antigravity' : 'bg-surface'}`}>
                   <span className="text-[11px] text-dim block">Short-Term (1-3M)</span>
-                  <span className="font-semibold text-prime text-sm font-mono">
+                  <span className="font-semibold text-prime text-sm tabular-nums">
                     {record.timeframeBreakdown.shortTerm?.hitRate != null ? `${(record.timeframeBreakdown.shortTerm.hitRate * 100).toFixed(0)}% win` : 'N/A'}
                   </span>
-                  <span className="text-dim text-[11px] block font-mono">
+                  <span className="text-dim text-[11px] block tabular-nums">
                     {record.timeframeBreakdown.shortTerm?.avgReturn != null ? `${record.timeframeBreakdown.shortTerm.avgReturn >= 0 ? '+' : ''}${record.timeframeBreakdown.shortTerm.avgReturn}%` : '—'}
                   </span>
                 </div>
 
                 <div className={`p-3 rounded-xl ${record.optimalHorizonKey === '6M' ? 'bg-surface-card shadow-antigravity' : 'bg-surface'}`}>
                   <span className="text-[11px] text-dim block">Mid-Term (6M)</span>
-                  <span className="font-semibold text-prime text-sm font-mono">
+                  <span className="font-semibold text-prime text-sm tabular-nums">
                     {record.timeframeBreakdown.midTerm?.hitRate != null ? `${(record.timeframeBreakdown.midTerm.hitRate * 100).toFixed(0)}% win` : 'N/A'}
                   </span>
-                  <span className="text-dim text-[11px] block font-mono">
+                  <span className="text-dim text-[11px] block tabular-nums">
                     {record.timeframeBreakdown.midTerm?.avgReturn != null ? `${record.timeframeBreakdown.midTerm.avgReturn >= 0 ? '+' : ''}${record.timeframeBreakdown.midTerm.avgReturn}%` : '—'}
                   </span>
                 </div>
 
                 <div className={`p-3 rounded-xl ${record.optimalHorizonKey === '1Y-3Y' ? 'bg-surface-card shadow-antigravity' : 'bg-surface'}`}>
                   <span className="text-[11px] text-dim block">Long-Term (1-3Y)</span>
-                  <span className="font-semibold text-prime text-sm font-mono">
+                  <span className="font-semibold text-prime text-sm tabular-nums">
                     {record.timeframeBreakdown.longTerm?.hitRate != null ? `${(record.timeframeBreakdown.longTerm.hitRate * 100).toFixed(0)}% win` : 'N/A'}
                   </span>
-                  <span className="text-dim text-[11px] block font-mono">
+                  <span className="text-dim text-[11px] block tabular-nums">
                     {record.timeframeBreakdown.longTerm?.avgReturn != null ? `${record.timeframeBreakdown.longTerm.avgReturn >= 0 ? '+' : ''}${record.timeframeBreakdown.longTerm.avgReturn}%` : '—'}
                   </span>
                 </div>
@@ -157,7 +157,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-surface-elevated p-4 rounded-xl shadow-antigravity">
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Total Picks</span>
-            <span className="text-xl font-bold font-mono text-prime mt-0.5 block">{record.totalPicks || picksList.length}</span>
+            <span className="text-xl font-bold text-prime mt-0.5 block tabular-nums">{record.totalPicks || picksList.length}</span>
             <span className="text-[11px] text-dim">{record.resolvedPicks || picksList.length} evaluated</span>
           </div>
 
@@ -166,7 +166,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
             {record.hitRate !== null ? (
               <>
                 <span
-                  className={`text-xl font-bold font-mono mt-0.5 block ${
+                  className={`text-xl font-bold mt-0.5 block tabular-nums ${
                     record.hitRate >= 0.6 ? 'text-signal-buy' : record.hitRate <= 0.4 ? 'text-signal-avoid' : 'text-signal-watch'
                   }`}
                 >
@@ -182,7 +182,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
           <div className="bg-surface-elevated p-4 rounded-xl shadow-antigravity">
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Avg Pick Return</span>
             <span
-              className={`text-xl font-bold font-mono mt-0.5 block ${
+              className={`text-xl font-bold mt-0.5 block tabular-nums ${
                 (record.avgTotalReturn ?? record.avgReturn ?? 0) >= 0 ? 'text-signal-buy' : 'text-signal-avoid'
               }`}
             >
@@ -196,12 +196,12 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Credibility Score</span>
             {record.credibilityScore != null ? (
               <>
-                <span className="text-xl font-bold font-mono text-prime mt-0.5 block">{record.credibilityScore}/100</span>
+                <span className="text-xl font-bold text-prime mt-0.5 block tabular-nums">{record.credibilityScore}/100</span>
                 <span className="text-[11px] text-dim">Bayesian Shrinkage</span>
               </>
             ) : hasEnoughData ? (
               <>
-                <span className="text-xl font-bold font-mono text-prime mt-0.5 block">
+                <span className="text-xl font-bold text-prime mt-0.5 block tabular-nums">
                   {Math.round(record.hitRate * 100)}/100
                 </span>
                 <span className="text-[11px] text-dim">CFA Standard</span>
@@ -235,7 +235,7 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                     <th className="py-3 px-4 font-semibold text-right">Total Return</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-surface-card font-mono">
+                <tbody className="divide-y divide-surface-card font-sans font-medium">
                   {picksList.map((pick, idx) => {
                     const ret = pick.totalReturnPct ?? pick.total_return_pct ?? pick.returnPct ?? pick.return_pct ?? pick.actualReturn;
                     return (
@@ -249,16 +249,16 @@ export default function GuestModal({ guestName, onClose, onSelectTicker, classNa
                                 onClose();
                               }
                             }}
-                            className="hover:text-prime underline decoration-dim transition-colors text-left font-mono"
+                            className="hover:text-white underline decoration-dim transition-colors text-left font-semibold"
                             title={`Click to score ${pick.ticker}`}
                           >
                             {pick.ticker}
                           </button>
                         </td>
-                        <td className="py-3.5 px-4 text-dim whitespace-nowrap">{pick.reviewDate || pick.review_date || pick.date || 'N/A'}</td>
-                        <td className="py-3.5 px-4 text-dim">{pick.thenPrice != null || pick.then_price != null ? `$${pick.thenPrice ?? pick.then_price}` : '—'}</td>
-                        <td className="py-3.5 px-4 text-dim">{pick.nowPrice != null || pick.now_price != null ? `$${pick.nowPrice ?? pick.now_price}` : '—'}</td>
-                        <td className="py-3.5 px-4 text-right font-bold">
+                        <td className="py-3.5 px-4 text-dim whitespace-nowrap tabular-nums">{pick.reviewDate || pick.review_date || pick.date || 'N/A'}</td>
+                        <td className="py-3.5 px-4 text-dim tabular-nums">{pick.thenPrice != null || pick.then_price != null ? `$${pick.thenPrice ?? pick.then_price}` : '—'}</td>
+                        <td className="py-3.5 px-4 text-dim tabular-nums">{pick.nowPrice != null || pick.now_price != null ? `$${pick.nowPrice ?? pick.now_price}` : '—'}</td>
+                        <td className="py-3.5 px-4 text-right font-bold tabular-nums">
                           {ret != null ? (
                             <span className={ret > 0 ? 'text-signal-buy' : ret < 0 ? 'text-signal-avoid' : 'text-prime'}>
                               {ret >= 0 ? '+' : ''}{ret}%

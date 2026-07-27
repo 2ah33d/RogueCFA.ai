@@ -541,11 +541,11 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   const isEstimated = !realUsage;
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in font-sans">
-      {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-card p-4 rounded-2xl shadow-antigravity">
+    <div className="w-full max-w-7xl mx-auto space-y-6 px-2 sm:px-4 animate-fade-in font-sans">
+      {/* Top Header Control Bar — Clean layout outside card bubble */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-surface-elevated/40">
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-dim">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-dim">
             MarketCall Digest
           </h2>
           <HistoryBrowser
@@ -555,63 +555,62 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           <button
             type="button"
             onClick={handleRefreshFull}
-            className="text-xs font-medium text-dim hover:text-prime px-3 py-1 rounded-full bg-surface-elevated transition-colors flex items-center gap-1 shadow-antigravity"
+            className="text-xs font-medium text-dim hover:text-prime px-3 py-1.5 rounded-full bg-surface-elevated transition-colors flex items-center gap-1.5 shadow-antigravity"
             title="Check YouTube for a newer episode"
           >
             Check Newer
           </button>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Video thumbnail in header bar */}
-          {videoInfo?.videoId && (
+
+        {/* Video Preview Column — Thumbnail with Watch Full Episode button directly underneath */}
+        {videoInfo?.videoId && (
+          <div className="flex flex-col items-end gap-1.5">
             <a
               href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-shrink-0 rounded-lg overflow-hidden shadow-inner transition-colors"
+              className="w-32 h-18 rounded-xl overflow-hidden shadow-md border border-edge/60 relative group block shrink-0"
               title={videoInfo?.videoTitle || 'Watch Full Episode'}
             >
               <img
                 src={`https://img.youtube.com/vi/${videoInfo.videoId}/mqdefault.jpg`}
                 alt="Episode thumbnail"
-                className="w-28 h-auto object-cover hover:scale-105 transition-transform duration-300"
+                className="w-full h-full object-cover scale-110 group-hover:scale-115 transition-transform duration-300"
               />
             </a>
-          )}
-          {videoInfo?.videoId && (
             <a
               href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-dim hover:text-prime transition-colors flex items-center gap-1.5 font-medium"
+              className="text-[11px] text-dim hover:text-white transition-colors flex items-center gap-1 font-medium"
             >
-              <svg className="w-3.5 h-3.5 text-dim" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="w-3 h-3 text-red-500" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
                 <path fill="rgb(var(--c-surface))" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
               </svg>
-              Watch Full Episode
+              Watch Full Episode ↗
             </a>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* 2-Column Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Main Column (2/3 width) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Market Outlook */}
+          {/* Market Outlook — Expanded font size & breathing room */}
           {digest.marketOutlook && (
-            <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-2.5">
+            <div className="bg-surface-card rounded-2xl p-6 sm:p-7 shadow-antigravity space-y-3 border border-surface-elevated/40">
               <h3 className="text-xs font-semibold text-dim uppercase tracking-wider">
                 Market Outlook
               </h3>
-              <p className="text-sm text-prime leading-relaxed font-sans">
+              <p className="text-base sm:text-lg text-prime leading-relaxed font-normal">
                 {digest.marketOutlook}
               </p>
             </div>
           )}
 
-          {/* Picks */}
+          {/* Top Picks */}
           {Array.isArray(digest.picks) && digest.picks.length > 0 && (
             <div>
               <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-3 flex items-center justify-between">
@@ -662,13 +661,13 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             </div>
           )}
 
-          {/* Closing Notes */}
+          {/* Closing Notes — Expanded font size & breathing room */}
           {digest.closingNotes && (
-            <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-2.5">
+            <div className="bg-surface-card rounded-2xl p-6 sm:p-7 shadow-antigravity space-y-3 border border-surface-elevated/40">
               <h3 className="text-xs font-semibold text-dim uppercase tracking-wider">
                 Closing Notes
               </h3>
-              <p className="text-sm text-dim leading-relaxed italic font-sans">
+              <p className="text-sm sm:text-base text-dim leading-relaxed italic font-normal">
                 {digest.closingNotes}
               </p>
             </div>
@@ -687,48 +686,40 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             onSelectGuest={onSelectGuest}
           />
 
-          {/* Episode Info & Stats Card */}
-          <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-4 font-sans">
+          {/* Episode Info & Actionable Digest Stats Card */}
+          <div className="bg-surface-card rounded-2xl p-6 shadow-antigravity space-y-4 font-sans border border-surface-elevated/40">
             <h3 className="text-xs font-semibold text-dim uppercase tracking-wider">
               Digest Overview
             </h3>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-2.5 text-xs">
               <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
-                <span className="text-dim">Time Saved</span>
-                <span className="font-semibold text-signal-buy bg-signal-buy/15 px-2.5 py-0.5 rounded-full">
-                  45m → 2m
+                <div className="flex flex-col">
+                  <span className="text-dim font-medium">Reading Efficiency</span>
+                  <span className="text-[10px] text-dim/70">35-min audio condensed</span>
+                </div>
+                <span className="font-semibold text-signal-buy bg-signal-buy/15 border border-signal-buy/20 px-2.5 py-1 rounded-full">
+                  45m → 2m read
+                </span>
+              </div>
+
+              <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
+                <span className="text-dim font-medium">Coverage Density</span>
+                <span className="font-semibold text-prime">
+                  {(digest.picks?.length || 0)} Picks • {(digest.callerMentions || digest.caller_mentions || []).length} Q&amp;A
                 </span>
               </div>
 
               <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-dim">Digest Cost</span>
-                  <span className="text-[10px] text-dim/70 font-normal">
+                  <span className="text-dim font-medium">Generation Cost</span>
+                  <span className="text-[10px] text-dim/70">
                     {costInfo.providerName}{isEstimated ? ' (est.)' : ''}
                   </span>
                 </div>
                 <span className="font-semibold text-prime">{costInfo.formattedCost}</span>
               </div>
-
-              <div className="bg-surface-elevated p-3.5 rounded-xl shadow-inner flex items-center justify-between">
-                <span className="text-dim">Episode Date</span>
-                <span className="font-semibold text-prime">
-                  {videoInfo?.episodeDate || 'Latest'}
-                </span>
-              </div>
             </div>
-
-            {videoInfo?.videoId && (
-              <a
-                href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-2.5 bg-surface-elevated hover:bg-surface text-dim hover:text-prime text-xs font-semibold rounded-full transition-colors shadow-antigravity flex items-center justify-center gap-2"
-              >
-                Watch Source Broadcast ↗
-              </a>
-            )}
           </div>
         </div>
       </div>

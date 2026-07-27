@@ -37,25 +37,33 @@ export default function AnalystBubble({
             </p>
           </div>
 
-          {/* Right: Date & Win Rate badge */}
-          <div className="flex-shrink-0 text-right">
+          {/* Right: Date, Credibility Score & Win Rate badge */}
+          <div className="flex-shrink-0 text-right space-y-1">
             {date && (
-              <span className="text-[11px] text-dim font-medium block mb-1">
+              <span className="text-[11px] text-dim font-medium block">
                 {date}
               </span>
             )}
-            {hasStats ? (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-signal-buy/15">
-                <span className="text-xs font-bold text-signal-buy">
-                  {(trackRecord.hitRate * 100).toFixed(0)}%
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              {trackRecord?.credibilityScore != null && (
+                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-accent/15 border border-accent/20">
+                  <span className="text-[10px] uppercase tracking-wider text-accent/80 font-medium">Credibility:</span>
+                  <span className="text-xs font-bold text-accent">{trackRecord.credibilityScore}</span>
+                </div>
+              )}
+              {hasStats ? (
+                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-signal-buy/15 border border-signal-buy/20">
+                  <span className="text-xs font-bold text-signal-buy">
+                    {(trackRecord.hitRate * 100).toFixed(0)}%
+                  </span>
+                  <span className="text-[10px] text-signal-buy/80 font-semibold">win</span>
+                </div>
+              ) : !trackRecord?.credibilityScore && (
+                <span className="inline-flex items-center text-[10px] text-dim font-normal bg-surface-elevated px-2.5 py-0.5 rounded-full">
+                  Track Record
                 </span>
-                <span className="text-[10px] text-signal-buy/80 font-semibold">win</span>
-              </div>
-            ) : (
-              <span className="inline-flex items-center text-[10px] text-dim font-normal bg-surface-elevated px-2.5 py-0.5 rounded-full">
-                Track Record
-              </span>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
