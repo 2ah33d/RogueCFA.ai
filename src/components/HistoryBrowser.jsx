@@ -71,16 +71,14 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
 
   return (
     <div ref={dropdownRef} className={`relative text-xs font-sans ${className}`}>
-      {/* Dropdown Toggle Pill — Integrated Date + Neutral Saved Count */}
+      {/* Dropdown Toggle Pill — Integrated Date & Saved Count inline (No nested sub-pill outlines) */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="h-8 px-3.5 inline-flex items-center gap-2 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer group"
       >
         <span className="text-xs font-semibold text-prime">{displayDate}</span>
-        <span className="text-[10px] font-medium text-dim bg-surface-elevated px-2 py-0.5 rounded-full">
-          {history.length} Saved
-        </span>
+        <span className="text-xs text-dim font-normal">· {history.length} Saved</span>
         <svg
           className="w-3 h-3 text-dim group-hover:text-prime transition-transform duration-200"
           style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
