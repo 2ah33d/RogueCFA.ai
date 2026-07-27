@@ -229,23 +229,23 @@ export function getGuestTrackRecord(guestName, providedBnnPicks = null) {
     }
   }
 
-  const episodeCount = Math.max(distinctEpisodes.size, seed ? 3 : 1);
+  const episodeCount = distinctEpisodes.size > 0 ? distinctEpisodes.size : 1;
   const dataUsedPicks = latest9Picks.length;
-  const hitRate = resolvedCount >= 3 ? Number((correctCount / resolvedCount).toFixed(2)) : null;
+  const hitRate = resolvedCount >= 1 ? Number((correctCount / resolvedCount).toFixed(2)) : null;
   const avgReturn = returnCount > 0 ? Number((totalReturn / returnCount).toFixed(2)) : 0;
 
-  const stHit = stWins.total >= 1 ? Number((stWins.wins / stWins.total).toFixed(2)) : seed ? seed.timeframeBreakdown.shortTerm.hitRate : null;
-  const stRet = stWins.total >= 1 ? Number((stWins.retSum / stWins.total).toFixed(2)) : seed ? seed.timeframeBreakdown.shortTerm.avgReturn : 0;
+  const stHit = stWins.total >= 1 ? Number((stWins.wins / stWins.total).toFixed(2)) : null;
+  const stRet = stWins.total >= 1 ? Number((stWins.retSum / stWins.total).toFixed(2)) : 0;
 
-  const mtHit = mtWins.total >= 1 ? Number((mtWins.wins / mtWins.total).toFixed(2)) : seed ? seed.timeframeBreakdown.midTerm.hitRate : null;
-  const mtRet = mtWins.total >= 1 ? Number((mtWins.retSum / mtWins.total).toFixed(2)) : seed ? seed.timeframeBreakdown.midTerm.avgReturn : 0;
+  const mtHit = mtWins.total >= 1 ? Number((mtWins.wins / mtWins.total).toFixed(2)) : null;
+  const mtRet = mtWins.total >= 1 ? Number((mtWins.retSum / mtWins.total).toFixed(2)) : 0;
 
-  const ltHit = ltWins.total >= 1 ? Number((ltWins.wins / ltWins.total).toFixed(2)) : seed ? seed.timeframeBreakdown.longTerm.hitRate : null;
-  const ltRet = ltWins.total >= 1 ? Number((ltWins.retSum / ltWins.total).toFixed(2)) : seed ? seed.timeframeBreakdown.longTerm.avgReturn : 0;
+  const ltHit = ltWins.total >= 1 ? Number((ltWins.wins / ltWins.total).toFixed(2)) : null;
+  const ltRet = ltWins.total >= 1 ? Number((ltWins.retSum / ltWins.total).toFixed(2)) : 0;
 
   /* Determine what horizon the analyst performs best with */
-  let optKey = seed ? seed.optimalHorizonKey : '6M';
-  let optLabel = seed ? seed.optimalHorizonLabel : 'Mid-Term Hold (6 Months)';
+  let optKey = '6M';
+  let optLabel = 'Mid-Term Hold (6 Months)';
   let optHit = mtHit;
   let optRet = mtRet;
 
