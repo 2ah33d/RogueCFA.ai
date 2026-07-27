@@ -586,36 +586,35 @@ function renderScannableOutlook(text) {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 px-2 sm:px-4 animate-fade-in font-sans">
-      {/* Top Header Control Bar — Clean 2-row layout */}
+      {/* Top Header Control Bar — Clean layout with merged BNN Source & Action button */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-surface-elevated/40">
         <div className="space-y-2">
-          {/* Row 1: Title + BNN Bloomberg Source Pill */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight text-prime">
-              MarketCall Digest
-            </h1>
-            <span className="h-8 px-3.5 inline-flex items-center gap-1.5 text-xs font-medium text-dim bg-surface-card rounded-full shadow-antigravity select-none shrink-0">
-              <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
-              BNN Bloomberg
-            </span>
-          </div>
+          {/* Title */}
+          <h1 className="text-2xl font-bold tracking-tight text-prime">
+            MarketCall Digest
+          </h1>
 
-          {/* Row 2 (Under Title & Source Pill): Date Selector Pill & Check Newer Pill */}
-          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          {/* Subtitle Control Row — Perfectly aligned Date Selector + Merged BNN Source & Check Newer Button */}
+          <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
             <HistoryBrowser
               selectedDate={videoInfo?.episodeDate}
               onSelectDigest={handleSelectHistoricalDigest}
             />
+
+            {/* Merged BNN Bloomberg Source & Check Newer Action Button */}
             <button
               type="button"
               onClick={handleRefreshFull}
-              className="h-8 px-3.5 inline-flex items-center gap-1.5 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer shrink-0"
-              title="Check YouTube for a newer episode"
+              className="h-8 px-3.5 inline-flex items-center gap-2 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer shrink-0"
+              title="Check YouTube for a newer BNN Bloomberg MarketCall episode"
             >
-              <svg className="w-3.5 h-3.5 text-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+              <span className="text-dim font-medium">BNN Bloomberg</span>
+              <span className="w-px h-3.5 bg-surface-elevated shrink-0" />
+              <svg className="w-3.5 h-3.5 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span>Check Newer</span>
+              <span className="font-semibold text-prime">Check Newer</span>
             </button>
           </div>
         </div>
