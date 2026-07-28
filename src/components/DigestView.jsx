@@ -266,11 +266,13 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     /* Manual trigger only via buttons */
   }, [digest, hasAttempted, loading, fetchDigest]);
 
-  /** Cancel polling on unmount or refresh */
-  const handleRefreshFull = () => {
+  /** Trigger immediate fetch/check for newer episode */
+  const handleCheckNewer = useCallback(() => {
     stopPolling();
-    handleRefresh();
-  };
+    setError(null);
+    setDigest(null);
+    fetchDigest();
+  }, [fetchDigest]);
 
   /* Try to get track record for the guest */
   const trackRecord = digest?.guest ? getGuestTrackRecord(digest.guest) : null;
@@ -414,10 +416,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setHasAttempted(false);
-                    setError(null);
-                  }}
+                  onClick={handleCheckNewer}
                   className="inline-flex items-center gap-2 px-5 py-2.5
                              bg-surface-elevated border border-edge
                              text-prime text-sm font-semibold rounded-lg
@@ -449,10 +448,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setHasAttempted(false);
-                    setError(null);
-                  }}
+                  onClick={handleCheckNewer}
                   className="inline-flex items-center gap-2 px-5 py-2.5
                              bg-surface-elevated border border-edge
                              text-prime text-sm font-semibold rounded-lg
@@ -604,9 +600,9 @@ function renderScannableOutlook(text) {
             {/* Merged BNN Bloomberg Source & Check Newer Action Button */}
             <button
               type="button"
-              onClick={handleRefreshFull}
+              onClick={handleCheckNewer}
               className="h-8 px-3.5 inline-flex items-center gap-2 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer shrink-0"
-              title="Check YouTube for a newer BNN Bloomberg MarketCall episode"
+              title="Check YouTube & Supabase for a newer BNN Bloomberg MarketCall episode"
             >
               <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
               <span className="text-dim font-medium">BNN Bloomberg</span>

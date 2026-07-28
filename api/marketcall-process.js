@@ -22,6 +22,7 @@ import {
   callLLM,
   extractJSON,
   getLatestMarketCallDateStr,
+  sanitizeAnalystName,
 } from './_pipeline.js';
 
 export const config = { maxDuration: 300 };

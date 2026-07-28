@@ -16,6 +16,7 @@ import {
   callLLM,
   extractJSON,
   getLatestMarketCallDateStr,
+  sanitizeAnalystName,
 } from './_pipeline.js';
 
 export const config = { maxDuration: 60 };
@@ -82,6 +83,11 @@ export default async function handler(req, res) {
         return res.status(422).json({
           error: 'LLM returned an unparseable digest. Try again.',
         });
+      }
+
+      /* Sanitize analyst name against YouTube video title & phonetic mishearing dictionary */
+      if (digest && digest.guest) {
+        digest.guest = sanitizeAnalystName(digest.guest, clientVideoTitle || '');
       }
 
       /* Attach usage to digest so frontend can show real costs */
