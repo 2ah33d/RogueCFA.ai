@@ -610,7 +610,10 @@ OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
   "guest": "${officialGuest || 'Full Name'}",
   "firm": "Firm/Title",
   "episodeFocus": "Stated theme of the episode, e.g. Technical Analysis / Energy Sector Outlook",
-  "marketOutlook": "100-150 word executive summary of the guest's market view. The first sentence MUST be a sharp 15-25 word standalone takeaway sentence (avoid broken abbreviations like e.g. or i.e. in the opening sentence).",
+  "marketOutlook": {
+    "takeaway": "1-2 sentence (20-35 words) high-signal key takeaway summarizing the guest's core market thesis & posture.",
+    "details": "100-150 word detailed breakdown of the guest's market view, rate/inflation logic, sector allocations, and macroeconomic rationale."
+  },
   "picks": [
     {
       "ticker": "TICKER",
