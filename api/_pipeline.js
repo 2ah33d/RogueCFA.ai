@@ -507,10 +507,15 @@ export function cleanRawTranscript(rawText) {
    ════════════════════════════════════════════════════════════════ */
 
 export const PHONETIC_ANALYST_OVERRIDES = {
-  'julian nono-wamden': 'Julian Klymochko',
-  'julian nono wamden': 'Julian Klymochko',
-  'julian nono': 'Julian Klymochko',
-  'julian namboothiri': 'Julian Klymochko',
+  'julien nono-wamden': 'Julien Nono-Womdim',
+  'julian nono-wamden': 'Julien Nono-Womdim',
+  'julien nono wamden': 'Julien Nono-Womdim',
+  'julian nono wamden': 'Julien Nono-Womdim',
+  'julien nono-womden': 'Julien Nono-Womdim',
+  'julian nono': 'Julien Nono-Womdim',
+  'julien nono': 'Julien Nono-Womdim',
+  'julian klymochko': 'Julian Klymochko',
+  'julien klymochko': 'Julian Klymochko',
 };
 
 /**

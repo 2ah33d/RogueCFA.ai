@@ -24,6 +24,16 @@ export function normalizeAnalystName(rawName) {
     .replace(/^(by|guest|analyst):?\s+/i, '')
     .replace(/\s+(Senior|Portfolio|Wealth|Advisor|Manager|Managing|Director|Vice|President|Chief|VP|CEO).*$/i, '')
     .trim();
+
+  /* Canonical Identity Resolution Step */
+  const lower = cleaned.toLowerCase();
+  if (lower.includes('nono-womdim') || lower.includes('nono-wamden') || lower.includes('nono wamden') || lower.includes('nono womdim')) {
+    return 'Julien Nono-Womdim';
+  }
+  if (lower.includes('klymochko')) {
+    return 'Julian Klymochko';
+  }
+
   return cleaned;
 }
 
