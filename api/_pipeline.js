@@ -306,8 +306,6 @@ async function fetchTimedText(videoId) {
 export async function fetchRssPodcastFallback(groqKey = '', timer) {
   const rssUrls = [
     'https://www.omnycontent.com/d/playlist/4809bc8a-e41a-405c-93da-a8cf011df2f4/fcfd42e4-d5c6-4b4a-8c62-ae32016f1b9a/4ecaf48c-23a4-4f5e-84b3-ae3201711923/podcast.rss',
-    'https://www.bnnbloomberg.ca/feed/podcast/market-call',
-    'https://www.bnnbloomberg.ca/investing/rss/',
   ];
 
   for (const url of rssUrls) {
