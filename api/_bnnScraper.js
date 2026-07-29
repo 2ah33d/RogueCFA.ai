@@ -188,7 +188,6 @@ export function parseBnnPastPicksArticle(html, sourceUrl, fallbackAnalystName = 
         source_article_url: sourceUrl,
         pick_publish_date: pickPublishDate,
         ticker: cleanTicker,
-        company_name: rawCompany || rawTicker,
         then_price: thenPrice,
         now_price: nowPrice,
         return_pct: isNaN(returnPct) ? 0 : returnPct,
