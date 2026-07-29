@@ -108,25 +108,39 @@ export default async function handler(req, res) {
     /* ══════════════════════════════════════════
        Fast path B: Check Supabase cache for today's digest
        — returns in < 1s if a previous run already completed
+       (Bypassed if user explicitly clicked 'Check Newer' with force: true)
        ══════════════════════════════════════════ */
+    const { force, bypassCache } = req.body || {};
     const todayStr = getLatestMarketCallDateStr();
 
-    try {
-      const { data: cached } = await supabase
-        .from('digest_jobs')
-        .select('id, status, result, error_message, video_id, video_title')
-        .eq('episode_date', todayStr)
-        .eq('status', 'complete')
-        .eq('is_debug', false)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    if (!force && !bypassCache) {
+      try {
+        const { data: cached } = await supabase
+          .from('digest_jobs')
+          .select('id, status, result, error_message, video_id, video_title')
+          .eq('episode_date', todayStr)
+          .eq('status', 'complete')
+          .eq('is_debug', false)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (cached && cached.result) {
-        return res.status(200).json(cached.result);
+        if (cached && cached.result) {
+          return res.status(200).json(cached.result);
+        }
+      } catch (cacheErr) {
+        console.warn('[marketcall-digest] Cache check failed:', cacheErr.message);
       }
-    } catch (cacheErr) {
-      console.warn('[marketcall-digest] Cache check failed:', cacheErr.message);
+    } else {
+      /* Force refresh: delete stale jobs for todayStr so pipeline runs fresh */
+      try {
+        await supabase
+          .from('digest_jobs')
+          .delete()
+          .eq('episode_date', todayStr);
+      } catch {
+        /* ignore */
+      }
     }
 
     /* ══════════════════════════════════════════

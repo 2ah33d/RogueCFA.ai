@@ -317,15 +317,24 @@ export async function fetchRssPodcastFallback(groqKey = '', timer) {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0)' },
         signal: AbortSignal.timeout(8000),
       });
-      timer?.end('RSS feed fetch');
-      if (!res.ok) continue;
-
       const xml = await res.text();
       const items = xml.match(/<item>([\s\S]*?)<\/item>/gi) || [];
 
       const isOmny = url.includes('omnycontent.com');
       for (const itemXml of items) {
         if (isOmny || itemXml.toLowerCase().includes('market call') || itemXml.toLowerCase().includes('marketcall')) {
+          /* Extract pubDate and title from RSS item */
+          const titleMatch = itemXml.match(/<title>([\s\S]*?)<\/title>/i);
+          const pubDateMatch = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/i);
+          const rssItemTitle = titleMatch ? decodeHTMLEntities(titleMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim()) : '';
+          let rssItemDate = '';
+          if (pubDateMatch && pubDateMatch[1]) {
+            const parsedD = new Date(pubDateMatch[1].trim());
+            if (!isNaN(parsedD.getTime())) {
+              rssItemDate = parsedD.toISOString().split('T')[0];
+            }
+          }
+
           /* If groqKey is present, attempt free Whisper audio transcription on the MP3 stream */
           if (groqKey && groqKey.startsWith('gsk_')) {
             const mp3Match = itemXml.match(/https?:\/\/[^"'\s<>]+\.mp3[^"'\s<>]*/i);
@@ -442,7 +451,7 @@ export async function fetchRssPodcastFallback(groqKey = '', timer) {
 
                 const combinedText = results.map(r => r.text).filter(Boolean).join('\n\n');
                 if (combinedText.length >= 200) {
-                  return { text: combinedText, groqDiagnostic: null };
+                  return { text: combinedText, rssItemDate, rssItemTitle, groqDiagnostic: null };
                 }
                 return { text: '', groqDiagnostic: 'Groq API returned an empty audio transcription payload.' };
               } catch (asrErr) {

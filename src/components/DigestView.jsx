@@ -51,7 +51,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     setError(null);
   };
 
-  const fetchDigest = useCallback(async () => {
+  const fetchDigest = useCallback(async (force = false) => {
     const youtubeKey = getYoutubeKey();
     const groqKey = getGroqKey();
     const { llmKey } = getKeys();
@@ -84,7 +84,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       const res = await fetch('/api/marketcall-digest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey }),
+        body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey, force, bypassCache: force }),
       });
 
       let data;
@@ -103,14 +103,11 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         setPollingElapsed(0);
         isPollingTrans = true;
 
-        /* Fire-and-forget: kick off the heavy processing endpoint.
-           We don't await this — the client polls /api/marketcall-status
-           independently. The process function runs inline for up to 300s
-           on the server, updating Supabase when done. */
+        /* Fire-and-forget: kick off the heavy processing endpoint. */
         fetch('/api/marketcall-process', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey }),
+          body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey, force, bypassCache: force }),
         }).catch(() => {
           /* Ignore — if this fails, the polling will detect 'not_found' or timeout */
         });
@@ -271,7 +268,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     stopPolling();
     setError(null);
     setDigest(null);
-    fetchDigest();
+    fetchDigest(true);
   }, [fetchDigest]);
 
   /* Try to get track record for the guest */
