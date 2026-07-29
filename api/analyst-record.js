@@ -2,11 +2,11 @@
    CENTRALIZED & AUDITABLE SCORING ENGINE CONFIGURATION
    ════════════════════════════════════════════════════════════════ */
 export const SCORING_CONFIG = {
-  version: '3.2.0-empirical-bayes',
-  ts: '2026-07-27',
-  priorSource: 'heuristic prior (k=4.5, mu_pop=50.0) — empirical population calibration pending full dataset ingestion',
+  version: '3.2.0-shrinkage-uncalibrated-prior',
+  ts: '2026-07-29',
+  priorSource: 'uncalibrated prior baseline (mu_pop=50.0, k=4.5) — empirical population calibration pending full dataset ingestion',
   weightsSource: 'hand-chosen baseline (40% win consistency / 60% risk-adjusted alpha return)',
-  populationMean: 50.0, // μ_pop prior baseline (50%)
+  populationMean: 50.0, // μ_pop uncalibrated prior baseline (50.0%)
   shrinkageK: 4.5,     // k shrinkage weight parameter
   tsxAnnualBenchmarkRate: 8.0,   // ~8.0% annual S&P/TSX Composite baseline return
   sp500AnnualBenchmarkRate: 10.0, // ~10.0% annual S&P 500 baseline return
@@ -14,6 +14,18 @@ export const SCORING_CONFIG = {
   hitRateWeight: 0.40, // 40% win consistency weight in raw score calculation (hand-chosen)
   alphaWeight: 0.60,   // 60% alpha return weight in raw score calculation (hand-chosen)
 };
+
+/**
+ * Ticker-to-Benchmark Routing Logic:
+ * Canadian tickers (.TO, .V, .CN, TSX) route to TSX annual rate (8.0%).
+ * US/Other tickers (.O, .N, NASDAQ, NYSE, or un-suffixed tickers like C, MRK, CLS, PIPR, FCX, HROW) route to S&P 500 annual rate (10.0%).
+ */
+export function getAnnualBenchmarkRate(ticker) {
+  if (!ticker || typeof ticker !== 'string') return SCORING_CONFIG.sp500AnnualBenchmarkRate;
+  const clean = ticker.trim().toUpperCase();
+  const isCanadian = clean.endsWith('.TO') || clean.endsWith('.V') || clean.endsWith('.CN') || clean.includes('TSX');
+  return isCanadian ? SCORING_CONFIG.tsxAnnualBenchmarkRate : SCORING_CONFIG.sp500AnnualBenchmarkRate;
+}
 
 export default async function handler(req, res) {
   /* ── CORS ── */
@@ -55,8 +67,10 @@ export default async function handler(req, res) {
 
     let activeRows = rows || [];
 
+    /* DESIGN CONSTRAINT: On-demand search is a supplementary intake path into Supabase table analyst_track_record.
+       Population calibration (mu_pop, k) MUST be derived from systematic background ingestion of the entire guest pool in Supabase,
+       never from an isolated on-demand search subset. */
     if (activeRows.length < 9) {
-      /* Dynamic On-Demand Scraper: Fetch additional BNN Bloomberg past picks articles to fill sample */
       try {
         const { searchBnnPastPicks, parseBnnPastPicksArticle } = await import('./_bnnScraper.js');
         const articles = await searchBnnPastPicks(cleanGuest, 10);
@@ -118,7 +132,7 @@ export default async function handler(req, res) {
       });
     }
 
-    /* ── Calculate Holding-Period Matched Benchmark Returns & Alpha ── */
+    /* ── Calculate Ground-Truth Directional Hit Rate & Benchmark Alpha ── */
     const nowMs = Date.now();
     const tickerClusters = new Map();
     const episodeDatesSet = new Set();
@@ -131,32 +145,32 @@ export default async function handler(req, res) {
       const reviewDateStr = pick.pick_publish_date || new Date().toISOString().split('T')[0];
       if (reviewDateStr) episodeDatesSet.add(reviewDateStr);
 
-      const isCanadian = pick.ticker.endsWith('.TO') || pick.ticker.endsWith('.V') || pick.ticker.endsWith('.CN');
-      const annualBenchmarkRate = isCanadian
-        ? SCORING_CONFIG.tsxAnnualBenchmarkRate
-        : SCORING_CONFIG.sp500AnnualBenchmarkRate;
+      const rawReturn = pick.total_return_pct ?? pick.return_pct ?? 0;
 
-      /* Calculate holding period in years from review date to now */
+      /* 1. H_raw: Pure price direction I(TotalReturn_i > 0) — NO benchmark involved.
+            Guarantees positive return rows (+X%) are ALWAYS classified as wins. */
+      const isPositiveReturn = rawReturn > 0;
+      if (isPositiveReturn) rawHitCount++;
+      totalReturnSum += rawReturn;
+
+      /* 2. Alpha_i: Benchmark-adjusted holding-period return.
+            Routes ticker to TSX (8%) or S&P 500 (10%) annual rate based on exchange. */
+      const annualBenchmarkRate = getAnnualBenchmarkRate(pick.ticker);
       const reviewMs = new Date(reviewDateStr).getTime();
       const validReviewMs = isNaN(reviewMs) ? nowMs : reviewMs;
       const holdingYears = Math.max(0.01, (nowMs - validReviewMs) / (365.25 * 86400 * 1000));
 
-      /* Period-matched benchmark return compounded over holding period */
       const periodBenchmarkReturn = Number(
         ((Math.pow(1 + annualBenchmarkRate / 100, holdingYears) - 1) * 100).toFixed(2)
       );
 
-      const rawReturn = pick.total_return_pct ?? pick.return_pct ?? 0;
       const rawAlpha = rawReturn - periodBenchmarkReturn;
       const winsorizedAlpha = Math.max(
         -SCORING_CONFIG.winsorizeAlphaLimit,
         Math.min(SCORING_CONFIG.winsorizeAlphaLimit, rawAlpha)
       );
       const isBeatBenchmark = winsorizedAlpha > 0;
-
-      if (isBeatBenchmark) rawHitCount++;
       totalAlphaSum += winsorizedAlpha;
-      totalReturnSum += rawReturn;
 
       /* Cluster by normalized ticker */
       const normTicker = pick.ticker.toUpperCase().replace(/\-(U|UN)$/i, '-U.TO');
@@ -175,8 +189,10 @@ export default async function handler(req, res) {
         totalReturnPct: pick.total_return_pct,
         reviewDate: reviewDateStr,
         holdingYears: Number(holdingYears.toFixed(2)),
+        benchmarkRateAnnual: annualBenchmarkRate,
         benchmarkReturn: periodBenchmarkReturn,
         benchmarkAlpha: Number(winsorizedAlpha.toFixed(2)),
+        isPositiveReturn,
         isBeatBenchmark,
       };
     });
@@ -185,15 +201,20 @@ export default async function handler(req, res) {
     const uniquePositionsCount = tickerClusters.size;
     const totalEpisodesCount = episodeDatesSet.size || 1;
 
-    /* ── Ground-Truth Primary Stats (Undecayed) ── */
+    /* ── Ground-Truth Primary Stats ── */
     const rawHitRate = nTotal > 0 ? Number((rawHitCount / nTotal).toFixed(2)) : 0;
     const avgAlpha = nTotal > 0 ? Number((totalAlphaSum / nTotal).toFixed(2)) : 0;
     const avgTotalReturn = nTotal > 0 ? Number((totalReturnSum / nTotal).toFixed(2)) : 0;
 
-    /* ── STRICT GENERALIZED GUARDRAIL ASSERTION FOR ALL ANALYSTS ── */
-    const expectedHitRate = nTotal > 0 ? Number((rawHitCount / nTotal).toFixed(2)) : 0;
+    /* ── STRICT GENERALIZED GUARDRAIL ASSERTION FOR ALL ANALYSTS ──
+       Validates rawHitRate against the actual sign of TotalReturn_i values as rendered in the Tracked Pick History data.
+       Ensures NO positive return row can ever register as a loss.
+    */
+    const tablePositiveHits = evaluatedPicks.filter((p) => (p.totalReturnPct ?? p.returnPct ?? 0) > 0).length;
+    const expectedHitRate = nTotal > 0 ? Number((tablePositiveHits / nTotal).toFixed(2)) : 0;
+
     if (Math.abs(rawHitRate - expectedHitRate) > 0.001) {
-      const errMsg = `[Scoring Engine Integrity Failure] Computed rawHitRate (${rawHitRate}) diverges from ground-truth raw table win ratio (${rawHitCount}/${nTotal} = ${expectedHitRate}).`;
+      const errMsg = `[Scoring Engine Integrity Failure] Computed rawHitRate (${rawHitRate}) diverges from source table positive-return count (${tablePositiveHits}/${nTotal} = ${expectedHitRate}).`;
       console.error(errMsg);
       throw new Error(errMsg);
     }
