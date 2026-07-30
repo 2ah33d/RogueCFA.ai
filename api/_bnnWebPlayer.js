@@ -57,12 +57,32 @@ export async function fetchBnnWebPlayerMedia(timer) {
     return await fetchBnnQuerylyMedia(timer);
   }
 
-  /* Try candidate video article URLs for today's media stream */
-  for (const artUrl of urlArray.slice(0, 5)) {
+  /* Collect media streams for all episode segments for today (Market Outlook, Top Picks, Past Picks) */
+  const segmentStreams = [];
+  let mainTitle = 'BNN Bloomberg MarketCall';
+  let targetEpisodeDate = '';
+
+  for (const artUrl of urlArray.slice(0, 10)) {
     const media = await extractMediaFromBnnArticle(artUrl, timer);
     if (media && media.streamUrl) {
-      return media;
+      if (!targetEpisodeDate) targetEpisodeDate = media.episodeDate;
+      if (media.episodeDate === targetEpisodeDate) {
+        segmentStreams.push(media.streamUrl);
+        if (!mainTitle || mainTitle === 'BNN Bloomberg MarketCall') {
+          mainTitle = media.videoTitle;
+        }
+      }
     }
+  }
+
+  if (segmentStreams.length > 0) {
+    return {
+      streamUrl: segmentStreams[0],
+      streamUrls: segmentStreams,
+      videoTitle: mainTitle,
+      episodeDate: targetEpisodeDate || new Date().toISOString().split('T')[0],
+      source: 'bnn_web_player',
+    };
   }
 
   return await fetchBnnQuerylyMedia(timer);
@@ -157,83 +177,93 @@ async function fetchBnnQuerylyMedia(timer) {
 /**
  * Download BNN Web Player audio/video media stream and transcribe via Groq Whisper AI.
  */
-export async function transcribeBnnWebMedia(streamUrl, groqKey, timer) {
+export async function transcribeBnnWebMedia(streamUrlInput, groqKey, timer) {
   if (!groqKey || !groqKey.startsWith('gsk_')) {
     return { text: '', error: 'Missing or invalid Groq API key' };
   }
 
-  try {
-    /* Check HEAD Content-Length: if media stream is < 100KB, it is a 1-frame Bell Media placeholder MP4 */
+  const urls = Array.isArray(streamUrlInput) ? streamUrlInput : [streamUrlInput];
+  const transcripts = [];
+
+  for (const streamUrl of urls) {
     try {
-      const headRes = await fetch(streamUrl, { method: 'HEAD', headers: BNN_BROWSER_HEADERS, signal: AbortSignal.timeout(5000) });
-      const sizeBytes = parseInt(headRes.headers.get('content-length') || '0', 10);
-      if (sizeBytes > 0 && sizeBytes < 100 * 1024) {
-        console.warn(`[bnnWebPlayer] Media stream ${streamUrl} is a 1-frame Bell Media placeholder (${sizeBytes} bytes). Skipping.`);
-        return { text: '', error: 'Media stream is an 8KB Bell Media placeholder clip undergoing CDN transcoding.' };
+      /* Check HEAD Content-Length: if media stream is < 100KB, it is a 1-frame Bell Media placeholder MP4 */
+      try {
+        const headRes = await fetch(streamUrl, { method: 'HEAD', headers: BNN_BROWSER_HEADERS, signal: AbortSignal.timeout(5000) });
+        const sizeBytes = parseInt(headRes.headers.get('content-length') || '0', 10);
+        if (sizeBytes > 0 && sizeBytes < 100 * 1024) {
+          console.warn(`[bnnWebPlayer] Media stream ${streamUrl} is a 1-frame Bell Media placeholder (${sizeBytes} bytes). Skipping.`);
+          continue;
+        }
+      } catch {
+        /* ignore head check error */
       }
-    } catch {
-      /* ignore head check error */
-    }
 
-    timer?.start('BNN media stream download');
-    const res = await fetch(streamUrl, {
-      headers: BNN_BROWSER_HEADERS,
-      redirect: 'follow',
-      signal: AbortSignal.timeout(25000),
-    });
-
-    if (!res.ok) {
-      timer?.end('BNN media stream download');
-      return { text: '', error: `BNN media CDN returned HTTP ${res.status}` };
-    }
-
-    const audioBuffer = await res.arrayBuffer();
-    timer?.end('BNN media stream download');
-    console.log(`[TIMING] BNN Web Media stream downloaded: ${(audioBuffer.byteLength / 1024 / 1024).toFixed(1)}MB`);
-
-    /* Split audio/video buffer into 20MB slices to stay within Groq's 25MB payload limit */
-    const CHUNK_LIMIT = 20 * 1024 * 1024;
-    const chunks = [];
-    let offset = 0;
-    while (offset < audioBuffer.byteLength) {
-      const end = Math.min(offset + CHUNK_LIMIT, audioBuffer.byteLength);
-      chunks.push(audioBuffer.slice(offset, end));
-      offset = end;
-    }
-
-    const transcribeChunk = async (chunkBuf, idx) => {
-      const formData = new FormData();
-      const ext = streamUrl.toLowerCase().includes('.mp4') ? 'mp4' : 'audio.mp3';
-      formData.append('file', new Blob([chunkBuf]), `bnn_web_part${idx}.${ext}`);
-      formData.append('model', 'whisper-large-v3-turbo');
-      formData.append('response_format', 'json');
-
-      const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${groqKey}` },
-        body: formData,
-        signal: AbortSignal.timeout(45000),
+      timer?.start('BNN media stream download');
+      const res = await fetch(streamUrl, {
+        headers: BNN_BROWSER_HEADERS,
+        redirect: 'follow',
+        signal: AbortSignal.timeout(25000),
       });
 
-      if (groqRes.ok) {
-        const data = await groqRes.json().catch(() => null);
-        return { text: data?.text || '', error: null };
+      if (!res.ok) {
+        timer?.end('BNN media stream download');
+        continue;
       }
-      const errData = await groqRes.json().catch(() => ({}));
-      return { text: '', error: `Groq error (${groqRes.status}): ${errData.error?.message || groqRes.statusText}` };
-    };
 
-    timer?.start('Groq Whisper BNN web media transcription');
-    const results = await Promise.all(chunks.map((buf, i) => transcribeChunk(buf, i + 1)));
-    timer?.end('Groq Whisper BNN web media transcription');
+      const audioBuffer = await res.arrayBuffer();
+      timer?.end('BNN media stream download');
+      console.log(`[TIMING] BNN Web Media stream downloaded: ${(audioBuffer.byteLength / 1024 / 1024).toFixed(1)}MB`);
 
-    const combinedText = results.map((r) => r.text).filter(Boolean).join('\n\n');
-    if (combinedText.length >= 200) {
-      return { text: combinedText, error: null };
+      /* Split audio/video buffer into 20MB slices to stay within Groq's 25MB payload limit */
+      const CHUNK_LIMIT = 20 * 1024 * 1024;
+      const chunks = [];
+      let offset = 0;
+      while (offset < audioBuffer.byteLength) {
+        const end = Math.min(offset + CHUNK_LIMIT, audioBuffer.byteLength);
+        chunks.push(audioBuffer.slice(offset, end));
+        offset = end;
+      }
+
+      const transcribeChunk = async (chunkBuf, idx) => {
+        const formData = new FormData();
+        const ext = streamUrl.toLowerCase().includes('.mp4') ? 'mp4' : 'audio.mp3';
+        formData.append('file', new Blob([chunkBuf]), `bnn_web_part${idx}.${ext}`);
+        formData.append('model', 'whisper-large-v3-turbo');
+        formData.append('response_format', 'json');
+
+        const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${groqKey}` },
+          body: formData,
+          signal: AbortSignal.timeout(45000),
+        });
+
+        if (groqRes.ok) {
+          const data = await groqRes.json().catch(() => null);
+          return { text: data?.text || '', error: null };
+        }
+        const errData = await groqRes.json().catch(() => ({}));
+        return { text: '', error: `Groq error (${groqRes.status}): ${errData.error?.message || groqRes.statusText}` };
+      };
+
+      timer?.start('Groq Whisper BNN web media transcription');
+      const results = await Promise.all(chunks.map((buf, i) => transcribeChunk(buf, i + 1)));
+      timer?.end('Groq Whisper BNN web media transcription');
+
+      const segmentText = results.map((r) => r.text).filter(Boolean).join(' ');
+      if (segmentText.trim()) {
+        transcripts.push(segmentText.trim());
+      }
+    } catch (err) {
+      console.warn(`[bnnWebPlayer] Failed segment stream ${streamUrl}:`, err.message);
     }
-
-    return { text: '', error: 'Groq Whisper returned an empty transcription for BNN web media stream.' };
-  } catch (err) {
-    return { text: '', error: `BNN Web Media transcription exception: ${err.message}` };
   }
+
+  const combinedText = transcripts.join('\n\n');
+  if (combinedText.length >= 200) {
+    return { text: combinedText, error: null };
+  }
+
+  return { text: '', error: 'Groq Whisper returned an empty transcription for BNN web media streams.' };
 }
