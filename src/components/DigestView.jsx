@@ -513,6 +513,10 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   }
 
   const handleSelectHistoricalDigest = (historicalItem) => {
+    if (historicalItem?.isTodayTrigger) {
+      handleCheckNewer();
+      return;
+    }
     if (historicalItem && historicalItem.digest) {
       setDigest(historicalItem.digest);
       setVideoInfo({

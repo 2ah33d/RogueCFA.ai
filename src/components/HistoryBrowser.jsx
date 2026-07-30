@@ -66,7 +66,23 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
     return null;
   }
 
-  const currentSelection = history.find((h) => h.episodeDate === selectedDate) || history[0];
+  const todayStr = new Date().toISOString().split('T')[0];
+  const historyList = [...history];
+
+  /* If todayStr is not in history list, prepend a placeholder trigger item */
+  if (!historyList.some((h) => h.episodeDate === selectedDate || h.episodeDate === todayStr)) {
+    historyList.unshift({
+      id: `today-trigger-${todayStr}`,
+      episodeDate: todayStr,
+      isTodayTrigger: true,
+      digest: {
+        guest: "Check / Generate Today's Episode",
+        picks: [],
+      },
+    });
+  }
+
+  const currentSelection = historyList.find((h) => h.episodeDate === selectedDate) || historyList[0];
   const displayDate = selectedDate || (currentSelection ? currentSelection.episodeDate : 'Latest Episode');
 
   return (
@@ -103,7 +119,7 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
             <div className="px-3 py-2 text-[10px] uppercase font-semibold text-dim tracking-wider">
               Select Episode Date (Last 30 Days)
             </div>
-            {history.map((item, idx) => {
+            {historyList.map((item, idx) => {
               const isSelected = item.episodeDate === selectedDate || (!selectedDate && idx === 0);
               const guestName = item.digest?.guest || 'MarketCall Analyst';
               const picksList = Array.isArray(item.digest?.picks)
