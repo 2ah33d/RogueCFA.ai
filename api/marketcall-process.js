@@ -156,20 +156,16 @@ export default async function handler(req, res) {
         timer.start('YouTube audio pipeline');
         const ytMedia = await fetchYoutubeAudioMedia(timer);
         if (ytMedia && ytMedia.streamUrl) {
-          const isDateMatch = !ytMedia.episodeDate || ytMedia.episodeDate === todayStr;
-          if (isDateMatch) {
-            const ytTrans = await transcribeYoutubeAudio(ytMedia.streamUrl, groqKey, timer);
-            if (ytTrans && ytTrans.text && ytTrans.text.length >= 200) {
-              selectedVideo = {
-                videoId: ytMedia.videoId || '',
-                videoTitle: ytMedia.videoTitle || 'BNN Bloomberg MarketCall (YouTube)',
-                episodeDate: todayStr,
-                source: 'youtube_ytdlp',
-              };
-              cleanedTranscript = cleanRawTranscript(ytTrans.text);
-            }
-          } else {
-            console.warn(`[marketcall-process] YouTube video date (${ytMedia.episodeDate}) does not match today (${todayStr}). Skipping.`);
+          const episodeDate = ytMedia.episodeDate || todayStr;
+          const ytTrans = await transcribeYoutubeAudio(ytMedia.streamUrl, groqKey, timer);
+          if (ytTrans && ytTrans.text && ytTrans.text.length >= 200) {
+            selectedVideo = {
+              videoId: ytMedia.videoId || '',
+              videoTitle: ytMedia.videoTitle || 'BNN Bloomberg MarketCall (YouTube)',
+              episodeDate: episodeDate,
+              source: 'youtube_ytdlp',
+            };
+            cleanedTranscript = cleanRawTranscript(ytTrans.text);
           }
         }
         timer.end('YouTube audio pipeline');

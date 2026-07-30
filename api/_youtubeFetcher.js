@@ -79,7 +79,7 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
 
     if (uniqueIds.length === 0) return [];
 
-    /* For each candidate, fetch the watch page and check if title contains "Market Call" + today's date */
+    /* For each candidate, fetch the watch page and check if title contains "Market Call" */
     const results = [];
     const dateFragments = buildDateFragments(todayStr);
 
@@ -96,11 +96,16 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
         const rawTitle = titleMatch ? decodeHTMLTitle(titleMatch[1].trim()) : '';
         const titleLower = rawTitle.toLowerCase();
 
-        if (titleLower.includes('market call') && dateFragments.some((frag) => titleLower.includes(frag))) {
+        if (titleLower.includes('market call') || titleLower.includes('marketcall')) {
+          const isTodayMatch = dateFragments.some((frag) => titleLower.includes(frag));
+          const extractedDate = extractDateFromTitle(rawTitle);
+          const publishDate = isTodayMatch ? todayStr : extractedDate || todayStr;
+
           results.push({
             videoId: vid,
             title: rawTitle.replace(/ - YouTube$/, ''),
-            publishDate: todayStr,
+            publishDate,
+            isTodayMatch,
           });
         }
       } catch {
@@ -108,10 +113,18 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
       }
     }
 
-    if (results.length > 0) {
-      console.log(`[youtubeFetcher] Channel scrape found ${results.length} MarketCall video(s) for ${todayStr}`);
+    /* Filter first for today's date matches */
+    const todayResults = results.filter((r) => r.isTodayMatch);
+    if (todayResults.length > 0) {
+      console.log(`[youtubeFetcher] Channel scrape found ${todayResults.length} MarketCall video(s) for ${todayStr}`);
+      return todayResults;
     }
-    return results;
+
+    /* Fallback: Return most recent MarketCall video found on YouTube */
+    if (results.length > 0) {
+      console.log(`[youtubeFetcher] Today's video not published yet. Falling back to most recent MarketCall video: ${results[0].title} (${results[0].publishDate})`);
+      return [results[0]];
+    }
   } catch (err) {
     console.warn('[youtubeFetcher] YouTube channel page scrape failed:', err.message);
   }
@@ -204,7 +217,7 @@ export async function fetchYoutubeAudioMedia(timer) {
       return {
         streamUrl: audio.streamUrl,
         videoTitle: video.title,
-        episodeDate: todayStr,
+        episodeDate: video.publishDate || todayStr,
         source: 'youtube_ytdlp',
         videoId: video.videoId,
       };
@@ -330,4 +343,26 @@ function decodeHTMLTitle(str) {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&#x27;/g, "'");
+}
+
+/**
+ * Extract YYYY-MM-DD date string from video title (e.g., "July 29, 2026" → "2026-07-29").
+ */
+function extractDateFromTitle(title) {
+  if (!title) return null;
+  const monthMap = {
+    january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+    july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
+    jan: '01', feb: '02', mar: '03', apr: '04', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  };
+
+  const match = title.match(/(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\s+([0-9]{1,2}),?\s+([0-9]{4})/i);
+  if (match) {
+    const mStr = match[1].toLowerCase();
+    const month = monthMap[mStr] || '01';
+    const day = match[2].padStart(2, '0');
+    const year = match[3];
+    return `${year}-${month}-${day}`;
+  }
+  return null;
 }
