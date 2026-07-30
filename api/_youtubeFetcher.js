@@ -145,7 +145,7 @@ export async function fetchYoutubeAudio(videoId, timer) {
 
   if (!workerUrl) {
     console.warn('[youtubeFetcher] YT_DLP_WORKER_URL environment variable is not configured.');
-    return null;
+    return { error: 'YT_DLP_WORKER_URL environment variable is missing in Vercel Dashboard. Please set YT_DLP_WORKER_URL under Vercel Settings -> Environment Variables to your Modal app URL.' };
   }
 
   try {
@@ -210,6 +210,7 @@ export async function fetchYoutubeAudioMedia(timer) {
   }
 
   /* Step 2: Try each video until we get an audio stream from the yt-dlp worker */
+  let lastError = null;
   for (const video of videos) {
     const audio = await fetchYoutubeAudio(video.videoId, timer);
     if (audio && audio.streamUrl) {
@@ -221,11 +222,17 @@ export async function fetchYoutubeAudioMedia(timer) {
         source: 'youtube_ytdlp',
         videoId: video.videoId,
       };
+    } else if (audio && audio.error) {
+      lastError = audio.error;
     }
   }
 
   timer?.end('YouTube audio pipeline');
-  return null;
+  return {
+    error: lastError || 'YT_DLP_WORKER_URL environment variable is missing in Vercel Dashboard',
+    videoTitle: videos[0]?.title || '',
+    episodeDate: videos[0]?.publishDate || todayStr,
+  };
 }
 
 /**

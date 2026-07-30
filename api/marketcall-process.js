@@ -167,6 +167,8 @@ export default async function handler(req, res) {
             };
             cleanedTranscript = cleanRawTranscript(ytTrans.text);
           }
+        } else if (ytMedia && ytMedia.error) {
+          groqDiagnosticMsg = ` [DIAGNOSTIC: ${ytMedia.error}]`;
         }
         timer.end('YouTube audio pipeline');
       } catch (ytErr) {
