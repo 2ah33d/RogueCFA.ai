@@ -313,19 +313,30 @@ export default async function handler(req, res) {
           const { normalizeAnalystName, parseBnnPastPicksArticle } = await import('./_bnnScraper.js');
           const cleanGuest = normalizeAnalystName(digest.guest);
 
-          /* 1. Passive Capture: check if today's transcript contains a past picks block */
-          if (cleanedTranscript && /PAST\s+PICKS:/i.test(cleanedTranscript)) {
-            const rows = parseBnnPastPicksArticle(cleanedTranscript, `https://www.bnnbloomberg.ca/markets/`, cleanGuest);
-            if (rows && rows.length > 0) {
-              await supabase.from('analyst_track_record').upsert(rows, {
+          /* 1. Upsert today's top picks from digest into analyst_track_record */
+          const picksList = Array.isArray(digest.picks) ? digest.picks : Array.isArray(digest.top_picks) ? digest.top_picks : [];
+          if (picksList.length > 0) {
+            const digestRows = picksList.map((p) => ({
+              analyst_name: cleanGuest,
+              ticker: (p.ticker || '').trim().toUpperCase(),
+              company_name: p.companyName || p.company_name || p.name || p.ticker,
+              pick_publish_date: todayStr,
+              then_price: typeof p.thenPrice === 'number' ? p.thenPrice : typeof p.price === 'number' ? p.price : 100,
+              now_price: typeof p.nowPrice === 'number' ? p.nowPrice : typeof p.price === 'number' ? p.price : 100,
+              total_return_pct: typeof p.returnPct === 'number' ? p.returnPct : 0,
+              source_article_url: `https://www.bnnbloomberg.ca/video/shows/market-call/`,
+            })).filter((r) => r.ticker && r.analyst_name);
+
+            if (digestRows.length > 0) {
+              await supabase.from('analyst_track_record').upsert(digestRows, {
                 onConflict: 'analyst_name, ticker, pick_publish_date',
                 ignoreDuplicates: true,
               });
-              console.log(`[marketcall-process] Passive capture inserted ${rows.length} rows for ${cleanGuest}`);
+              console.log(`[marketcall-process] Direct digest capture inserted ${digestRows.length} rows for ${cleanGuest}`);
             }
           }
 
-          /* 2. Cold-Start Capture: Check if analyst has 0 existing track record rows */
+          /* 2. Cold-Start Capture: Check if analyst has < 5 existing track record rows */
           const { count: existingCount } = await supabase
             .from('analyst_track_record')
             .select('id', { count: 'exact', head: true })

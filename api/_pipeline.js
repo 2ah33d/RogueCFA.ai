@@ -7,11 +7,19 @@
  * MarketCall only airs Mon-Fri. If invoked on Sat/Sun, resolves to Friday.
  */
 export function getLatestMarketCallDateStr(d = new Date()) {
-  const dateObj = new Date(d);
-  const day = dateObj.getUTCDay();
-  if (day === 6) { // Saturday -> Friday
+  /* Enforce North American Pacific/Eastern timezone to prevent UTC server clock overflow after 5pm local time */
+  const options = { timeZone: 'America/Vancouver', year: 'numeric', month: '2-digit', day: '2-digit' };
+  const formatter = new Intl.DateTimeFormat('en-CA', options);
+  const parts = formatter.format(d).split('-'); // YYYY-MM-DD
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+
+  const dateObj = new Date(Date.UTC(year, month - 1, day));
+  const dayOfWeek = dateObj.getUTCDay();
+  if (dayOfWeek === 6) { // Saturday -> Friday
     dateObj.setUTCDate(dateObj.getUTCDate() - 1);
-  } else if (day === 0) { // Sunday -> Friday
+  } else if (dayOfWeek === 0) { // Sunday -> Friday
     dateObj.setUTCDate(dateObj.getUTCDate() - 2);
   }
   return dateObj.toISOString().split('T')[0];
