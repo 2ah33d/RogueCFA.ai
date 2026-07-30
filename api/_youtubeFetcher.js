@@ -39,18 +39,29 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
         const items = (data.items || [])
           .filter((item) => {
             const title = (item.snippet?.title || '').toLowerCase();
-            const publishDate = (item.snippet?.publishedAt || '').split('T')[0];
-            return title.includes('market call') && publishDate === todayStr;
+            return title.includes('market call') || title.includes('marketcall');
           })
-          .map((item) => ({
-            videoId: item.id?.videoId || '',
-            title: item.snippet?.title || '',
-            publishDate: (item.snippet?.publishedAt || '').split('T')[0],
-          }));
+          .map((item) => {
+            const rawTitle = item.snippet?.title || '';
+            const pubDate = (item.snippet?.publishedAt || '').split('T')[0];
+            const extractedDate = extractDateFromTitle(rawTitle);
+            return {
+              videoId: item.id?.videoId || '',
+              title: rawTitle,
+              publishDate: extractedDate || pubDate || todayStr,
+              isTodayMatch: pubDate === todayStr,
+            };
+          });
+
+        const todayItems = items.filter((i) => i.isTodayMatch);
+        if (todayItems.length > 0) {
+          console.log(`[youtubeFetcher] YouTube API found ${todayItems.length} MarketCall video(s) for ${todayStr}`);
+          return todayItems;
+        }
 
         if (items.length > 0) {
-          console.log(`[youtubeFetcher] YouTube API found ${items.length} MarketCall video(s) for ${todayStr}`);
-          return items;
+          console.log(`[youtubeFetcher] YouTube API today video not found. Falling back to most recent: ${items[0].title} (${items[0].publishDate})`);
+          return [items[0]];
         }
       }
     } catch (err) {
@@ -79,6 +90,8 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
 
     if (uniqueIds.length === 0) return [];
 
+    const dateFragments = buildDateFragments(todayStr);
+
     /* Inspect candidate videos in parallel for instant sub-second response */
     const inspectVideo = async (vid) => {
       try {
@@ -105,13 +118,14 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
             isTodayMatch,
           };
         }
-      } catch {
+      } catch (e) {
+        console.error('inspectVideo error:', e.message);
         return null;
       }
       return null;
     };
 
-    const inspected = await Promise.all(uniqueIds.slice(0, 15).map(inspectVideo));
+    const inspected = await Promise.all(uniqueIds.slice(0, 50).map(inspectVideo));
     const results = inspected.filter(Boolean);
 
     /* Filter first for today's date matches */
