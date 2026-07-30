@@ -149,8 +149,31 @@ export default async function handler(req, res) {
       candidateVideos = await findRecentMarketCallVideos(youtubeKey, timer);
     }
 
-    /* ── Step 2: Priority 1 — Groq Whisper MP3 transcription ── */
+    /* ── Step 2: Priority 1 — BNN Web Video Player + Groq Whisper ── */
     if (groqKey && groqKey.startsWith('gsk_')) {
+      try {
+        timer.start('BNN Web Player pipeline');
+        const webMedia = await fetchBnnWebPlayerMedia(timer);
+        if (webMedia && webMedia.streamUrl) {
+          const webTrans = await transcribeBnnWebMedia(webMedia.streamUrl, groqKey, timer);
+          if (webTrans && webTrans.text && webTrans.text.length >= 200) {
+            selectedVideo = {
+              videoId: '',
+              videoTitle: webMedia.videoTitle || 'BNN Bloomberg MarketCall (Web Video Player)',
+              episodeDate: webMedia.episodeDate || todayStr,
+              source: 'bnn_web_player',
+            };
+            cleanedTranscript = cleanRawTranscript(webTrans.text);
+          }
+        }
+        timer.end('BNN Web Player pipeline');
+      } catch (webErr) {
+        console.warn('[marketcall-process] BNN Web Player pipeline warning:', webErr.message);
+      }
+    }
+
+    /* ── Step 3: Priority 2 — Groq Whisper MP3 transcription ── */
+    if ((!selectedVideo || !cleanedTranscript) && groqKey && groqKey.startsWith('gsk_')) {
       timer.start('Groq Whisper pipeline');
       const rssResult = await fetchRssPodcastFallback(groqKey, timer);
       timer.end('Groq Whisper pipeline');
