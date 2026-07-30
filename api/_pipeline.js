@@ -83,6 +83,8 @@ export function decodeHTMLEntities(str) {
    YouTube video discovery
    ════════════════════════════════════════════════════════════════ */
 
+const BNN_CHANNEL_ID = 'UC5aNPmKYwbudeNngDMTY3lw';
+
 const YOUTUBE_BROWSER_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0; +https://github.com/2ah33d/RogueCFA.ai)',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',

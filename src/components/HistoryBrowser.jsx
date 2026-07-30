@@ -62,12 +62,8 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
     );
   }
 
-  if (error || history.length === 0) {
-    return null;
-  }
-
   const todayStr = new Date().toISOString().split('T')[0];
-  const historyList = [...history];
+  const historyList = [...(history || [])];
 
   /* If todayStr is not in history list, prepend a placeholder trigger item */
   if (!historyList.some((h) => h.episodeDate === selectedDate || h.episodeDate === todayStr)) {
