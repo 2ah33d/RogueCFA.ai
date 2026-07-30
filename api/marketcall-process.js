@@ -154,28 +154,18 @@ export default async function handler(req, res) {
       try {
         timer.start('BNN Web Player pipeline');
         const webMedia = await fetchBnnWebPlayerMedia(timer);
-        if (webMedia) {
+        if (webMedia && webMedia.streamUrl) {
           const isDateMatch = !webMedia.episodeDate || webMedia.episodeDate === todayStr;
           if (isDateMatch) {
-            if (webMedia.streamUrl) {
-              const webTrans = await transcribeBnnWebMedia(webMedia.streamUrl, groqKey, timer);
-              if (webTrans && webTrans.text && webTrans.text.length >= 200) {
-                selectedVideo = {
-                  videoId: '',
-                  videoTitle: webMedia.videoTitle || 'BNN Bloomberg MarketCall (Web Video Player)',
-                  episodeDate: todayStr,
-                  source: 'bnn_web_player',
-                };
-                cleanedTranscript = cleanRawTranscript(webTrans.text);
-              }
-            } else if (webMedia.articleText && webMedia.articleText.length >= 200) {
+            const webTrans = await transcribeBnnWebMedia(webMedia.streamUrl, groqKey, timer);
+            if (webTrans && webTrans.text && webTrans.text.length >= 200) {
               selectedVideo = {
                 videoId: '',
-                videoTitle: webMedia.videoTitle || 'BNN Bloomberg MarketCall (Top Picks Article)',
+                videoTitle: webMedia.videoTitle || 'BNN Bloomberg MarketCall (Web Video Player)',
                 episodeDate: todayStr,
-                source: 'bnn_article_text',
+                source: 'bnn_web_player',
               };
-              cleanedTranscript = cleanRawTranscript(webMedia.articleText);
+              cleanedTranscript = cleanRawTranscript(webTrans.text);
             }
           } else {
             console.warn(`[marketcall-process] BNN Web Player video date (${webMedia.episodeDate}) does not match today (${todayStr}). Skipping outdated web video.`);

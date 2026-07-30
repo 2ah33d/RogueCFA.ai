@@ -57,10 +57,10 @@ export async function fetchBnnWebPlayerMedia(timer) {
     return await fetchBnnQuerylyMedia(timer);
   }
 
-  /* Try candidate video article URLs for today's media stream or written article text */
+  /* Try candidate video article URLs for today's media stream */
   for (const artUrl of urlArray.slice(0, 5)) {
     const media = await extractMediaFromBnnArticle(artUrl, timer);
-    if (media && (media.streamUrl || media.articleText)) {
+    if (media && media.streamUrl) {
       return media;
     }
   }
@@ -114,26 +114,6 @@ async function extractMediaFromBnnArticle(artUrl, timer) {
         episodeDate,
         source: 'bnn_web_player',
       };
-    }
-
-    /* Fallback: If video stream is still undergoing transcode (Placeholder.mp4), extract BNN written article text */
-    const articleBodyMatch = html.match(/"articleBody":\s*"([\s\S]*?)"/i);
-    const textSnippetMatch = html.match(/Top Picks from[\s\S]{300,4000}/i);
-    const bodyText = articleBodyMatch ? articleBodyMatch[1] : textSnippetMatch ? textSnippetMatch[0] : '';
-
-    if (bodyText) {
-      const cleanText = decodeHTMLEntities(
-        bodyText.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
-      );
-      if (cleanText.length >= 300) {
-        console.log(`[bnnWebPlayer] Extracted BNN written article text (${cleanText.length} chars) for ${episodeDate}`);
-        return {
-          articleText: cleanText,
-          videoTitle: decodeHTMLEntities(videoTitle),
-          episodeDate,
-          source: 'bnn_article_text',
-        };
-      }
     }
   } catch (err) {
     console.warn(`[bnnWebPlayer] Failed to parse article ${artUrl}:`, err.message);
