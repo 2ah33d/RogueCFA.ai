@@ -5,7 +5,7 @@
  * Zero datacenter IP blocks, zero YouTube decipher ciphers, zero Vercel timeouts.
  */
 
-import { decodeHTMLEntities } from './_pipeline.js';
+import { decodeHTMLEntities, getLatestMarketCallDateStr } from './_pipeline.js';
 
 const BNN_BROWSER_HEADERS = {
   'User-Agent':
@@ -13,6 +13,27 @@ const BNN_BROWSER_HEADERS = {
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9',
 };
+
+/**
+ * Construct the direct BNN Bloomberg full 45-minute episode article URL for a given date.
+ */
+function buildFullEpisodeUrlForDate(dateStr) {
+  if (!dateStr || !dateStr.includes('-')) return null;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return null;
+  const [year, month, day] = parts;
+  const d = new Date(Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10)));
+  if (isNaN(d.getTime())) return null;
+
+  const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+
+  const weekdayName = weekdays[d.getUTCDay()];
+  const monthName = months[d.getUTCMonth()];
+
+  const slug = `full-episode-market-call-for-${weekdayName}-${monthName}-${parseInt(day, 10)}-${year}`;
+  return `https://www.bnnbloomberg.ca/video/shows/market-call/${year}/${month}/${day}/${slug}/`;
+}
 
 /**
  * Fetch BNN Bloomberg's latest MarketCall video article page and extract direct CloudFront MP4/m3u8 media stream URL.
@@ -27,6 +48,13 @@ export async function fetchBnnWebPlayerMedia(timer) {
 
   const candidateUrls = new Set();
 
+  /* Inject constructed direct 45-minute full broadcast episode URL for today */
+  const todayStr = getLatestMarketCallDateStr();
+  const directFullEp = buildFullEpisodeUrlForDate(todayStr);
+  if (directFullEp) {
+    candidateUrls.add(directFullEp);
+  }
+
   for (const pageUrl of sectionUrls) {
     try {
       const res = await fetch(pageUrl, {
@@ -37,7 +65,7 @@ export async function fetchBnnWebPlayerMedia(timer) {
       if (res.ok) {
         const html = await res.text();
         const linkMatches = Array.from(
-          html.matchAll(/href=["'](\/(?:video\/shows\/market-call|markets)\/[0-9]{4}\/[0-9]{2}\/[0-9]{2}\/[^"']+?)["']/gi)
+          html.matchAll(/href=["'](\/video\/[^"']*?[0-9]{4}\/[0-9]{2}\/[0-9]{2}\/[^"']+?)["']/gi)
         ).map((m) => m[1]);
 
         for (const link of linkMatches) {
@@ -56,6 +84,15 @@ export async function fetchBnnWebPlayerMedia(timer) {
   if (urlArray.length === 0) {
     return await fetchBnnQuerylyMedia(timer);
   }
+
+  /* Prioritize full 45-minute broadcast episode video URLs first */
+  urlArray.sort((a, b) => {
+    const aIsFull = a.toLowerCase().includes('full-episode') || a.toLowerCase().includes('full_episode') || a.toLowerCase().includes('full-show');
+    const bIsFull = b.toLowerCase().includes('full-episode') || b.toLowerCase().includes('full_episode') || b.toLowerCase().includes('full-show');
+    if (aIsFull && !bIsFull) return -1;
+    if (!aIsFull && bIsFull) return 1;
+    return 0;
+  });
 
   /* Collect media streams for all episode segments for today (Market Outlook, Top Picks, Past Picks) */
   const segmentStreams = [];
@@ -121,11 +158,7 @@ async function extractMediaFromBnnArticle(artUrl, timer) {
 
     /* Extract CloudFront MP4/m3u8 media stream URL from Fusion globalContent JSON or HTML */
     const mediaMatches = html.match(/https?:\/\/[^"'\s<>]+\.(?:mp4|m3u8|m4a|mp3)[^"'\s>]*/gi) || [];
-
-    /* Strictly ignore temporary promo placeholder clips (Placeholder.mp4) */
-    const validStream = mediaMatches.find(
-      (u) => !u.toLowerCase().includes('placeholder') && !u.toLowerCase().includes('promo') && !u.toLowerCase().includes('thumb')
-    );
+    const validStream = mediaMatches.find((u) => !u.toLowerCase().includes('thumb')) || mediaMatches[0];
 
     if (validStream) {
       return {
