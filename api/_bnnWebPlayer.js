@@ -102,8 +102,10 @@ async function extractMediaFromBnnArticle(artUrl, timer) {
     /* Extract CloudFront MP4/m3u8 media stream URL from Fusion globalContent JSON or HTML */
     const mediaMatches = html.match(/https?:\/\/[^"'\s<>]+\.(?:mp4|m3u8|m4a|mp3)[^"'\s>]*/gi) || [];
 
-    /* Prefer non-placeholder MP4 or m3u8 stream */
-    const validStream = mediaMatches.find((u) => !u.toLowerCase().includes('placeholder')) || mediaMatches[0];
+    /* Strictly ignore temporary promo placeholder clips (Placeholder.mp4) */
+    const validStream = mediaMatches.find(
+      (u) => !u.toLowerCase().includes('placeholder') && !u.toLowerCase().includes('promo') && !u.toLowerCase().includes('thumb')
+    );
 
     if (validStream) {
       return {

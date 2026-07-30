@@ -336,14 +336,14 @@ export default async function handler(req, res) {
             }
           }
 
-          /* 2. Cold-Start Capture: Check if analyst has < 5 existing track record rows */
+          /* 2. Cold-Start Capture: Check if analyst has < 10 existing track record rows */
           const { count: existingCount } = await supabase
             .from('analyst_track_record')
             .select('id', { count: 'exact', head: true })
             .ilike('analyst_name', `%${cleanGuest}%`);
 
-          if (!existingCount || existingCount === 0) {
-            console.log(`[marketcall-process] Cold-start triggered for analyst "${cleanGuest}"`);
+          if (!existingCount || existingCount < 10) {
+            console.log(`[marketcall-process] Cold-start triggered for analyst "${cleanGuest}" (count: ${existingCount || 0})`);
             const protocol = req.headers['x-forwarded-proto'] || 'http';
             const host = req.headers.host || 'localhost:3000';
             const coldstartUrl = `${protocol}://${host}/api/analyst-coldstart`;
