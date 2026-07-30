@@ -208,18 +208,30 @@ export default function App() {
                       backdrop-blur-md sticky top-0 z-30 shadow-antigravity"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-            <div
-              className="flex items-center gap-3 cursor-pointer select-none group"
-              onClick={() => setActiveTab('landing')}
-            >
-              <img
-                src="/logo.png"
-                alt="RogueCFA Logo"
-                className="w-8 h-8 object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"
-              />
-              <span className="text-lg font-bold tracking-tight text-prime">
-                RogueCFA
-              </span>
+            <div className="flex items-center gap-3">
+              <div
+                className="flex items-center gap-2.5 cursor-pointer select-none group"
+                onClick={() => setActiveTab('landing')}
+              >
+                <img
+                  src="/logo.png"
+                  alt="RogueCFA Logo"
+                  className="w-8 h-8 object-contain rounded-lg group-hover:scale-105 transition-transform duration-300"
+                />
+                <span className="text-lg font-bold tracking-tight text-prime">
+                  RogueCFA
+                </span>
+              </div>
+              <a
+                href={`https://github.com/2ah33d/RogueCFA.ai/commit/${typeof __COMMIT_SHA__ !== 'undefined' ? __COMMIT_SHA__ : 'dev'}`}
+                target="_blank"
+                rel="noreferrer"
+                title="Active Deployed Commit SHA (Click to view on GitHub)"
+                className="px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider bg-surface-card/80 border border-white/10 text-dim hover:text-prime hover:border-accent/40 transition-all flex items-center gap-1.5 select-none"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-signal-buy animate-pulse" />
+                <span>v{typeof __COMMIT_SHA__ !== 'undefined' ? __COMMIT_SHA__ : 'dev'}</span>
+              </a>
             </div>
 
             <NavPill activeTab={activeTab} onTabChange={setActiveTab} />
