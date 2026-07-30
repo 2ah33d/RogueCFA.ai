@@ -175,10 +175,11 @@ export async function fetchYoutubeAudio(videoId, timer) {
     }
 
     const data = await res.json();
-    if (data.status === 'success' && data.streamUrl) {
+    const targetStreamUrl = data.streamUrl || data.stream_url;
+    if ((data.status === 'success' || targetStreamUrl) && targetStreamUrl) {
       console.log(`[youtubeFetcher] yt-dlp worker returned audio stream (${data.audioFormat || 'm4a'}, ${data.duration || '?'}s)`);
       return {
-        streamUrl: data.streamUrl,
+        streamUrl: targetStreamUrl,
         audioFormat: data.audioFormat || 'm4a',
         duration: data.duration || 0,
       };
