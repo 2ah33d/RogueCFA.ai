@@ -593,6 +593,56 @@ The Automated Data Pipeline executes weekly via Vercel Cron without IP blocking 
 
 ---
 
+### MODULE: YouTube + Python Micro-Worker Audio Pipeline Architecture
+
+**Core Objective:**
+Deprecate the direct BNN website scraper and web player reverse-engineering logic (`api/_bnnWebPlayer.js`) in favor of an offloaded YouTube-based audio extraction pipeline powered by an external Python `yt-dlp` micro-worker. This ensures 99.9% pipeline uptime and eliminates web player HTML payload fragility, CDN token expiration, and `Placeholder.mp4` transcode delays, while preserving 100% of our Groq Whisper (`whisper-large-v3-turbo`) transcription fidelity.
+
+#### Target Pipeline Flow
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│ 1. Trigger (Vercel Cron) @ 2:00 PM EDT daily                              │
+│    └─> Executes api/marketcall-cron.js                                   │
+│ 2. Episode Discovery (YouTube RSS Feed / Search)                           │
+│    └─> Queries https://www.youtube.com/feeds/videos.xml?channel_id=...   │
+│    └─> Resolves today's BNN MarketCall full broadcast episode video_id    │
+│ 3. Audio Extraction (Python yt-dlp Micro-Worker)                           │
+│    └─> POST YT_DLP_WORKER_URL { videoId: "..." }                         │
+│    └─> Micro-worker runs yt-dlp -f bestaudio -g <video_id>               │
+│    └─> Returns direct .m4a audio stream URL / buffer                      │
+│ 4. Transcription (Groq Whisper ASR)                                       │
+│    └─> Streams .m4a audio into whisper-large-v3-turbo on Groq             │
+│    └─> Returns full high-fidelity text transcript                         │
+│ 5. Financial Summarization & Signal Extraction (Groq LLM)                  │
+│    └─> Injects transcript into financial prompt engine                    │
+│    └─> Extracts Top Picks, Tickers, Sentiments, and Caller Mentions       │
+│ 6. Persistence (Supabase Postgres)                                        │
+│    └─> Appends structured JSON digest to digest_jobs & episodes tables    │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+#### API Signatures & Data Contracts
+
+##### 1. YouTube Discovery Service (`api/_youtubeFetcher.js`)
+- **Function:** `discoverLatestBnnMarketCallVideo(todayStr)`
+- **Input:** Target date string (`YYYY-MM-DD`)
+- **Output:** `{ videoId: string, title: string, publishDate: string } | null`
+
+##### 2. Python `yt-dlp` Micro-Worker Endpoint Contract
+- **Request:** `POST YT_DLP_WORKER_URL`
+  - **Headers:** `Authorization: Bearer <YT_DLP_WORKER_SECRET>`, `Content-Type: application/json`
+  - **Payload:** `{ "videoId": "..." }`
+- **Response:** `200 OK`
+  - **Body:** `{ "status": "success", "streamUrl": "https://...", "audioFormat": "m4a", "duration": 2686 }`
+
+##### 3. Audio Transcription Engine (`transcribeYoutubeAudio`)
+- **Input:** `streamUrl` (or audio buffer), `groqKey`
+- **Model:** `whisper-large-v3-turbo` on Groq API
+- **Output:** `{ text: string, error: string | null }`
+
+---
+
 ### Tier 1: Daily MarketCall Digest + Caller-Mention Extraction
 **Priority:** P1  
 **Status:** Architecture Specified / In Production & Extension  

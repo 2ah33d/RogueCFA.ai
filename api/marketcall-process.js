@@ -24,6 +24,7 @@ import {
   getLatestMarketCallDateStr,
   sanitizeAnalystName,
 } from './_pipeline.js';
+import { fetchYoutubeAudioMedia, transcribeYoutubeAudio } from './_youtubeFetcher.js';
 
 export const config = { maxDuration: 300 };
 
@@ -149,31 +150,31 @@ export default async function handler(req, res) {
       candidateVideos = await findRecentMarketCallVideos(youtubeKey, timer);
     }
 
-    /* ── Step 2: Priority 1 — BNN Web Video Player + Groq Whisper ── */
+    /* ── Step 2: Priority 1 — YouTube + yt-dlp Micro-Worker + Groq Whisper ── */
     if (groqKey && groqKey.startsWith('gsk_')) {
       try {
-        timer.start('BNN Web Player pipeline');
-        const webMedia = await fetchBnnWebPlayerMedia(timer);
-        if (webMedia && webMedia.streamUrl) {
-          const isDateMatch = !webMedia.episodeDate || webMedia.episodeDate === todayStr;
+        timer.start('YouTube audio pipeline');
+        const ytMedia = await fetchYoutubeAudioMedia(timer);
+        if (ytMedia && ytMedia.streamUrl) {
+          const isDateMatch = !ytMedia.episodeDate || ytMedia.episodeDate === todayStr;
           if (isDateMatch) {
-            const webTrans = await transcribeBnnWebMedia(webMedia.streamUrl, groqKey, timer);
-            if (webTrans && webTrans.text && webTrans.text.length >= 200) {
+            const ytTrans = await transcribeYoutubeAudio(ytMedia.streamUrl, groqKey, timer);
+            if (ytTrans && ytTrans.text && ytTrans.text.length >= 200) {
               selectedVideo = {
-                videoId: '',
-                videoTitle: webMedia.videoTitle || 'BNN Bloomberg MarketCall (Web Video Player)',
+                videoId: ytMedia.videoId || '',
+                videoTitle: ytMedia.videoTitle || 'BNN Bloomberg MarketCall (YouTube)',
                 episodeDate: todayStr,
-                source: 'bnn_web_player',
+                source: 'youtube_ytdlp',
               };
-              cleanedTranscript = cleanRawTranscript(webTrans.text);
+              cleanedTranscript = cleanRawTranscript(ytTrans.text);
             }
           } else {
-            console.warn(`[marketcall-process] BNN Web Player video date (${webMedia.episodeDate}) does not match today (${todayStr}). Skipping outdated web video.`);
+            console.warn(`[marketcall-process] YouTube video date (${ytMedia.episodeDate}) does not match today (${todayStr}). Skipping.`);
           }
         }
-        timer.end('BNN Web Player pipeline');
-      } catch (webErr) {
-        console.warn('[marketcall-process] BNN Web Player pipeline warning:', webErr.message);
+        timer.end('YouTube audio pipeline');
+      } catch (ytErr) {
+        console.warn('[marketcall-process] YouTube audio pipeline warning:', ytErr.message);
       }
     }
 
