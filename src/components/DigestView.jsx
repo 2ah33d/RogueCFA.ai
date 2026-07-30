@@ -655,7 +655,7 @@ function renderScannableOutlook(outlook) {
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
               <span className="text-dim font-medium">
-                {videoInfo?.source === 'bnn_web_player' ? '🎙️ BNN Web Media' : videoInfo?.source === 'bnn_rss_podcast' ? '🎙️ BNN RSS Audio' : 'BNN Bloomberg'}
+                {videoInfo?.source === 'bnn_web_player' ? 'BNN Web Media' : videoInfo?.source === 'bnn_rss_podcast' ? 'BNN RSS Audio' : 'BNN Bloomberg'}
               </span>
               <span className="w-px h-3.5 bg-surface-elevated shrink-0" />
               <svg className="w-3.5 h-3.5 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
