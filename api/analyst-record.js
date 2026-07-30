@@ -1,3 +1,6 @@
+import { supabase } from './supabaseClient.js';
+import { normalizeAnalystName } from './_bnnScraper.js';
+
 /* ════════════════════════════════════════════════════════════════
    CENTRALIZED & AUDITABLE SCORING ENGINE CONFIGURATION
    ════════════════════════════════════════════════════════════════ */
