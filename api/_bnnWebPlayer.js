@@ -163,6 +163,18 @@ export async function transcribeBnnWebMedia(streamUrl, groqKey, timer) {
   }
 
   try {
+    /* Check HEAD Content-Length: if media stream is < 100KB, it is a 1-frame Bell Media placeholder MP4 */
+    try {
+      const headRes = await fetch(streamUrl, { method: 'HEAD', headers: BNN_BROWSER_HEADERS, signal: AbortSignal.timeout(5000) });
+      const sizeBytes = parseInt(headRes.headers.get('content-length') || '0', 10);
+      if (sizeBytes > 0 && sizeBytes < 100 * 1024) {
+        console.warn(`[bnnWebPlayer] Media stream ${streamUrl} is a 1-frame Bell Media placeholder (${sizeBytes} bytes). Skipping.`);
+        return { text: '', error: 'Media stream is an 8KB Bell Media placeholder clip undergoing CDN transcoding.' };
+      }
+    } catch {
+      /* ignore head check error */
+    }
+
     timer?.start('BNN media stream download');
     const res = await fetch(streamUrl, {
       headers: BNN_BROWSER_HEADERS,
