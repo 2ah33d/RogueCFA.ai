@@ -166,7 +166,12 @@ export async function fetchYoutubeAudio(videoId, timer) {
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
       console.warn(`[youtubeFetcher] yt-dlp worker returned HTTP ${res.status}: ${errText}`);
-      return null;
+      let parsedErr = errText;
+      try {
+        const jsonErr = JSON.parse(errText);
+        parsedErr = jsonErr.detail || jsonErr.error || errText;
+      } catch {}
+      return { error: `Micro-worker HTTP ${res.status}: ${parsedErr}` };
     }
 
     const data = await res.json();
