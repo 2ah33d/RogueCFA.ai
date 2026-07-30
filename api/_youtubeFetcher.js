@@ -79,17 +79,14 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
 
     if (uniqueIds.length === 0) return [];
 
-    /* For each candidate, fetch the watch page and check if title contains "Market Call" */
-    const results = [];
-    const dateFragments = buildDateFragments(todayStr);
-
-    for (const vid of uniqueIds.slice(0, 15)) {
+    /* Inspect candidate videos in parallel for instant sub-second response */
+    const inspectVideo = async (vid) => {
       try {
         const vRes = await fetch(`https://www.youtube.com/watch?v=${vid}`, {
           headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-          signal: AbortSignal.timeout(6000),
+          signal: AbortSignal.timeout(5000),
         });
-        if (!vRes.ok) continue;
+        if (!vRes.ok) return null;
         const vHtml = await vRes.text();
 
         const titleMatch = vHtml.match(/<title>([\s\S]*?)<\/title>/i);
@@ -101,17 +98,21 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
           const extractedDate = extractDateFromTitle(rawTitle);
           const publishDate = isTodayMatch ? todayStr : extractedDate || todayStr;
 
-          results.push({
+          return {
             videoId: vid,
             title: rawTitle.replace(/ - YouTube$/, ''),
             publishDate,
             isTodayMatch,
-          });
+          };
         }
       } catch {
-        /* ignore individual video fetch errors */
+        return null;
       }
-    }
+      return null;
+    };
+
+    const inspected = await Promise.all(uniqueIds.slice(0, 15).map(inspectVideo));
+    const results = inspected.filter(Boolean);
 
     /* Filter first for today's date matches */
     const todayResults = results.filter((r) => r.isTodayMatch);
