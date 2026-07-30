@@ -18,51 +18,54 @@ const BNN_BROWSER_HEADERS = {
  * Fetch BNN Bloomberg's latest MarketCall video article page and extract direct CloudFront MP4/m3u8 media stream URL.
  */
 export async function fetchBnnWebPlayerMedia(timer) {
-  const showUrl = 'https://www.bnnbloomberg.ca/video/shows/market-call/';
+  const sectionUrls = [
+    'https://www.bnnbloomberg.ca/video/',
+    'https://www.bnnbloomberg.ca/markets/',
+    'https://www.bnnbloomberg.ca/video/shows/market-call/',
+  ];
   timer?.start('BNN Web Player search');
 
-  try {
-    const res = await fetch(showUrl, {
-      headers: BNN_BROWSER_HEADERS,
-      signal: AbortSignal.timeout(8000),
-    });
+  const candidateUrls = new Set();
 
-    if (!res.ok) {
-      timer?.end('BNN Web Player search');
-      return null;
-    }
+  for (const pageUrl of sectionUrls) {
+    try {
+      const res = await fetch(pageUrl, {
+        headers: BNN_BROWSER_HEADERS,
+        signal: AbortSignal.timeout(6000),
+      });
 
-    const html = await res.text();
-    timer?.end('BNN Web Player search');
+      if (res.ok) {
+        const html = await res.text();
+        const linkMatches = Array.from(
+          html.matchAll(/href=["'](\/(?:video\/shows\/market-call|markets)\/[0-9]{4}\/[0-9]{2}\/[0-9]{2}\/[^"']+?)["']/gi)
+        ).map((m) => m[1]);
 
-    /* 1. Search for video article links inside MarketCall show page */
-    const linkMatches = Array.from(
-      html.matchAll(/href=["'](\/(?:video|markets)\/[0-9]{4}\/[0-9]{2}\/[0-9]{2}\/[^"']+?)["']/gi)
-    ).map((m) => m[1]);
-
-    const candidateUrls = Array.from(new Set(linkMatches)).map((link) =>
-      link.startsWith('http') ? link : `https://www.bnnbloomberg.ca${link}`
-    );
-
-    if (candidateUrls.length === 0) {
-      /* Search fallback: query Queryly for latest video article */
-      return await fetchBnnQuerylyMedia(timer);
-    }
-
-    /* Try the top candidate video article URL */
-    for (const artUrl of candidateUrls.slice(0, 3)) {
-      const media = await extractMediaFromBnnArticle(artUrl, timer);
-      if (media && media.streamUrl) {
-        return media;
+        for (const link of linkMatches) {
+          const fullUrl = link.startsWith('http') ? link : `https://www.bnnbloomberg.ca${link}`;
+          candidateUrls.add(fullUrl);
+        }
       }
+    } catch {
+      /* ignore individual section fetch timeout */
     }
+  }
 
-    return await fetchBnnQuerylyMedia(timer);
-  } catch (err) {
-    timer?.end('BNN Web Player search');
-    console.warn('[bnnWebPlayer] Failed to fetch BNN show page:', err.message);
+  timer?.end('BNN Web Player search');
+
+  const urlArray = Array.from(candidateUrls);
+  if (urlArray.length === 0) {
     return await fetchBnnQuerylyMedia(timer);
   }
+
+  /* Try candidate video article URLs for today's media stream */
+  for (const artUrl of urlArray.slice(0, 5)) {
+    const media = await extractMediaFromBnnArticle(artUrl, timer);
+    if (media && media.streamUrl) {
+      return media;
+    }
+  }
+
+  return await fetchBnnQuerylyMedia(timer);
 }
 
 /**

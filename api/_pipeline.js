@@ -59,7 +59,7 @@ export function createTimer(onProgress) {
    HTML entity decoding
    ════════════════════════════════════════════════════════════════ */
 
-function decodeHTMLEntities(str) {
+export function decodeHTMLEntities(str) {
   if (!str) return '';
   return str
     .replace(/&#39;/g, "'")
