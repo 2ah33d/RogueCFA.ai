@@ -341,6 +341,13 @@ export async function fetchRssPodcastFallback(groqKey = '', timer) {
             }
           }
 
+          /* Enforce strict date check: only accept RSS items matching targetDate (todayStr) */
+          const targetDate = getLatestMarketCallDateStr();
+          if (rssItemDate && rssItemDate !== targetDate) {
+            console.warn(`[RSS Fallback] Item date (${rssItemDate}) does not match target date (${targetDate}). Skipping outdated RSS item.`);
+            continue;
+          }
+
           /* If groqKey is present, attempt free Whisper audio transcription on the MP3 stream */
           if (groqKey && groqKey.startsWith('gsk_')) {
             const mp3Match = itemXml.match(/https?:\/\/[^"'\s<>]+\.mp3[^"'\s<>]*/i);
