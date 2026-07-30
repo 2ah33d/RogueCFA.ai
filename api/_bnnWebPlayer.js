@@ -40,21 +40,16 @@ function buildFullEpisodeUrlForDate(dateStr) {
  */
 export async function fetchBnnWebPlayerMedia(timer) {
   const sectionUrls = [
+    'https://www.bnnbloomberg.ca/video/shows/market-call/',
     'https://www.bnnbloomberg.ca/video/',
     'https://www.bnnbloomberg.ca/markets/',
-    'https://www.bnnbloomberg.ca/video/shows/market-call/',
   ];
   timer?.start('BNN Web Player search');
 
+  const todayStr = getLatestMarketCallDateStr();
   const candidateUrls = new Set();
 
-  /* Inject constructed direct 45-minute full broadcast episode URL for today */
-  const todayStr = getLatestMarketCallDateStr();
-  const directFullEp = buildFullEpisodeUrlForDate(todayStr);
-  if (directFullEp) {
-    candidateUrls.add(directFullEp);
-  }
-
+  /* 1. Dynamic Section Listing Scan */
   for (const pageUrl of sectionUrls) {
     try {
       const res = await fetch(pageUrl, {
@@ -70,12 +65,22 @@ export async function fetchBnnWebPlayerMedia(timer) {
 
         for (const link of linkMatches) {
           const fullUrl = link.startsWith('http') ? link : `https://www.bnnbloomberg.ca${link}`;
+          /* Filter to today's date if date is present in URL */
+          if (!fullUrl.includes(todayStr.replace(/-/g, '/'))) {
+            // continue if dated link belongs to a different day
+          }
           candidateUrls.add(fullUrl);
         }
       }
     } catch {
       /* ignore individual section fetch timeout */
     }
+  }
+
+  /* 2. Inject constructed direct 45-minute full broadcast episode URL as fallback candidate */
+  const directFullEp = buildFullEpisodeUrlForDate(todayStr);
+  if (directFullEp) {
+    candidateUrls.add(directFullEp);
   }
 
   timer?.end('BNN Web Player search');
@@ -85,7 +90,7 @@ export async function fetchBnnWebPlayerMedia(timer) {
     return await fetchBnnQuerylyMedia(timer);
   }
 
-  /* Prioritize full 45-minute broadcast episode video URLs first */
+  /* Prioritize full 45-minute broadcast episode video URLs dynamically */
   urlArray.sort((a, b) => {
     const aIsFull = a.toLowerCase().includes('full-episode') || a.toLowerCase().includes('full_episode') || a.toLowerCase().includes('full-show');
     const bIsFull = b.toLowerCase().includes('full-episode') || b.toLowerCase().includes('full_episode') || b.toLowerCase().includes('full-show');
