@@ -80,7 +80,7 @@ export function decodeHTMLEntities(str) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   YouTube video discovery
+   YouTube video discovery (DEPRECATED - Legacy Fallback)
    ════════════════════════════════════════════════════════════════ */
 
 const BNN_CHANNEL_ID = 'UC5aNPmKYwbudeNngDMTY3lw';
@@ -91,6 +91,10 @@ const YOUTUBE_BROWSER_HEADERS = {
   'Accept-Language': 'en-US,en;q=0.9',
 };
 
+/**
+ * @deprecated [LEGACY YOUTUBE FALLBACK]
+ * Primary capture is now handled via Modal Live Stream Capture (modal_app/live_capture.py).
+ */
 export async function findRecentMarketCallVideos(youtubeKey, timer) {
   timer?.start('YouTube video search');
   const candidateMap = new Map();

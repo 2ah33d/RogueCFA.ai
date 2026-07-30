@@ -144,13 +144,14 @@ export default async function handler(req, res) {
     let cleanedTranscript = null;
     let groqDiagnosticMsg = '';
 
-    /* ── Step 1: Find candidate videos ── */
+    /* ── LEGACY YOUTUBE FALLBACK (DEPRECATED): Primary pipeline is modal_app/live_capture.py ── */
     let candidateVideos = [];
     if (youtubeKey) {
+      /* Deprecated: legacy YouTube video search preserved for manual/fallback reference */
       candidateVideos = await findRecentMarketCallVideos(youtubeKey, timer);
     }
 
-    /* ── Step 2: Priority 1 — YouTube + yt-dlp Micro-Worker + Groq Whisper ── */
+    /* ── Legacy Fallback Step 2: YouTube + yt-dlp Micro-Worker + Groq Whisper (Deprecated) ── */
     if (groqKey && groqKey.startsWith('gsk_')) {
       try {
         timer.start('YouTube audio pipeline');

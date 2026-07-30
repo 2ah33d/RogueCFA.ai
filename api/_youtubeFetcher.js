@@ -1,9 +1,11 @@
 /**
  * api/_youtubeFetcher.js
+ * @deprecated [LEGACY YOUTUBE FALLBACK]
  * YouTube-based audio pipeline for BNN Bloomberg MarketCall episode discovery,
  * audio extraction via external Python yt-dlp micro-worker, and Groq Whisper transcription.
  *
- * Replaces the deprecated api/_bnnWebPlayer.js (direct BNN web scraper).
+ * Primary production pipeline now uses modal_app/live_capture.py (Modal Live Stream Capture Engine).
+ * All code in this module is preserved intact as a fallback reference.
  */
 
 import { getLatestMarketCallDateStr } from './_pipeline.js';

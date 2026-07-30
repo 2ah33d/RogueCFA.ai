@@ -16,16 +16,14 @@
     "api/marketcall-process.js": {
       "maxDuration": 300
     },
+    "api/ingest.js": {
+      "maxDuration": 300
+    },
     "api/marketcall-status.js": {
       "maxDuration": 10
     }
   },
-  "crons": [
-    {
-      "path": "/api/marketcall-process",
-      "schedule": "0 21 * * 1-5"
-    }
-  ],
+  "crons": [],
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
