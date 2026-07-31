@@ -51,7 +51,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     setError(null);
   };
 
-  const fetchDigest = useCallback(async (force = false) => {
+  const fetchDigest = useCallback(async (force = false, targetDate = null) => {
     const youtubeKey = getYoutubeKey();
     const groqKey = getGroqKey();
     const { llmKey } = getKeys();
@@ -81,10 +81,15 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     let isPollingTrans = false;
 
     try {
+      const payload = { youtubeKey, llmKey, provider, groqKey, force, bypassCache: force };
+      if (targetDate) {
+        payload.episodeDate = targetDate;
+      }
+
       const res = await fetch('/api/marketcall-digest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey, force, bypassCache: force }),
+        body: JSON.stringify(payload),
       });
 
       let data;
@@ -107,7 +112,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         fetch('/api/marketcall-process', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ youtubeKey, llmKey, provider, groqKey, force, bypassCache: force }),
+          body: JSON.stringify(payload),
         }).catch(() => {
           /* Ignore — if this fails, the polling will detect 'not_found' or timeout */
         });
@@ -524,6 +529,14 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         videoTitle: historicalItem.videoTitle,
         episodeDate: historicalItem.episodeDate,
       });
+    } else if (historicalItem?.episodeDate) {
+      setVideoInfo({
+        videoId: '',
+        videoTitle: `BNN Bloomberg Market Call (${historicalItem.episodeDate})`,
+        episodeDate: historicalItem.episodeDate,
+      });
+      setDigest(null);
+      fetchDigest(false, historicalItem.episodeDate);
     }
   };
 
