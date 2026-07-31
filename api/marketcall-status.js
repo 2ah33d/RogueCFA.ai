@@ -4,7 +4,7 @@
    Client polls this every ~5s after kicking off processing.
    ════════════════════════════════════════════════════════════════ */
 
-import { supabase } from './supabaseClient.js';
+import { supabase } from './_supabaseClient.js';
 
 export const config = { maxDuration: 10 };
 

@@ -11,7 +11,7 @@
    No waitUntil, no background task magic — just inline execution.
    ════════════════════════════════════════════════════════════════ */
 
-import { supabase } from './supabaseClient.js';
+import { supabase } from './_supabaseClient.js';
 import {
   createTimer,
   findRecentMarketCallVideos,

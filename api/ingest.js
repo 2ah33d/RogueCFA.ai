@@ -10,7 +10,7 @@
    - Triggers analyst track record processing & cold-start capture.
    ════════════════════════════════════════════════════════════════ */
 
-import { supabase } from './supabaseClient.js';
+import { supabase } from './_supabaseClient.js';
 import {
   createTimer,
   cleanRawTranscript,

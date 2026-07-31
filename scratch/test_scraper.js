@@ -1,62 +1,50 @@
-import fetch from 'node-fetch';
+import fs from 'fs';
+import path from 'path';
 
-const ANALYSTS = [
-  { name: 'Brian Acker', slug: 'Brian-Acker' },
-  { name: 'Christine Poole', slug: 'Christine-Poole' },
-  { name: 'Jason Bouvier', slug: 'Jason-Bouvier' },
-  { name: 'John Connell', slug: 'John-Connell' },
-  { name: 'Bruce Murray', slug: 'Bruce-Murray' },
-  { name: 'Chris White', slug: 'Chris-White' },
-  { name: 'Andrey Omelchak', slug: 'Andrey-Omelchak' },
-  { name: 'Greg Newman', slug: 'Greg-Newman' },
-  { name: 'Brendan Caldwell', slug: 'Brendan-Caldwell' },
-  { name: 'Paul Harris', slug: 'Paul-Harris' },
-  { name: 'Ryan Bushell', slug: 'Ryan-Bushell' },
-  { name: 'Rick Rule', slug: 'Rick-Rule' },
-  { name: 'Ivana Delevska', slug: 'Ivana-Delevska' },
-  { name: 'Michael Hakes', slug: 'Michael-Hakes' },
-  { name: 'Kim Bolton', slug: 'Kim-Bolton' },
-  { name: 'Bruce Campbell', slug: 'Bruce-Campbell' },
-  { name: 'Darren Sissons', slug: 'Darren-Sissons' },
-  { name: 'Norm Levine', slug: 'Norm-Levine' },
-  { name: 'Larry Berman', slug: 'Larry-Berman' }
-];
-
-const BROWSER_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-};
-
-async function checkStockchaseSlug(slug) {
-  // Try direct expert link e.g. https://stockchase.com/expert/view/Brian-Acker
-  const urls = [
-    `https://stockchase.com/expert/view/${slug}`,
-    `https://stockchase.com/expert/${slug}`,
-    `https://stockchase.com/discover/expert?q=${slug.replace('-', '+')}`
-  ];
-
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { headers: BROWSER_HEADERS });
-      if (res.ok) {
-        const text = await res.text();
-        // check if Top Picks table or picks exist
-        const topPicksMatch = text.match(/Top Picks[\s\S]{1,2000}/i) || text.match(/<table[\s\S]{1,3000}<\/table>/i);
-        // find expert link in discovery if discovery URL
-        const expertLinks = text.match(/href="(\/expert\/view\/[^"]+)"/g);
-        return { status: res.status, url, length: text.length, expertLinks: expertLinks ? expertLinks.slice(0, 3) : null, hasTable: !!topPicksMatch };
+const envPath = path.resolve('.env.local');
+if (fs.existsSync(envPath)) {
+  const envConfig = fs.readFileSync(envPath, 'utf8');
+  for (const line of envConfig.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const [key, ...vals] = trimmed.split('=');
+      if (key && vals.length > 0) {
+        process.env[key.trim()] = vals.join('=').trim().replace(/^["']|["']$/g, '');
       }
-    } catch (e) {}
-  }
-  return { status: 'Failed' };
-}
-
-async function run() {
-  console.log('Testing exact direct URLs...');
-  for (const a of ANALYSTS.slice(0, 5)) {
-    const res = await checkStockchaseSlug(a.slug);
-    console.log(`${a.name}:`, JSON.stringify(res));
+    }
   }
 }
 
-run();
+const { searchBnnPastPicks, parseBnnPastPicksArticle } = await import('../api/_bnnScraper.js');
+
+const analysts = ['Greg Newman', 'Andrew Pink', 'John Stephenson', 'Julien Nono-Womdim'];
+
+async function main() {
+  for (const name of analysts) {
+    console.log(`\n========================================`);
+    console.log(`Searching BNN for: ${name}`);
+    const articles = await searchBnnPastPicks(name, 5);
+    console.log(`Articles found (${articles.length}):`, JSON.stringify(articles, null, 2));
+
+    for (const art of articles) {
+      console.log(`Fetching: ${art.url}`);
+      try {
+        const res = await fetch(art.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          }
+        });
+        const html = await res.text();
+        const parsed = parseBnnPastPicksArticle(html, art.url, name);
+        console.log(`Parsed rows count for ${art.title}: ${parsed.length}`);
+        if (parsed.length > 0) {
+          console.log('Parsed rows:', JSON.stringify(parsed, null, 2));
+        }
+      } catch (err) {
+        console.error('Fetch err:', err.message);
+      }
+    }
+  }
+}
+
+main().catch(console.error);
