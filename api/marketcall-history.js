@@ -16,12 +16,11 @@ export default async function handler(req, res) {
     const limit = Math.min(parseInt(req.query.limit || '30', 10), 100);
     const offset = Math.max(parseInt(req.query.offset || '0', 10), 0);
 
-    /* Fetch complete, non-debug digests ordered by episode_date descending, then created_at descending */
+    /* Fetch complete digests ordered by episode_date descending, then created_at descending */
     const { data, error } = await supabase
       .from('digest_jobs')
       .select('id, episode_date, video_id, video_title, result, created_at, updated_at')
       .eq('status', 'complete')
-      .eq('is_debug', false)
       .not('result', 'is', null)
       .order('episode_date', { ascending: false })
       .order('created_at', { ascending: false });

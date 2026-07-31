@@ -16,8 +16,10 @@ import HistoryBrowser from './HistoryBrowser';
  * @param {Function} props.onOpenSettings - () => void — opens settings panel
  */
 export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSettings }) {
+  const todayStr = new Date().toISOString().split('T')[0];
   const [digest, setDigest] = useState(null);
   const [videoInfo, setVideoInfo] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasAttempted, setHasAttempted] = useState(false);
@@ -29,8 +31,6 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   const elapsedRef = useRef(null);
   const stageRef = useRef('Initializing pipeline...');
 
-  const todayStr = new Date().toISOString().split('T')[0];
-
   /* Check cache on mount */
   useEffect(() => {
     const cached = getDigestCache('latest_marketcall') || getDigestCache(todayStr);
@@ -41,6 +41,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         videoTitle: cached.videoTitle,
         episodeDate: cached.episodeDate || todayStr,
       });
+      if (cached.episodeDate) setSelectedDate(cached.episodeDate);
       setHasAttempted(true);
     }
   }, [todayStr]);
@@ -522,22 +523,31 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       handleCheckNewer();
       return;
     }
+    const epDate = historicalItem?.episodeDate || todayStr;
+    setSelectedDate(epDate);
+
     if (historicalItem && historicalItem.digest) {
       setDigest(historicalItem.digest);
       setVideoInfo({
         videoId: historicalItem.videoId,
         videoTitle: historicalItem.videoTitle,
-        episodeDate: historicalItem.episodeDate,
+        episodeDate: epDate,
       });
-    } else if (historicalItem?.episodeDate) {
+    } else if (epDate) {
       setVideoInfo({
         videoId: '',
-        videoTitle: `BNN Bloomberg Market Call (${historicalItem.episodeDate})`,
-        episodeDate: historicalItem.episodeDate,
+        videoTitle: `BNN Bloomberg Market Call (${epDate})`,
+        episodeDate: epDate,
       });
       setDigest(null);
-      fetchDigest(false, historicalItem.episodeDate);
+      fetchDigest(false, epDate);
     }
+  };
+
+  const handleRenewDigest = () => {
+    const epDate = videoInfo?.episodeDate || selectedDate || todayStr;
+    setDigest(null);
+    fetchDigest(true, epDate);
   };
 
 /**
@@ -679,6 +689,19 @@ function renderScannableOutlook(outlook) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               <span className="font-semibold text-prime">Check Newer</span>
+            </button>
+
+            {/* Renew / Re-generate Digest Button */}
+            <button
+              type="button"
+              onClick={handleRenewDigest}
+              className="h-8 px-3.5 inline-flex items-center gap-1.5 bg-surface-card hover:bg-surface-elevated border border-accent/30 text-accent hover:text-white rounded-full text-xs font-medium shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer shrink-0"
+              title="Clean up malformed jobs for this date and re-generate a fresh digest"
+            >
+              <svg className="w-3.5 h-3.5 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="font-semibold">Renew Digest</span>
             </button>
           </div>
         </div>

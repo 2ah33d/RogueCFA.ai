@@ -78,8 +78,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'LLM key and provider are required.' });
   }
 
-  const todayStr = getLatestMarketCallDateStr();
-  const jobId = isDebug ? `debug-${Date.now()}` : generateJobId(todayStr);
+  const rawDate = req.body?.episodeDate;
+  const targetDateStr = (rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate))
+    ? rawDate
+    : getLatestMarketCallDateStr();
+  const jobId = isDebug ? `debug-${Date.now()}` : generateJobId(targetDateStr);
 
   /* ── Check if this job is already completed (skip if debug) ── */
   if (!isDebug) {

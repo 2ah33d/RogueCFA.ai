@@ -106,21 +106,23 @@ export default async function handler(req, res) {
     }
 
     /* ══════════════════════════════════════════
-       Fast path B: Check Supabase cache for today's digest
+       Fast path B: Check Supabase cache for target episode digest
        — returns in < 1s if a previous run already completed
-       (Bypassed if user explicitly clicked 'Check Newer' with force: true)
+       (Bypassed if user explicitly clicked 'Renew' with force: true)
        ══════════════════════════════════════════ */
     const { force, bypassCache } = req.body || {};
-    const todayStr = getLatestMarketCallDateStr();
+    const rawDate = req.body?.episodeDate || clientEpisodeDate;
+    const targetDateStr = (rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate))
+      ? rawDate
+      : getLatestMarketCallDateStr();
 
     if (!force && !bypassCache) {
       try {
         const { data: cached } = await supabase
           .from('digest_jobs')
           .select('id, status, result, error_message, video_id, video_title')
-          .eq('episode_date', todayStr)
+          .eq('episode_date', targetDateStr)
           .eq('status', 'complete')
-          .eq('is_debug', false)
           .order('updated_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -132,12 +134,12 @@ export default async function handler(req, res) {
         console.warn('[marketcall-digest] Cache check failed:', cacheErr.message);
       }
     } else {
-      /* Force refresh: delete stale jobs for todayStr so pipeline runs fresh */
+      /* Force refresh / Renew: delete stale & malformed jobs for targetDateStr so pipeline runs fresh */
       try {
         await supabase
           .from('digest_jobs')
           .delete()
-          .eq('episode_date', todayStr);
+          .eq('episode_date', targetDateStr);
       } catch {
         /* ignore */
       }
@@ -154,15 +156,14 @@ export default async function handler(req, res) {
       });
     }
 
-    const jobId = generateJobId(todayStr);
+    const jobId = generateJobId(targetDateStr);
 
-    /* Check if there's already a job for today */
+    /* Check if there's already a job for targetDateStr */
     try {
       const { data: existingJob } = await supabase
         .from('digest_jobs')
         .select('id, status, error_message, created_at')
-        .eq('episode_date', todayStr)
-        .eq('is_debug', false)
+        .eq('episode_date', targetDateStr)
         .in('status', ['processing', 'complete'])
         .order('created_at', { ascending: false })
         .limit(1)
