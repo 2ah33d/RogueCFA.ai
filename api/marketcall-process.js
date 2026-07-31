@@ -147,20 +147,32 @@ export default async function handler(req, res) {
     let cleanedTranscript = null;
     let groqDiagnosticMsg = '';
 
-    /* ── LEGACY YOUTUBE FALLBACK (DEPRECATED): Primary pipeline is modal_app/live_capture.py ── */
-    let candidateVideos = [];
-    if (youtubeKey) {
-      /* Deprecated: legacy YouTube video search preserved for manual/fallback reference */
-      candidateVideos = await findRecentMarketCallVideos(youtubeKey, timer);
+    /* ── Priority 1: Official BNN Market Call Podcast RSS Feed + Groq Whisper ── */
+    if (groqKey && groqKey.startsWith('gsk_')) {
+      timer.start('Groq Whisper RSS pipeline');
+      const rssResult = await fetchRssPodcastFallback(groqKey, timer, targetDateStr);
+      timer.end('Groq Whisper RSS pipeline');
+
+      if (rssResult && rssResult.text && rssResult.text.length >= 200) {
+        selectedVideo = {
+          videoId: '',
+          videoTitle: rssResult.rssItemTitle || `BNN Bloomberg MarketCall (${targetDateStr})`,
+          episodeDate: rssResult.rssItemDate || targetDateStr,
+          source: 'bnn_rss_podcast',
+        };
+        cleanedTranscript = cleanRawTranscript(rssResult.text);
+      } else if (rssResult && rssResult.groqDiagnostic) {
+        groqDiagnosticMsg = ` [DIAGNOSTIC: Groq Whisper MP3 transcription issue: ${rssResult.groqDiagnostic}]`;
+      }
     }
 
-    /* ── Legacy Fallback Step 2: YouTube + yt-dlp Micro-Worker + Groq Whisper (Deprecated) ── */
-    if (groqKey && groqKey.startsWith('gsk_')) {
+    /* ── Priority 2 (Secondary Fallback): YouTube + yt-dlp Micro-Worker + Groq Whisper ── */
+    if ((!selectedVideo || !cleanedTranscript) && groqKey && groqKey.startsWith('gsk_')) {
       try {
         timer.start('YouTube audio pipeline');
         const ytMedia = await fetchYoutubeAudioMedia(timer);
         if (ytMedia && ytMedia.streamUrl) {
-          const episodeDate = ytMedia.episodeDate || todayStr;
+          const episodeDate = ytMedia.episodeDate || targetDateStr;
           const ytTrans = await transcribeYoutubeAudio(ytMedia.streamUrl, groqKey, timer);
           if (ytTrans && ytTrans.text && ytTrans.text.length >= 200) {
             selectedVideo = {
@@ -177,24 +189,6 @@ export default async function handler(req, res) {
         timer.end('YouTube audio pipeline');
       } catch (ytErr) {
         console.warn('[marketcall-process] YouTube audio pipeline warning:', ytErr.message);
-      }
-    }
-
-    /* ── Step 3: Priority 2 — Groq Whisper MP3 transcription ── */
-    if ((!selectedVideo || !cleanedTranscript) && groqKey && groqKey.startsWith('gsk_')) {
-      timer.start('Groq Whisper pipeline');
-      const rssResult = await fetchRssPodcastFallback(groqKey, timer);
-      timer.end('Groq Whisper pipeline');
-
-      if (rssResult && rssResult.text && rssResult.text.length >= 200) {
-        selectedVideo = candidateVideos[0] || {
-          videoId: '',
-          videoTitle: 'BNN Bloomberg MarketCall (Official MP3 Audio Feed)',
-          episodeDate: todayStr,
-        };
-        cleanedTranscript = cleanRawTranscript(rssResult.text);
-      } else if (rssResult && rssResult.groqDiagnostic) {
-        groqDiagnosticMsg = ` [DIAGNOSTIC: Groq Whisper MP3 transcription issue: ${rssResult.groqDiagnostic}]`;
       }
     }
 
