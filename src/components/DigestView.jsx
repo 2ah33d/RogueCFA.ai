@@ -695,13 +695,13 @@ function renderScannableOutlook(outlook) {
             <button
               type="button"
               onClick={handleRenewDigest}
-              className="h-8 px-3.5 inline-flex items-center gap-1.5 bg-surface-card hover:bg-surface-elevated border border-accent/30 text-accent hover:text-white rounded-full text-xs font-medium shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer shrink-0"
+              className="h-8 px-3.5 inline-flex items-center gap-2 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer shrink-0 group"
               title="Clean up malformed jobs for this date and re-generate a fresh digest"
             >
-              <svg className="w-3.5 h-3.5 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-dim group-hover:text-prime shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span className="font-semibold">Renew Digest</span>
+              <span className="font-semibold text-prime">Renew Digest</span>
             </button>
           </div>
         </div>

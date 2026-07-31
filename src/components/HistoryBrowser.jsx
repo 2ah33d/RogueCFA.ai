@@ -13,34 +13,36 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
   const [customDateInput, setCustomDateInput] = useState(new Date().toISOString().split('T')[0]);
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
-
+  const fetchHistory = () => {
     fetch('/api/marketcall-history?limit=30')
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
       .then((data) => {
-        if (!isMounted) return;
         if (data && Array.isArray(data.history)) {
           setHistory(data.history);
         }
       })
       .catch((err) => {
-        if (!isMounted) return;
         console.warn('[HistoryBrowser] Failed to load digest history:', err.message);
         setError('Unable to load digest history');
       })
       .finally(() => {
-        if (isMounted) setLoading(false);
+        setLoading(false);
       });
+  };
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  useEffect(() => {
+    setLoading(true);
+    fetchHistory();
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchHistory();
+    }
+  }, [isOpen]);
 
   /* Close dropdown when clicking outside */
   useEffect(() => {
@@ -148,7 +150,7 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
                 />
                 <button
                   type="submit"
-                  className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-accent-text text-xs font-semibold rounded-lg transition-colors shrink-0"
+                  className="px-3 py-1.5 bg-surface-card hover:bg-surface-elevated border border-edge/80 text-prime text-xs font-semibold rounded-lg transition-all shrink-0 cursor-pointer"
                 >
                   Load
                 </button>

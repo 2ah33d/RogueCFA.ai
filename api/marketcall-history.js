@@ -16,6 +16,20 @@ export default async function handler(req, res) {
     const limit = Math.min(parseInt(req.query.limit || '30', 10), 100);
     const offset = Math.max(parseInt(req.query.offset || '0', 10), 0);
 
+    /* ── Automated 30-Day Retention Pruning: Delete summaries older than 30 days ── */
+    try {
+      const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      supabase
+        .from('digest_jobs')
+        .delete()
+        .lt('episode_date', cutoffDate)
+        .then(({ error: pruneErr }) => {
+          if (pruneErr) console.warn('[marketcall-history] 30-day retention cleanup error:', pruneErr.message);
+        });
+    } catch {
+      /* ignore */
+    }
+
     /* Fetch complete digests ordered by episode_date descending, then created_at descending */
     const { data, error } = await supabase
       .from('digest_jobs')
