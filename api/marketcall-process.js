@@ -118,7 +118,7 @@ export default async function handler(req, res) {
       .from('digest_jobs')
       .upsert({
         id: jobId,
-        episode_date: todayStr,
+        episode_date: targetDateStr,
         status: 'processing',
         result: null,
         error_message: null,
@@ -299,7 +299,7 @@ export default async function handler(req, res) {
       digest,
       videoId: selectedVideo.videoId,
       videoTitle: selectedVideo.videoTitle,
-      episodeDate: selectedVideo.episodeDate || todayStr,
+      episodeDate: selectedVideo.episodeDate || targetDateStr,
       generatedAt: new Date().toISOString(),
       source: 'server',
       timing: timer.report(),
@@ -323,7 +323,7 @@ export default async function handler(req, res) {
               analyst_name: cleanGuest,
               ticker: (p.ticker || '').trim().toUpperCase(),
               company_name: p.companyName || p.company_name || p.name || p.ticker,
-              pick_publish_date: todayStr,
+              pick_publish_date: targetDateStr,
               then_price: typeof p.thenPrice === 'number' ? p.thenPrice : typeof p.price === 'number' ? p.price : 100,
               now_price: typeof p.nowPrice === 'number' ? p.nowPrice : typeof p.price === 'number' ? p.price : 100,
               total_return_pct: typeof p.returnPct === 'number' ? p.returnPct : 0,

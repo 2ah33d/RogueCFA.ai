@@ -202,7 +202,7 @@ export default async function handler(req, res) {
         .from('digest_jobs')
         .upsert({
           id: jobId,
-          episode_date: todayStr,
+          episode_date: targetDateStr,
           status: 'processing',
           result: null,
           error_message: null,
