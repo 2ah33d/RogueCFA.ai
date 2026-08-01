@@ -146,6 +146,15 @@ export default async function handler(req, res) {
     let selectedVideo = null;
     let cleanedTranscript = null;
     let groqDiagnosticMsg = '';
+    let candidateVideos = [];
+
+    if (youtubeKey) {
+      try {
+        candidateVideos = (await findRecentMarketCallVideos(youtubeKey, timer)) || [];
+      } catch (ytErr) {
+        console.warn('[marketcall-process] YouTube candidate lookup failed:', ytErr.message);
+      }
+    }
 
     /* ── Priority 1: Official BNN Market Call Podcast RSS Feed + Groq Whisper ── */
     if (groqKey && groqKey.startsWith('gsk_')) {
