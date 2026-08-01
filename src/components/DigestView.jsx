@@ -478,37 +478,42 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     );
   }
 
-  /* ── No digest loaded (e.g., auto-fetch disabled or cleared cache) — show prominent Check Newer button ── */
+  /* ── No digest loaded (unsaved date or initial state) — show explicit generation prompt ── */
   if (!digest) {
+    const isUnsavedDate = selectedDate && selectedDate !== todayStr;
     return (
       <div className="w-full max-w-3xl mx-auto animate-fade-in font-sans">
-        <div className="bg-surface-card rounded-2xl p-8 text-center space-y-4 shadow-antigravity">
+        <div className="bg-surface-card rounded-2xl p-8 text-center space-y-5 shadow-antigravity border border-surface-elevated/60">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/15 flex items-center justify-center font-mono font-bold text-lg text-accent">
-            AI
+            <svg className="w-7 h-7 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-prime">BNN Bloomberg MarketCall Digest</h3>
-            <p className="text-xs text-dim max-w-md mx-auto mt-1 leading-relaxed">
-              Click below to fetch and summarize today&apos;s episode audio stream with Groq Whisper &amp; AI.
+          <div className="space-y-1.5">
+            <h3 className="text-xl font-bold text-prime">
+              {isUnsavedDate ? "This digest hasn't been saved yet" : 'BNN Bloomberg MarketCall Digest'}
+            </h3>
+            <p className="text-xs text-dim max-w-md mx-auto leading-relaxed">
+              {isUnsavedDate
+                ? `No saved MarketCall episode digest was found for ${selectedDate}. Click below if you would like to generate it.`
+                : "Click below to fetch and summarize today's episode audio stream with Groq Whisper & AI."}
             </p>
           </div>
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
-              onClick={fetchDigest}
-              className="inline-flex items-center gap-2 px-6 py-3
-                         bg-accent text-accent-text text-xs font-semibold rounded-full
-                         shadow-antigravity hover:bg-accent-hover transition-all"
+              onClick={() => fetchDigest(false, selectedDate || todayStr)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-accent-text text-xs font-semibold rounded-full shadow-antigravity hover:bg-accent-hover transition-all cursor-pointer"
             >
-              Check Newer / Generate Today&apos;s Digest
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>{isUnsavedDate ? 'Click to Generate Digest' : "Check Newer / Generate Today's Digest"}</span>
             </button>
             <button
               type="button"
               onClick={onOpenSettings}
-              className="inline-flex items-center gap-2 px-5 py-3
-                         bg-surface-elevated text-dim hover:text-prime
-                         text-xs font-semibold rounded-full
-                         shadow-antigravity transition-all"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-surface-elevated text-dim hover:text-prime text-xs font-semibold rounded-full shadow-antigravity transition-all cursor-pointer"
             >
               Open Settings
             </button>
@@ -540,7 +545,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
         episodeDate: epDate,
       });
       setDigest(null);
-      fetchDigest(false, epDate);
+      /* Do NOT auto-fetch on unsaved dates; user will confirm via prompt screen */
     }
   };
 

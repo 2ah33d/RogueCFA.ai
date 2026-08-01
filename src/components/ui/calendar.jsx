@@ -76,17 +76,17 @@ export function Calendar({
   return (
     <div
       className={cn(
-        'w-72 bg-surface-elevated border border-surface-card/90 rounded-2xl p-4 text-prime font-sans shadow-antigravity-elevated select-none',
+        'w-80 bg-surface-elevated border border-surface-card/90 rounded-2xl p-4 text-prime font-sans shadow-antigravity-elevated select-none',
         className
       )}
     >
-      {/* Calendar Header: Month, Year, Today & Arrows */}
-      <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-surface-card/80">
+      {/* Calendar Header: Month, Year, Today & Arrows — Symmetrical spacing */}
+      <div className="flex items-center justify-between mb-3 pb-3 border-b border-surface-card/70">
         <div className="flex items-center gap-2">
           <CalendarIcon className="w-4 h-4 text-accent shrink-0" />
           <motion.h3
             key={format(currentMonth, 'yyyy-MM')}
-            initial={{ opacity: 0, y: -4 }}
+            initial={{ opacity: 0, y: -3 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-sm font-bold tracking-tight text-white"
           >
@@ -95,7 +95,6 @@ export function Calendar({
         </div>
 
         <div className="flex items-center gap-1">
-          {/* Today Button (Text only, no icon) */}
           <button
             type="button"
             onClick={handleTodayClick}
@@ -124,19 +123,19 @@ export function Calendar({
       </div>
 
       {/* Weekday Header */}
-      <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
+      <div className="grid grid-cols-7 gap-1 text-center mb-1">
         {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map((dayStr) => (
           <span
             key={dayStr}
-            className="text-[10px] font-bold uppercase tracking-wider text-dim/80 py-0.5"
+            className="text-[10px] font-bold uppercase tracking-wider text-dim/70 py-0.5"
           >
             {dayStr}
           </span>
         ))}
       </div>
 
-      {/* Days Grid */}
-      <div className="grid grid-cols-7 gap-1 text-center">
+      {/* Days Grid — Clean fixed cell layout to guarantee symmetric top & bottom padding */}
+      <div className="grid grid-cols-7 gap-y-1 gap-x-1 text-center pb-1">
         {calendarDays.map((day) => {
           const dateKey = format(day, 'yyyy-MM-dd');
           const isSelected = isSameDay(day, activeSelectedDate);
@@ -145,44 +144,51 @@ export function Calendar({
           const hasSavedEpisode = savedSet.has(dateKey);
 
           return (
-            <button
+            <div
               key={dateKey}
-              type="button"
-              onClick={() => handleDayClick(day)}
-              className={cn(
-                'relative h-8 w-8 mx-auto flex flex-col items-center justify-center rounded-full text-xs transition-all duration-150 cursor-pointer font-medium',
-                {
-                  // 1. Selected Day: Solid exact accent color circle with bold white text & glow shadow
-                  'bg-accent text-accent-text font-bold shadow-md shadow-accent/30 scale-105 z-10':
-                    isSelected,
-
-                  // 2. Today (when unselected): High-contrast crisp white text with a solid accent outline ring & subtle surface card fill
-                  'text-white font-bold border-2 border-accent bg-surface-card shadow-sm':
-                    !isSelected && isCurrentDay,
-
-                  // 3. Regular day in current month
-                  'text-white/90 hover:bg-surface-card hover:text-white':
-                    !isSelected && !isCurrentDay && isCurrentMonth,
-
-                  // 4. Day outside current month
-                  'text-dim/35 hover:text-dim hover:bg-surface-card/40':
-                    !isSelected && !isCurrentDay && !isCurrentMonth,
-                }
-              )}
+              className="flex flex-col items-center justify-start h-10 w-full"
             >
-              <span>{format(day, 'd')}</span>
+              {/* Circular Day Button */}
+              <button
+                type="button"
+                onClick={() => handleDayClick(day)}
+                className={cn(
+                  'h-7.5 w-7.5 rounded-full text-xs font-semibold flex items-center justify-center transition-all duration-150 cursor-pointer',
+                  {
+                    // 1. Selected Day: Solid accent background with white text & subtle glow
+                    'bg-accent text-accent-text font-bold shadow-md shadow-accent/30 scale-105 z-10':
+                      isSelected,
 
-              {/* Saved episode green dot indicator */}
-              {hasSavedEpisode && (
-                <span
-                  className={cn(
-                    'absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50',
-                    isSelected && 'bg-white shadow-none'
-                  )}
-                  title="Saved Episode Available"
-                />
-              )}
-            </button>
+                    // 2. Today (when unselected): High-contrast crisp white text with a solid accent border
+                    'text-white font-bold border-2 border-accent bg-surface-card':
+                      !isSelected && isCurrentDay,
+
+                    // 3. Regular day in current month
+                    'text-white/90 hover:bg-surface-card hover:text-white':
+                      !isSelected && !isCurrentDay && isCurrentMonth,
+
+                    // 4. Day outside current month
+                    'text-dim/35 hover:text-dim hover:bg-surface-card/40':
+                      !isSelected && !isCurrentDay && !isCurrentMonth,
+                  }
+                )}
+              >
+                {format(day, 'd')}
+              </button>
+
+              {/* Dedicated Dot Container below circle (NEVER overlaps circle border) */}
+              <div className="h-2 flex items-center justify-center mt-0.5">
+                {hasSavedEpisode && (
+                  <span
+                    className={cn(
+                      'w-1.25 h-1.25 rounded-full transition-colors',
+                      isSelected ? 'bg-accent' : 'bg-emerald-400 shadow-sm shadow-emerald-400/50'
+                    )}
+                    title="Saved Episode Available"
+                  />
+                )}
+              </div>
+            </div>
           );
         })}
       </div>
