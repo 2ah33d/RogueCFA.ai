@@ -80,7 +80,7 @@ export function Calendar({
         className
       )}
     >
-      {/* Calendar Header: Month, Year, Today & Arrows — Symmetrical spacing */}
+      {/* Calendar Header: Month, Year, Today (Grey text) & Arrows */}
       <div className="flex items-center justify-between mb-3 pb-3 border-b border-surface-card/70">
         <div className="flex items-center gap-2">
           <CalendarIcon className="w-4 h-4 text-accent shrink-0" />
@@ -95,10 +95,11 @@ export function Calendar({
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Today Button — Muted grey font text-dim turning white on hover */}
           <button
             type="button"
             onClick={handleTodayClick}
-            className="px-2.5 py-1 rounded-lg text-accent hover:text-accent-hover hover:bg-surface-card transition-colors text-xs font-semibold cursor-pointer mr-1"
+            className="px-2 py-1 rounded-lg text-dim hover:text-white hover:bg-surface-card transition-colors text-xs font-medium cursor-pointer mr-1"
             title="Jump to Today"
           >
             Today
@@ -134,8 +135,8 @@ export function Calendar({
         ))}
       </div>
 
-      {/* Days Grid — Clean 32px circular buttons + dedicated 6px dot row */}
-      <div className="grid grid-cols-7 gap-y-1 gap-x-1 text-center pb-1">
+      {/* Days Grid — 32px circular buttons with green dots inside near the bottom */}
+      <div className="grid grid-cols-7 gap-y-1 gap-x-1 text-center py-1">
         {calendarDays.map((day) => {
           const dateKey = format(day, 'yyyy-MM-dd');
           const isSelected = isSameDay(day, activeSelectedDate);
@@ -144,16 +145,12 @@ export function Calendar({
           const hasSavedEpisode = savedSet.has(dateKey);
 
           return (
-            <div
-              key={dateKey}
-              className="flex flex-col items-center justify-start h-11 w-full"
-            >
-              {/* Circular Day Button (Exact 32px x 32px circle) */}
+            <div key={dateKey} className="flex items-center justify-center h-9 w-full">
               <button
                 type="button"
                 onClick={() => handleDayClick(day)}
                 className={cn(
-                  'w-8 h-8 rounded-full text-xs font-semibold flex items-center justify-center transition-all duration-150 cursor-pointer shrink-0',
+                  'relative w-8 h-8 rounded-full text-xs font-semibold flex flex-col items-center justify-center transition-all duration-150 cursor-pointer shrink-0',
                   {
                     // 1. Selected Day: Solid accent background with crisp white text & glow shadow
                     'bg-accent text-accent-text font-bold shadow-md shadow-accent/30 scale-105 z-10':
@@ -173,21 +170,21 @@ export function Calendar({
                   }
                 )}
               >
-                {format(day, 'd')}
-              </button>
+                <span className={cn('leading-none', hasSavedEpisode && 'pb-1')}>
+                  {format(day, 'd')}
+                </span>
 
-              {/* Dedicated Green Save Dot Container (Exact 6px x 6px dot below circle) */}
-              <div className="h-2.5 flex items-center justify-center mt-0.5">
+                {/* Green Save Dot — Inside the bottom of the circle */}
                 {hasSavedEpisode && (
                   <span
                     className={cn(
-                      'w-1.5 h-1.5 rounded-full transition-colors shrink-0',
-                      isSelected ? 'bg-emerald-300 shadow-sm' : 'bg-emerald-400 shadow-sm shadow-emerald-400/80'
+                      'w-1 h-1 rounded-full absolute bottom-1 left-1/2 -translate-x-1/2 transition-colors',
+                      isSelected ? 'bg-white' : 'bg-emerald-400 shadow-sm shadow-emerald-400/80'
                     )}
                     title="Saved Episode Available"
                   />
                 )}
-              </div>
+              </button>
             </div>
           );
         })}
