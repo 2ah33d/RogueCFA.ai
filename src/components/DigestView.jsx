@@ -853,6 +853,7 @@ function renderScannableOutlook(outlook) {
                     guestName={digest.guest}
                     onScoreTicker={onScoreTicker}
                     index={idx}
+                    stance={pick.stance || 'buy'}
                   />
                 ))}
               </div>
@@ -879,6 +880,7 @@ function renderScannableOutlook(outlook) {
                     onScoreTicker={onScoreTicker}
                     index={idx}
                     isCallerMention={true}
+                    stance={pick.stance}
                   />
                 ))}
               </div>

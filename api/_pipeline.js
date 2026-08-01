@@ -637,7 +637,12 @@ STRICT RULES:
    - "picks": MUST contain EXACTLY the guest's NEW official featured Top Picks (typically 3 stocks) introduced for today's market.
    - "callerMentions": MUST contain any additional stocks discussed by the guest when answering caller questions or viewer emails during the Q&A segment. DO NOT mix caller Q&A stocks into "picks".
 9. EXCLUDE PAST PICKS REVIEWS: Do NOT include historical "Past Picks" reviewed during the episode. "picks" MUST ONLY contain NEW, CURRENT actionable Top Picks.
-10. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
+10. ANALYST STANCE / EVALUATION: For each stock in "callerMentions" (and "picks"), analyze the guest analyst's verbal assessment, sentiment, and recommendation to determine their explicit stance:
+   - "buy": Analyst explicitly recommends buying, adding, or gives a clear positive/bullish recommendation.
+   - "sell": Analyst explicitly recommends selling, trimming, avoiding, or gives a clear negative/bearish stance.
+   - "hold": Analyst recommends holding, neutral posture, wait-and-see, or fair valuation.
+   - "unsure": Analyst is uncertain, hesitant, declined to take a position, or gives a mixed/ambiguous opinion.
+11. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
 
 OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 {
@@ -652,14 +657,16 @@ OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
     {
       "ticker": "TICKER",
       "company": "Company Name",
-      "reasoning": "80-150 words condensing the guest's own logic for this official top pick — WHY they like it, any stated price target or timeframe, any specific catalyst or metric they referenced."
+      "reasoning": "80-150 words condensing the guest's own logic for this official top pick — WHY they like it, any stated price target or timeframe, any specific catalyst or metric they referenced.",
+      "stance": "buy"
     }
   ],
   "callerMentions": [
     {
       "ticker": "TICKER",
       "company": "Company Name",
-      "reasoning": "60-120 words condensing what the guest said about this stock when answering a caller question (buy/sell/hold stance, technicals/fundamentals, risks or valuation concerns)."
+      "reasoning": "60-120 words condensing what the guest said about this stock when answering a caller question (buy/sell/hold stance, technicals/fundamentals, risks or valuation concerns).",
+      "stance": "buy" | "sell" | "hold" | "unsure"
     }
   ],
   "closingNotes": "Optional 50-100 words. Any general macro risks or concluding thoughts the guest mentioned. Empty string if none.",

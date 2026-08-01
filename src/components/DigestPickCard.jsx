@@ -3,12 +3,59 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
- * DigestPickCard — Premium Framer Motion layoutId morphing.
- * 1. Scrolls original card smoothly to vertical center of screen on click.
- * 2. Shared layoutId morphs the bubble container directly from its top-left origin.
- * 3. Expands wider (max-w-2xl) with high-readability text (text-base) and equal margins.
- * 4. Toned down ambient backdrop (bg-[#1E1F22]/55 + backdrop-blur-[3px]).
+ * Render a color-coded stance flag badge based on analyst evaluation
+ * green flag if buy
+ * red flag if sell
+ * yellow flag if hold
+ * grey flag if unsure/neutral
  */
+function renderStanceFlag(stance) {
+  if (!stance) return null;
+  const s = String(stance).toLowerCase().trim();
+
+  if (s === 'buy') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+        <svg className="w-3 h-3 fill-current text-emerald-400" viewBox="0 0 24 24">
+          <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/>
+        </svg>
+        <span>BUY</span>
+      </span>
+    );
+  }
+  if (s === 'sell') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 shrink-0">
+        <svg className="w-3 h-3 fill-current text-rose-400" viewBox="0 0 24 24">
+          <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/>
+        </svg>
+        <span>SELL</span>
+      </span>
+    );
+  }
+  if (s === 'hold') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
+        <svg className="w-3 h-3 fill-current text-amber-400" viewBox="0 0 24 24">
+          <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/>
+        </svg>
+        <span>HOLD</span>
+      </span>
+    );
+  }
+  if (s === 'unsure' || s === 'grey' || s === 'neutral' || s === 'mixed') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/30 shrink-0">
+        <svg className="w-3 h-3 fill-current text-slate-400" viewBox="0 0 24 24">
+          <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/>
+        </svg>
+        <span>UNSURE</span>
+      </span>
+    );
+  }
+  return null;
+}
+
 export default function DigestPickCard({
   ticker,
   company,
@@ -17,10 +64,13 @@ export default function DigestPickCard({
   onScoreTicker,
   index = 0,
   isCallerMention = false,
+  stance = null,
 }) {
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef(null);
   const layoutKey = `pick-card-${ticker}-${index}`;
+
+  const effectiveStance = stance || (isCallerMention ? null : 'buy');
 
   const preview = reasoning
     ? reasoning.length > 100
@@ -91,6 +141,7 @@ export default function DigestPickCard({
                 <h4 className="text-base font-medium text-prime truncate">
                   {company || ticker}
                 </h4>
+                {renderStanceFlag(effectiveStance)}
                 {isCallerMention && (
                   <span className="text-[10px] font-normal px-2.5 py-0.5 rounded-full bg-surface-elevated text-dim">
                     Caller Q&amp;A
@@ -161,11 +212,14 @@ export default function DigestPickCard({
                       <h3 className="text-xl font-bold text-prime leading-snug">
                         {company || ticker}
                       </h3>
-                      {isCallerMention && (
-                        <span className="text-[11px] font-normal px-2.5 py-0.5 rounded-full bg-surface-elevated text-dim mt-1 inline-block">
-                          Caller Q&amp;A
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {renderStanceFlag(effectiveStance)}
+                        {isCallerMention && (
+                          <span className="text-[11px] font-normal px-2.5 py-0.5 rounded-full bg-surface-elevated text-dim inline-block">
+                            Caller Q&amp;A
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
