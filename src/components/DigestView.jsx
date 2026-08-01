@@ -478,12 +478,82 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     );
   }
 
+  /* Helper to return to the latest pre-saved digest without triggering a new generation */
+  const handleBackToLatestSaved = async () => {
+    // 1. Check local storage cache first
+    const cached = getDigestCache('latest_marketcall') || getDigestCache(todayStr);
+    if (cached && cached.digest) {
+      setDigest(cached.digest);
+      const epDate = cached.episodeDate || todayStr;
+      setSelectedDate(epDate);
+      setVideoInfo({
+        videoId: cached.videoId,
+        videoTitle: cached.videoTitle,
+        episodeDate: epDate,
+      });
+      setError(null);
+      return;
+    }
+
+    // 2. Fetch latest saved entry from history API
+    try {
+      setLoading(true);
+      const res = await fetch('/api/marketcall-history?limit=1');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.history) && data.history.length > 0) {
+          const latestItem = data.history[0];
+          if (latestItem && latestItem.digest) {
+            setDigest(latestItem.digest);
+            const epDate = latestItem.episodeDate || todayStr;
+            setSelectedDate(epDate);
+            setVideoInfo({
+              videoId: latestItem.videoId,
+              videoTitle: latestItem.videoTitle,
+              episodeDate: epDate,
+            });
+            setError(null);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[DigestView] Failed to load latest saved episode:', err);
+    } finally {
+      setLoading(false);
+    }
+
+    // 3. Fallback: reset selected date to today without fetching/generating
+    setSelectedDate(todayStr);
+    setVideoInfo({
+      videoId: '',
+      videoTitle: `BNN Bloomberg Market Call (${todayStr})`,
+      episodeDate: todayStr,
+    });
+    setDigest(null);
+  };
+
   /* ── No digest loaded (unsaved date or initial state) — show explicit generation prompt ── */
   if (!digest) {
     const isUnsavedDate = selectedDate && selectedDate !== todayStr;
     return (
       <div className="w-full max-w-3xl mx-auto animate-fade-in font-sans">
-        <div className="bg-surface-card rounded-2xl p-8 text-center space-y-5 shadow-antigravity border border-surface-elevated/60">
+        <div className="relative bg-surface-card rounded-2xl p-8 text-center space-y-5 shadow-antigravity border border-surface-elevated/60">
+          {/* Top-Left Corner "Back to Today" Button */}
+          {isUnsavedDate && (
+            <button
+              type="button"
+              onClick={handleBackToLatestSaved}
+              className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-elevated/80 text-dim hover:text-prime text-xs font-medium rounded-xl transition-all cursor-pointer shadow-sm group"
+              title="Return to latest saved episode"
+            >
+              <svg className="w-3.5 h-3.5 text-accent group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+              </svg>
+              <span>Back to Today</span>
+            </button>
+          )}
+
           <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/15 flex items-center justify-center font-mono font-bold text-lg text-accent">
             <svg className="w-7 h-7 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -510,27 +580,6 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               </svg>
               <span>{isUnsavedDate ? 'Click to Generate Digest' : "Check Newer / Generate Today's Digest"}</span>
             </button>
-            {isUnsavedDate && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedDate(todayStr);
-                  setVideoInfo({
-                    videoId: '',
-                    videoTitle: `BNN Bloomberg Market Call (${todayStr})`,
-                    episodeDate: todayStr,
-                  });
-                  setDigest(null);
-                  fetchDigest(false, todayStr);
-                }}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-surface-elevated hover:bg-surface-elevated/80 text-prime text-xs font-semibold rounded-full shadow-antigravity transition-all cursor-pointer"
-              >
-                <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
-                </svg>
-                <span>Back to Today</span>
-              </button>
-            )}
             <button
               type="button"
               onClick={onOpenSettings}
