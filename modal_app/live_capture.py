@@ -85,7 +85,7 @@ def run_live_capture(duration_secs: int = 3600):
     print("Capture complete. Running Whisper large-v3 transcription on GPU...")
 
     # 2. Transcribe via Whisper large-v3
-    import whisper
+    import whisper  # type: ignore
     model = whisper.load_model("large-v3")
     result = model.transcribe(output_filename, verbose=False)
 
