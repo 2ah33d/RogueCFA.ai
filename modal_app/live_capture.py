@@ -48,21 +48,39 @@ def run_live_capture(duration_secs: int = 3600):
     except Exception as rss_err:
         print(f"Primary RSS audio download failed: {rss_err}. Trying secondary Streamlink live stream capture fallback...")
 
-    # Attempt 2 (FALLBACK): Direct stream capture via Streamlink
+    # Attempt 2 (FALLBACK): Direct stream capture via Streamlink / FFmpeg
     if not capture_success:
         try:
+            # Ensure Streamlink uses universal HLS engine for raw .m3u8 URLs
+            target_stream_url = stream_url
+            if stream_url.startswith("http") and not stream_url.startswith("hls://"):
+                target_stream_url = f"hls://{stream_url}"
+
+            print(f"Attempting live stream capture via Streamlink ({target_stream_url})...")
             streamlink_cmd = [
                 "streamlink",
                 "--http-header", "Referer=https://www.bnnbloomberg.ca/",
                 "--http-header", "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                stream_url,
+                target_stream_url,
                 "best",
                 "-o", output_filename
             ]
             subprocess.run(streamlink_cmd, timeout=duration_secs + 15, check=True)
             capture_success = True
-        except Exception as fallback_err:
-            raise RuntimeError(f"Both primary RSS audio download and Streamlink fallback failed: {fallback_err}")
+        except Exception as streamlink_err:
+            print(f"Streamlink capture failed ({streamlink_err}). Attempting direct FFmpeg capture fallback...")
+            try:
+                ffmpeg_cmd = [
+                    "ffmpeg", "-y",
+                    "-headers", "Referer: https://www.bnnbloomberg.ca/\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36\r\n",
+                    "-i", stream_url,
+                    "-t", str(duration_secs),
+                    "-vn", "-c:a", "aac", output_filename
+                ]
+                subprocess.run(ffmpeg_cmd, timeout=duration_secs + 15, check=True)
+                capture_success = True
+            except Exception as ffmpeg_err:
+                raise RuntimeError(f"Both Streamlink and direct FFmpeg live capture failed: {ffmpeg_err}")
 
     print("Capture complete. Running Whisper large-v3 transcription on GPU...")
 
