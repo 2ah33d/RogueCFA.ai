@@ -478,36 +478,43 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     );
   }
 
-  /* Helper to return to the latest pre-saved digest without triggering a new generation */
+  /* Helper to return to the latest pre-saved digest from history without triggering a new generation */
   const handleBackToLatestSaved = async () => {
-    // 1. Check local storage cache first
-    const cached = getDigestCache('latest_marketcall') || getDigestCache(todayStr);
-    if (cached && cached.digest) {
-      setDigest(cached.digest);
-      const epDate = cached.episodeDate || todayStr;
-      setSelectedDate(epDate);
+    // 1. Check local storage cache for today first
+    const todayCached = getDigestCache(todayStr);
+    if (todayCached && todayCached.digest) {
+      setDigest(todayCached.digest);
+      setSelectedDate(todayStr);
       setVideoInfo({
-        videoId: cached.videoId,
-        videoTitle: cached.videoTitle,
-        episodeDate: epDate,
+        videoId: todayCached.videoId,
+        videoTitle: todayCached.videoTitle,
+        episodeDate: todayStr,
       });
       setError(null);
       return;
     }
 
-    // 2. Fetch latest saved entry from history API
+    // 2. Fetch the most recent saved episode directly from history API
     try {
       setLoading(true);
-      const res = await fetch('/api/marketcall-history?limit=1');
+      const res = await fetch('/api/marketcall-history?limit=10');
       if (res.ok) {
         const data = await res.json();
         if (data && Array.isArray(data.history) && data.history.length > 0) {
-          const latestItem = data.history[0];
+          // Find the newest saved item that contains a full digest
+          const latestItem = data.history.find((h) => h && h.digest);
           if (latestItem && latestItem.digest) {
-            setDigest(latestItem.digest);
             const epDate = latestItem.episodeDate || todayStr;
+            setDigest(latestItem.digest);
             setSelectedDate(epDate);
             setVideoInfo({
+              videoId: latestItem.videoId,
+              videoTitle: latestItem.videoTitle,
+              episodeDate: epDate,
+            });
+            // Update cache so future loads stay fresh
+            saveDigestCache('latest_marketcall', {
+              digest: latestItem.digest,
               videoId: latestItem.videoId,
               videoTitle: latestItem.videoTitle,
               episodeDate: epDate,
@@ -523,7 +530,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       setLoading(false);
     }
 
-    // 3. Fallback: reset selected date to today without fetching/generating
+    // 3. Fallback: reset selected date to today without auto-generating
     setSelectedDate(todayStr);
     setVideoInfo({
       videoId: '',
