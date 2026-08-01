@@ -134,7 +134,7 @@ export function Calendar({
         ))}
       </div>
 
-      {/* Days Grid — Clean fixed cell layout to guarantee symmetric top & bottom padding */}
+      {/* Days Grid — Clean 32px circular buttons + dedicated 6px dot row */}
       <div className="grid grid-cols-7 gap-y-1 gap-x-1 text-center pb-1">
         {calendarDays.map((day) => {
           const dateKey = format(day, 'yyyy-MM-dd');
@@ -146,16 +146,16 @@ export function Calendar({
           return (
             <div
               key={dateKey}
-              className="flex flex-col items-center justify-start h-10 w-full"
+              className="flex flex-col items-center justify-start h-11 w-full"
             >
-              {/* Circular Day Button */}
+              {/* Circular Day Button (Exact 32px x 32px circle) */}
               <button
                 type="button"
                 onClick={() => handleDayClick(day)}
                 className={cn(
-                  'h-7.5 w-7.5 rounded-full text-xs font-semibold flex items-center justify-center transition-all duration-150 cursor-pointer',
+                  'w-8 h-8 rounded-full text-xs font-semibold flex items-center justify-center transition-all duration-150 cursor-pointer shrink-0',
                   {
-                    // 1. Selected Day: Solid accent background with white text & subtle glow
+                    // 1. Selected Day: Solid accent background with crisp white text & glow shadow
                     'bg-accent text-accent-text font-bold shadow-md shadow-accent/30 scale-105 z-10':
                       isSelected,
 
@@ -176,13 +176,13 @@ export function Calendar({
                 {format(day, 'd')}
               </button>
 
-              {/* Dedicated Dot Container below circle (NEVER overlaps circle border) */}
-              <div className="h-2 flex items-center justify-center mt-0.5">
+              {/* Dedicated Green Save Dot Container (Exact 6px x 6px dot below circle) */}
+              <div className="h-2.5 flex items-center justify-center mt-0.5">
                 {hasSavedEpisode && (
                   <span
                     className={cn(
-                      'w-1.25 h-1.25 rounded-full transition-colors',
-                      isSelected ? 'bg-accent' : 'bg-emerald-400 shadow-sm shadow-emerald-400/50'
+                      'w-1.5 h-1.5 rounded-full transition-colors shrink-0',
+                      isSelected ? 'bg-emerald-300 shadow-sm' : 'bg-emerald-400 shadow-sm shadow-emerald-400/80'
                     )}
                     title="Saved Episode Available"
                   />
