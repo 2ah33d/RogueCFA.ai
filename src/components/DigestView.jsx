@@ -510,6 +510,27 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               </svg>
               <span>{isUnsavedDate ? 'Click to Generate Digest' : "Check Newer / Generate Today's Digest"}</span>
             </button>
+            {isUnsavedDate && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDate(todayStr);
+                  setVideoInfo({
+                    videoId: '',
+                    videoTitle: `BNN Bloomberg Market Call (${todayStr})`,
+                    episodeDate: todayStr,
+                  });
+                  setDigest(null);
+                  fetchDigest(false, todayStr);
+                }}
+                className="inline-flex items-center gap-2 px-5 py-3 bg-surface-elevated hover:bg-surface-elevated/80 text-prime text-xs font-semibold rounded-full shadow-antigravity transition-all cursor-pointer"
+              >
+                <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                </svg>
+                <span>Back to Today</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onOpenSettings}
