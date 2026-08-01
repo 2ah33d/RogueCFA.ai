@@ -3,13 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Calendar from './ui/calendar';
 
 /**
- * HistoryBrowser.jsx — Smooth Framer Motion dropdown menu with interactive calendar.
- * Uses exact RogueCFA theme design tokens, circular date selector, and no emojis.
+ * HistoryBrowser.jsx — Smooth Framer Motion dropdown calendar menu.
+ * Continuous rounded-2xl box with zero scrollbars and exact site aesthetics.
  */
 export default function HistoryBrowser({ selectedDate, onSelectDigest, className = '' }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -26,7 +25,6 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
       })
       .catch((err) => {
         console.warn('[HistoryBrowser] Failed to load digest history:', err.message);
-        setError('Unable to load digest history');
       })
       .finally(() => {
         setLoading(false);
@@ -73,7 +71,7 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
     }
   };
 
-  if (loading) {
+  if (loading && history.length === 0) {
     return (
       <div className="flex items-center gap-2 text-xs text-dim font-sans py-1">
         <span className="w-1.5 h-1.5 rounded-full bg-dim animate-ping" />
@@ -104,11 +102,11 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
 
   return (
     <div ref={dropdownRef} className={`relative text-xs font-sans ${className}`}>
-      {/* Dropdown Toggle Pill */}
+      {/* Dropdown Toggle Pill - Clean surface-card background with NO white outline */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="h-8 px-3.5 inline-flex items-center gap-2 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer group border border-edge/40"
+        className="h-8 px-3.5 inline-flex items-center gap-2 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer group"
       >
         <span className="text-xs font-semibold text-prime">{displayDate}</span>
         <span className="text-xs text-dim font-normal">· {history.length} Saved</span>
@@ -123,7 +121,7 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
         </svg>
       </button>
 
-      {/* Animated Dropdown Menu */}
+      {/* Animated Dropdown Menu - Continuous rounded-2xl card without scrollbars */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -131,70 +129,14 @@ export default function HistoryBrowser({ selectedDate, onSelectDigest, className
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="absolute left-0 mt-2 w-88 max-h-[520px] overflow-y-auto bg-surface-elevated border border-surface-card/80 rounded-2xl shadow-antigravity-elevated z-50 p-3 divide-y divide-surface-card/60 font-sans"
+            className="absolute left-0 mt-2 z-50 rounded-2xl shadow-antigravity-elevated overflow-hidden font-sans"
           >
-            {/* Interactive Calendar Component */}
-            <div className="pb-3">
-              <Calendar
-                selectedDate={selectedDate || todayStr}
-                onDateSelect={handleCalendarDateSelect}
-                savedDates={savedDateStrings}
-                className="bg-transparent border-none p-0 shadow-none"
-              />
-            </div>
-
-            {/* Saved Episode History List */}
-            <div className="pt-3">
-              <div className="px-1 py-1 text-[10px] uppercase font-semibold text-dim tracking-wider flex items-center justify-between">
-                <span>Saved Episodes</span>
-                <span className="text-dim/70 font-mono text-[9px]">{historyList.length} total</span>
-              </div>
-              <div className="max-h-44 overflow-y-auto pr-1 space-y-1 mt-1">
-                {historyList.map((item, idx) => {
-                  const isSelected = item.episodeDate === selectedDate || (!selectedDate && idx === 0);
-                  const guestName = item.digest?.guest || 'MarketCall Analyst';
-                  const picksList = Array.isArray(item.digest?.picks)
-                    ? item.digest.picks
-                    : Array.isArray(item.digest?.top_picks)
-                      ? item.digest.top_picks
-                      : [];
-                  const pickCount = picksList.length;
-
-                  return (
-                    <button
-                      key={item.id || item.episodeDate}
-                      type="button"
-                      onClick={() => {
-                        setIsOpen(false);
-                        if (onSelectDigest) {
-                          onSelectDigest(item);
-                        }
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-xl hover:bg-surface-card transition-colors flex items-start justify-between gap-2 cursor-pointer ${
-                        isSelected ? 'bg-surface-card text-prime font-medium border border-accent/30' : 'text-dim'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-prime text-xs font-semibold">{item.episodeDate}</span>
-                          {isSelected && (
-                            <span className="text-[9px] bg-accent/20 text-accent font-semibold px-2 py-0.5 rounded-full">
-                              ACTIVE
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-dim truncate max-w-[190px] mt-0.5">
-                          {guestName}
-                        </p>
-                      </div>
-                      <span className="text-[10px] text-dim shrink-0 mt-0.5 font-medium">
-                        {pickCount} pick{pickCount === 1 ? '' : 's'}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <Calendar
+              selectedDate={selectedDate || todayStr}
+              onDateSelect={handleCalendarDateSelect}
+              savedDates={savedDateStrings}
+              className="border-surface-card/90"
+            />
           </motion.div>
         )}
       </AnimatePresence>

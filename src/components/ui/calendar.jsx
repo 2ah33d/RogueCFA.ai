@@ -14,8 +14,8 @@ import {
   parseISO,
   isValid,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, RotateCcw } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
 
 export function Calendar({
@@ -34,9 +34,6 @@ export function Calendar({
 
   const [currentMonth, setCurrentMonth] = useState(initialDate);
   const [activeSelectedDate, setActiveSelectedDate] = useState(initialDate);
-  const [manualInput, setManualInput] = useState(
-    format(initialDate, 'yyyy-MM-dd')
-  );
 
   // Sync internal state when prop changes
   React.useEffect(() => {
@@ -44,7 +41,6 @@ export function Calendar({
       const parsed = selectedDate instanceof Date ? selectedDate : parseISO(selectedDate);
       if (isValid(parsed)) {
         setActiveSelectedDate(parsed);
-        setManualInput(format(parsed, 'yyyy-MM-dd'));
       }
     }
   }, [selectedDate]);
@@ -70,22 +66,8 @@ export function Calendar({
   const handleDayClick = (day) => {
     setActiveSelectedDate(day);
     const dateStr = format(day, 'yyyy-MM-dd');
-    setManualInput(dateStr);
     if (onDateSelect) {
       onDateSelect(dateStr, day);
-    }
-  };
-
-  const handleManualSubmit = (e) => {
-    e.preventDefault();
-    if (!manualInput) return;
-    const parsed = parseISO(manualInput);
-    if (isValid(parsed)) {
-      setCurrentMonth(parsed);
-      setActiveSelectedDate(parsed);
-      if (onDateSelect) {
-        onDateSelect(manualInput, parsed);
-      }
     }
   };
 
@@ -94,38 +76,38 @@ export function Calendar({
   return (
     <div
       className={cn(
-        'w-full bg-surface-elevated border border-surface-card/80 rounded-2xl p-4 text-prime font-sans shadow-antigravity-elevated select-none',
+        'w-72 bg-surface-elevated border border-surface-card/90 rounded-2xl p-4 text-prime font-sans shadow-antigravity-elevated select-none',
         className
       )}
     >
-      {/* Calendar Header: Title & Navigation */}
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-surface-card/60">
+      {/* Calendar Header: Month, Year, Today & Arrows */}
+      <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-surface-card/80">
         <div className="flex items-center gap-2">
           <CalendarIcon className="w-4 h-4 text-accent shrink-0" />
           <motion.h3
             key={format(currentMonth, 'yyyy-MM')}
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-sm font-semibold tracking-tight text-prime"
+            className="text-sm font-bold tracking-tight text-white"
           >
             {format(currentMonth, 'MMMM yyyy')}
           </motion.h3>
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Today Button (Text only, no icon) */}
           <button
             type="button"
             onClick={handleTodayClick}
-            className="p-1.5 rounded-lg text-dim hover:text-prime hover:bg-surface-card transition-colors text-[11px] font-medium flex items-center gap-1 mr-1"
+            className="px-2.5 py-1 rounded-lg text-accent hover:text-accent-hover hover:bg-surface-card transition-colors text-xs font-semibold cursor-pointer mr-1"
             title="Jump to Today"
           >
-            <RotateCcw className="w-3 h-3 text-accent" />
-            <span>Today</span>
+            Today
           </button>
           <button
             type="button"
             onClick={handlePrevMonth}
-            className="p-1.5 rounded-xl text-dim hover:text-prime hover:bg-surface-card transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-dim hover:text-white hover:bg-surface-card transition-colors cursor-pointer"
             aria-label="Previous Month"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -133,7 +115,7 @@ export function Calendar({
           <button
             type="button"
             onClick={handleNextMonth}
-            className="p-1.5 rounded-xl text-dim hover:text-prime hover:bg-surface-card transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-dim hover:text-white hover:bg-surface-card transition-colors cursor-pointer"
             aria-label="Next Month"
           >
             <ChevronRight className="w-4 h-4" />
@@ -141,12 +123,12 @@ export function Calendar({
         </div>
       </div>
 
-      {/* Weekday Labels Header */}
-      <div className="grid grid-cols-7 gap-1 text-center mb-1">
-        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((dayStr) => (
+      {/* Weekday Header */}
+      <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
+        {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map((dayStr) => (
           <span
             key={dayStr}
-            className="text-[10px] font-semibold uppercase tracking-wider text-dim py-1"
+            className="text-[10px] font-bold uppercase tracking-wider text-dim/80 py-0.5"
           >
             {dayStr}
           </span>
@@ -170,56 +152,39 @@ export function Calendar({
               className={cn(
                 'relative h-8 w-8 mx-auto flex flex-col items-center justify-center rounded-full text-xs transition-all duration-150 cursor-pointer font-medium',
                 {
-                  // Selected Day: Exact theme accent background, white text, circular
-                  'bg-accent text-accent-text font-bold shadow-md shadow-accent/25 scale-105 z-10':
+                  // 1. Selected Day: Solid exact accent color circle with bold white text & glow shadow
+                  'bg-accent text-accent-text font-bold shadow-md shadow-accent/30 scale-105 z-10':
                     isSelected,
-                  // Unselected Today: Subtle ring + accent color text
-                  'text-accent font-semibold ring-1 ring-accent/60 bg-accent/10 hover:bg-accent/20':
+
+                  // 2. Today (when unselected): High-contrast crisp white text with a solid accent outline ring & subtle surface card fill
+                  'text-white font-bold border-2 border-accent bg-surface-card shadow-sm':
                     !isSelected && isCurrentDay,
-                  // Regular current month day
-                  'text-prime hover:bg-surface-card':
+
+                  // 3. Regular day in current month
+                  'text-white/90 hover:bg-surface-card hover:text-white':
                     !isSelected && !isCurrentDay && isCurrentMonth,
-                  // Outside current month day
-                  'text-dim/40 hover:text-dim hover:bg-surface-card/40':
+
+                  // 4. Day outside current month
+                  'text-dim/35 hover:text-dim hover:bg-surface-card/40':
                     !isSelected && !isCurrentDay && !isCurrentMonth,
                 }
               )}
             >
               <span>{format(day, 'd')}</span>
 
-              {/* Episode availability dot indicator */}
-              {hasSavedEpisode && !isSelected && (
+              {/* Saved episode green dot indicator */}
+              {hasSavedEpisode && (
                 <span
                   className={cn(
-                    'absolute bottom-0.5 w-1 h-1 rounded-full',
-                    isCurrentDay ? 'bg-accent' : 'bg-emerald-400'
+                    'absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50',
+                    isSelected && 'bg-white shadow-none'
                   )}
-                  title="Saved MarketCall Episode Available"
+                  title="Saved Episode Available"
                 />
               )}
             </button>
           );
         })}
-      </div>
-
-      {/* Manual Date Input & Quick Jump Bar */}
-      <div className="mt-3 pt-3 border-t border-surface-card/60">
-        <form onSubmit={handleManualSubmit} className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <input
-              type="date"
-              value={manualInput}
-              onChange={(e) => setManualInput(e.target.value)}
-              className="w-full bg-surface-card border border-edge rounded-xl px-3 py-1.5 text-xs text-prime focus:outline-none focus:border-accent font-mono transition-colors"
-            />
-          </div>
-          <button
-            type="submit"
-            className="px-3 py-1.5 bg-surface-card hover:bg-surface-card/80 border border-edge text-prime text-xs font-semibold rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer shrink-0"
-          >
-            Load Date
-          </button>
-        </form>
       </div>
     </div>
   );
