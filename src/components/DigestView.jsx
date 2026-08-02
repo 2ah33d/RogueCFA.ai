@@ -788,8 +788,8 @@ function renderScannableOutlook(outlook) {
           </div>
         </div>
 
-        {/* Video Preview Column — Soft floating shadow, no red play button */}
-        {videoInfo?.videoId && (
+        {/* Video Preview Column — Soft floating shadow */}
+        {videoInfo?.videoId ? (
           <div className="flex items-center gap-3.5 bg-surface-card p-3 rounded-2xl shadow-antigravity shrink-0">
             <a
               href={`https://www.youtube.com/watch?v=${videoInfo.videoId}`}
@@ -815,6 +815,20 @@ function renderScannableOutlook(outlook) {
               >
                 Watch Episode ↗
               </a>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3.5 bg-surface-card p-3 rounded-2xl shadow-antigravity shrink-0">
+            <div className="w-36 h-20 rounded-xl bg-surface-elevated/70 border border-dashed border-edge/60 flex flex-col items-center justify-center text-dim/60 shrink-0">
+              <svg className="w-6 h-6 text-faint mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div className="flex flex-col gap-0.5 pr-1 max-w-[170px]">
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-dim">Full Broadcast</span>
+              <span className="text-xs font-medium text-dim/90 leading-snug">
+                YouTube Not Available Yet
+              </span>
             </div>
           </div>
         )}

@@ -37,9 +37,11 @@ export default async function handler(req, res) {
   /* ── Bearer Token Authorization Verification ── */
   const authHeader = req.headers.authorization || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-  const expectedSecret = process.env.API_SECRET || process.env.CRON_SECRET;
+  const validSecrets = [process.env.API_SECRET, process.env.CRON_SECRET]
+    .filter(Boolean)
+    .map((s) => s.trim());
 
-  if (expectedSecret && token !== expectedSecret) {
+  if (validSecrets.length > 0 && !validSecrets.includes(token)) {
     console.warn('[api/ingest] Unauthorized webhook attempt - invalid or missing secret token');
     return res.status(401).json({ error: 'Unauthorized: Invalid API secret token' });
   }
