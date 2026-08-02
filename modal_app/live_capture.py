@@ -21,9 +21,9 @@ app = modal.App("roguecfa-live-capture")
     secrets=[modal.Secret.from_name("roguecfa-secrets")]
 )
 def run_live_capture(duration_secs: int = 3600):
-    stream_url = os.environ["BNN_LIVE_STREAM_URL"]
-    webhook_url = os.environ["VERCEL_WEBHOOK_URL"]
-    api_secret = os.environ["API_SECRET"]
+    stream_url = os.environ.get("BNN_LIVE_STREAM_URL", "")
+    webhook_url = os.environ.get("VERCEL_WEBHOOK_URL", "https://roguecfa.vercel.app/api/ingest")
+    api_secret = os.environ.get("API_SECRET") or os.environ.get("CRON_SECRET") or "heed_cron"
     output_filename = "market_call_live.m4a"
 
     print("Attempting primary capture from BNN Market Call official RSS audio feed...")
