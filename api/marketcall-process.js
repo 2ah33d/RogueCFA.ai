@@ -151,8 +151,34 @@ export default async function handler(req, res) {
       }
     }
 
+    /* ── Priority 0: Check if a saved raw transcript exists in Supabase for this episode_date ── */
+    try {
+      const { data: savedJob } = await supabase
+        .from('digest_jobs')
+        .select('result, video_title')
+        .eq('episode_date', targetDateStr)
+        .not('result', 'is', null)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const existingRawText = savedJob?.result?.rawText || savedJob?.result?.raw_text || savedJob?.result?.text;
+      if (existingRawText && existingRawText.length >= 200) {
+        selectedVideo = {
+          videoId: savedJob?.result?.videoId || '',
+          videoTitle: savedJob?.video_title || savedJob?.result?.videoTitle || `BNN Bloomberg MarketCall (${targetDateStr})`,
+          episodeDate: targetDateStr,
+          source: 'database_transcript_cache',
+        };
+        cleanedTranscript = cleanRawTranscript(existingRawText);
+        console.log(`[marketcall-process] Reusing pre-existing transcript from database for ${targetDateStr} (${cleanedTranscript.length} chars)`);
+      }
+    } catch (cacheLookErr) {
+      console.warn('[marketcall-process] Database transcript lookup failed:', cacheLookErr.message);
+    }
+
     /* ── Priority 1: Official BNN Market Call Podcast RSS Feed + Groq Whisper ── */
-    if (groqKey && groqKey.startsWith('gsk_')) {
+    if ((!selectedVideo || !cleanedTranscript) && groqKey && groqKey.startsWith('gsk_')) {
       timer.start('Groq Whisper RSS pipeline');
       const rssResult = await fetchRssPodcastFallback(groqKey, timer, targetDateStr);
       timer.end('Groq Whisper RSS pipeline');
@@ -167,32 +193,6 @@ export default async function handler(req, res) {
         cleanedTranscript = cleanRawTranscript(rssResult.text);
       } else if (rssResult && rssResult.groqDiagnostic) {
         groqDiagnosticMsg = ` [DIAGNOSTIC: Groq Whisper MP3 transcription issue: ${rssResult.groqDiagnostic}]`;
-      }
-    }
-
-    /* ── Priority 2 (Secondary Fallback): YouTube + yt-dlp Micro-Worker + Groq Whisper ── */
-    if ((!selectedVideo || !cleanedTranscript) && groqKey && groqKey.startsWith('gsk_')) {
-      try {
-        timer.start('YouTube audio pipeline');
-        const ytMedia = await fetchYoutubeAudioMedia(timer);
-        if (ytMedia && ytMedia.streamUrl) {
-          const episodeDate = ytMedia.episodeDate || targetDateStr;
-          const ytTrans = await transcribeYoutubeAudio(ytMedia.streamUrl, groqKey, timer);
-          if (ytTrans && ytTrans.text && ytTrans.text.length >= 200) {
-            selectedVideo = {
-              videoId: ytMedia.videoId || '',
-              videoTitle: ytMedia.videoTitle || 'BNN Bloomberg MarketCall (YouTube)',
-              episodeDate: episodeDate,
-              source: 'youtube_ytdlp',
-            };
-            cleanedTranscript = cleanRawTranscript(ytTrans.text);
-          }
-        } else if (ytMedia && ytMedia.error) {
-          groqDiagnosticMsg = ` [DIAGNOSTIC: ${ytMedia.error}]`;
-        }
-        timer.end('YouTube audio pipeline');
-      } catch (ytErr) {
-        console.warn('[marketcall-process] YouTube audio pipeline warning:', ytErr.message);
       }
     }
 

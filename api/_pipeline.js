@@ -349,11 +349,23 @@ export async function fetchRssPodcastFallback(groqKey = '', timer, targetDate = 
             }
           }
 
-          /* Enforce strict date check: match against targetDateStr */
-          if (rssItemDate && rssItemDate !== targetDateStr) {
-            console.warn(`[RSS Fallback] Item date (${rssItemDate}) does not match target date (${targetDateStr}). Skipping.`);
+          /* Extract date from title e.g. "July 31, 2026" */
+          let titleDateStr = '';
+          const titleDateMatch = rssItemTitle.match(/\(([A-Za-z]+\.?\s+\d{1,2},\s+\d{4})\)/i);
+          if (titleDateMatch && titleDateMatch[1]) {
+            const parsedTitleD = new Date(titleDateMatch[1]);
+            if (!isNaN(parsedTitleD.getTime())) {
+              titleDateStr = parsedTitleD.toISOString().split('T')[0];
+            }
+          }
+
+          /* Enforce date check: match if pubDate or title date equals targetDateStr */
+          const matchesTarget = (rssItemDate && rssItemDate === targetDateStr) || (titleDateStr && titleDateStr === targetDateStr);
+          if (!matchesTarget) {
+            console.warn(`[RSS Fallback] Item date (${rssItemDate} / ${titleDateStr}) does not match target date (${targetDateStr}). Skipping.`);
             continue;
           }
+          rssItemDate = titleDateStr || rssItemDate || targetDateStr;
 
           /* If groqKey is present, attempt free Whisper audio transcription on the MP3 stream */
           if (groqKey && groqKey.startsWith('gsk_')) {
