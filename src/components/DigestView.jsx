@@ -7,6 +7,87 @@ import DigestPickCard from './DigestPickCard';
 import HistoryBrowser from './HistoryBrowser';
 
 /**
+ * Format the entire AI output into markdown text for clipboard copying,
+ * including [BUY], [SELL], [HOLD], [UNSURE] flags for all picks and caller mentions.
+ */
+export function formatDigestToMarkdown(digest, videoInfo) {
+  if (!digest) return '';
+
+  const lines = [];
+  const dateStr = videoInfo?.episodeDate || new Date().toISOString().split('T')[0];
+  const titleStr = videoInfo?.videoTitle || `BNN Bloomberg MarketCall (${dateStr})`;
+
+  lines.push(`# ${titleStr}`);
+  lines.push(`**Date:** ${dateStr}`);
+  if (digest.guest) {
+    lines.push(`**Guest Analyst:** ${digest.guest}${digest.firm ? ` (${digest.firm})` : ''}`);
+  }
+  if (digest.episodeFocus) {
+    lines.push(`**Episode Focus:** ${digest.episodeFocus}`);
+  }
+  lines.push('');
+
+  /* Market Outlook */
+  if (digest.marketOutlook) {
+    lines.push('## Market Outlook');
+    if (typeof digest.marketOutlook === 'object') {
+      if (digest.marketOutlook.takeaway || digest.marketOutlook.tldr) {
+        lines.push(`> **TL;DR:** ${digest.marketOutlook.takeaway || digest.marketOutlook.tldr}`);
+        lines.push('');
+      }
+      if (digest.marketOutlook.details || digest.marketOutlook.summary) {
+        lines.push(digest.marketOutlook.details || digest.marketOutlook.summary);
+      }
+    } else {
+      lines.push(String(digest.marketOutlook));
+    }
+    lines.push('');
+  }
+
+  /* Top Picks */
+  const picks = Array.isArray(digest.picks) ? digest.picks : Array.isArray(digest.top_picks) ? digest.top_picks : [];
+  if (picks.length > 0) {
+    lines.push('## Analyst Top Picks');
+    picks.forEach((pick, idx) => {
+      const stanceFlag = (pick.stance || pick.action || 'BUY').toUpperCase();
+      const tickerStr = pick.ticker ? ` (${pick.ticker.toUpperCase()})` : '';
+      const companyStr = pick.companyName || pick.company_name || pick.company || pick.name || 'Stock';
+      lines.push(`### ${idx + 1}. [${stanceFlag}] ${companyStr}${tickerStr}`);
+      if (pick.targetPrice) lines.push(`- **Target Price:** ${pick.targetPrice}`);
+      if (pick.horizon) lines.push(`- **Time Horizon:** ${pick.horizon}`);
+      if (pick.reasoning || pick.thesis) lines.push(`- **Reasoning:** ${pick.reasoning || pick.thesis}`);
+      lines.push('');
+    });
+  }
+
+  /* Caller Mentions / Q&A */
+  const callerMentions = Array.isArray(digest.callerMentions) ? digest.callerMentions : Array.isArray(digest.caller_mentions) ? digest.caller_mentions : [];
+  if (callerMentions.length > 0) {
+    lines.push('## Caller Mentions & Q&A');
+    callerMentions.forEach((call, idx) => {
+      const stanceFlag = (call.stance || call.rating || 'UNSURE').toUpperCase();
+      const tickerStr = call.ticker ? ` (${call.ticker.toUpperCase()})` : '';
+      const companyStr = call.company || call.companyName || call.ticker || 'Stock';
+      const callerStr = call.caller ? ` (Caller: ${call.caller})` : '';
+      lines.push(`### ${idx + 1}. [${stanceFlag}] ${companyStr}${tickerStr}${callerStr}`);
+      if (call.reasoning || call.summary || call.commentary) {
+        lines.push(`${call.reasoning || call.summary || call.commentary}`);
+      }
+      lines.push('');
+    });
+  }
+
+  /* Closing Notes */
+  if (digest.closingNotes) {
+    lines.push('## Closing Notes');
+    lines.push(digest.closingNotes);
+    lines.push('');
+  }
+
+  return lines.join('\n').trim();
+}
+
+/**
  * DigestView — Main "Today's Picks" tab content.
  * Fetches & displays the daily MarketCall digest.
  *
@@ -665,87 +746,6 @@ function splitIntoSentences(text) {
   return parts
     .map((s) => s.replace(/___DOT___/g, '.').trim())
     .filter(Boolean);
-}
-
-/**
- * Format the entire AI output into markdown text for clipboard copying,
- * including [BUY], [SELL], [HOLD], [UNSURE] flags for all picks and caller mentions.
- */
-export function formatDigestToMarkdown(digest, videoInfo) {
-  if (!digest) return '';
-
-  const lines = [];
-  const dateStr = videoInfo?.episodeDate || new Date().toISOString().split('T')[0];
-  const titleStr = videoInfo?.videoTitle || `BNN Bloomberg MarketCall (${dateStr})`;
-
-  lines.push(`# ${titleStr}`);
-  lines.push(`**Date:** ${dateStr}`);
-  if (digest.guest) {
-    lines.push(`**Guest Analyst:** ${digest.guest}${digest.firm ? ` (${digest.firm})` : ''}`);
-  }
-  if (digest.episodeFocus) {
-    lines.push(`**Episode Focus:** ${digest.episodeFocus}`);
-  }
-  lines.push('');
-
-  /* Market Outlook */
-  if (digest.marketOutlook) {
-    lines.push('## Market Outlook');
-    if (typeof digest.marketOutlook === 'object') {
-      if (digest.marketOutlook.takeaway || digest.marketOutlook.tldr) {
-        lines.push(`> **TL;DR:** ${digest.marketOutlook.takeaway || digest.marketOutlook.tldr}`);
-        lines.push('');
-      }
-      if (digest.marketOutlook.details || digest.marketOutlook.summary) {
-        lines.push(digest.marketOutlook.details || digest.marketOutlook.summary);
-      }
-    } else {
-      lines.push(String(digest.marketOutlook));
-    }
-    lines.push('');
-  }
-
-  /* Top Picks */
-  const picks = Array.isArray(digest.picks) ? digest.picks : Array.isArray(digest.top_picks) ? digest.top_picks : [];
-  if (picks.length > 0) {
-    lines.push('## Analyst Top Picks');
-    picks.forEach((pick, idx) => {
-      const stanceFlag = (pick.stance || pick.action || 'BUY').toUpperCase();
-      const tickerStr = pick.ticker ? ` (${pick.ticker.toUpperCase()})` : '';
-      const companyStr = pick.companyName || pick.company_name || pick.company || pick.name || 'Stock';
-      lines.push(`### ${idx + 1}. [${stanceFlag}] ${companyStr}${tickerStr}`);
-      if (pick.targetPrice) lines.push(`- **Target Price:** ${pick.targetPrice}`);
-      if (pick.horizon) lines.push(`- **Time Horizon:** ${pick.horizon}`);
-      if (pick.reasoning || pick.thesis) lines.push(`- **Reasoning:** ${pick.reasoning || pick.thesis}`);
-      lines.push('');
-    });
-  }
-
-  /* Caller Mentions / Q&A */
-  const callerMentions = Array.isArray(digest.callerMentions) ? digest.callerMentions : Array.isArray(digest.caller_mentions) ? digest.caller_mentions : [];
-  if (callerMentions.length > 0) {
-    lines.push('## Caller Mentions & Q&A');
-    callerMentions.forEach((call, idx) => {
-      const stanceFlag = (call.stance || call.rating || 'UNSURE').toUpperCase();
-      const tickerStr = call.ticker ? ` (${call.ticker.toUpperCase()})` : '';
-      const companyStr = call.company || call.companyName || call.ticker || 'Stock';
-      const callerStr = call.caller ? ` (Caller: ${call.caller})` : '';
-      lines.push(`### ${idx + 1}. [${stanceFlag}] ${companyStr}${tickerStr}${callerStr}`);
-      if (call.reasoning || call.summary || call.commentary) {
-        lines.push(`${call.reasoning || call.summary || call.commentary}`);
-      }
-      lines.push('');
-    });
-  }
-
-  /* Closing Notes */
-  if (digest.closingNotes) {
-    lines.push('## Closing Notes');
-    lines.push(digest.closingNotes);
-    lines.push('');
-  }
-
-  return lines.join('\n').trim();
 }
 
 /**
