@@ -667,8 +667,6 @@ function splitIntoSentences(text) {
     .filter(Boolean);
 }
 
-}
-
 /**
  * Format the entire AI output into markdown text for clipboard copying,
  * including [BUY], [SELL], [HOLD], [UNSURE] flags for all picks and caller mentions.
