@@ -300,6 +300,7 @@ export default async function handler(req, res) {
     /* ── Success ── */
     const result = {
       digest,
+      rawText: cleanedTranscript,
       videoId: selectedVideo.videoId,
       videoTitle: selectedVideo.videoTitle,
       episodeDate: selectedVideo.episodeDate || targetDateStr,
