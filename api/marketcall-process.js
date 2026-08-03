@@ -24,7 +24,6 @@ import {
   getLatestMarketCallDateStr,
   sanitizeAnalystName,
 } from './_pipeline.js';
-import { fetchYoutubeAudioMedia, transcribeYoutubeAudio } from './_youtubeFetcher.js';
 
 export const config = { maxDuration: 300 };
 
@@ -84,28 +83,24 @@ export default async function handler(req, res) {
     : getLatestMarketCallDateStr();
   const jobId = isDebug ? `debug-${Date.now()}` : generateJobId(targetDateStr);
 
-  /* ── Check if this job is already completed (skip if debug) ── */
+  /* ── Check if this job (or any job for this episode_date) is already completed (skip if debug) ── */
   if (!isDebug) {
     try {
       const { data: existing } = await supabase
         .from('digest_jobs')
-        .select('id, status, result')
-        .eq('id', jobId)
+        .select('id, status, result, created_at')
+        .eq('episode_date', targetDateStr)
+        .eq('status', 'complete')
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (existing?.status === 'complete' && existing.result) {
         return res.status(200).json({
-          jobId,
+          jobId: existing.id,
           status: 'complete',
           result: existing.result,
         });
-      }
-      /* If 'processing' by another invocation, also return early */
-      if (existing?.status === 'processing') {
-        const age = Date.now() - new Date(existing.created_at || 0).getTime();
-        if (age < 4 * 60 * 1000) {
-          return res.status(200).json({ jobId, status: 'processing' });
-        }
       }
     } catch (dbErr) {
       console.warn('[marketcall-process] Supabase check failed:', dbErr.message);

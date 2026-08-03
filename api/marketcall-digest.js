@@ -134,12 +134,13 @@ export default async function handler(req, res) {
         console.warn('[marketcall-digest] Cache check failed:', cacheErr.message);
       }
     } else {
-      /* Force refresh / Renew: delete stale & malformed jobs for targetDateStr so pipeline runs fresh */
+      /* Force refresh / Renew: delete error and stale processing jobs for targetDateStr so pipeline runs fresh while preserving completed live captures */
       try {
         await supabase
           .from('digest_jobs')
           .delete()
-          .eq('episode_date', targetDateStr);
+          .eq('episode_date', targetDateStr)
+          .in('status', ['error', 'processing']);
       } catch {
         /* ignore */
       }
