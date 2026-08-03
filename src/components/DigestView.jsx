@@ -31,6 +31,20 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   const elapsedRef = useRef(null);
   const stageRef = useRef('Initializing pipeline...');
 
+  const [copied, setCopied] = useState(false);
+
+  /* Helper to format full digest into clean markdown text with stance flags */
+  const handleCopyAllText = () => {
+    if (!digest) return;
+    const text = formatDigestToMarkdown(digest, videoInfo);
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    }).catch((err) => {
+      console.warn('Clipboard write failed:', err);
+    });
+  };
+
   /* Check cache on mount */
   useEffect(() => {
     const cached = getDigestCache('latest_marketcall') || getDigestCache(todayStr);
@@ -653,6 +667,89 @@ function splitIntoSentences(text) {
     .filter(Boolean);
 }
 
+}
+
+/**
+ * Format the entire AI output into markdown text for clipboard copying,
+ * including [BUY], [SELL], [HOLD], [UNSURE] flags for all picks and caller mentions.
+ */
+export function formatDigestToMarkdown(digest, videoInfo) {
+  if (!digest) return '';
+
+  const lines = [];
+  const dateStr = videoInfo?.episodeDate || new Date().toISOString().split('T')[0];
+  const titleStr = videoInfo?.videoTitle || `BNN Bloomberg MarketCall (${dateStr})`;
+
+  lines.push(`# ${titleStr}`);
+  lines.push(`**Date:** ${dateStr}`);
+  if (digest.guest) {
+    lines.push(`**Guest Analyst:** ${digest.guest}${digest.firm ? ` (${digest.firm})` : ''}`);
+  }
+  if (digest.episodeFocus) {
+    lines.push(`**Episode Focus:** ${digest.episodeFocus}`);
+  }
+  lines.push('');
+
+  /* Market Outlook */
+  if (digest.marketOutlook) {
+    lines.push('## Market Outlook');
+    if (typeof digest.marketOutlook === 'object') {
+      if (digest.marketOutlook.takeaway || digest.marketOutlook.tldr) {
+        lines.push(`> **TL;DR:** ${digest.marketOutlook.takeaway || digest.marketOutlook.tldr}`);
+        lines.push('');
+      }
+      if (digest.marketOutlook.details || digest.marketOutlook.summary) {
+        lines.push(digest.marketOutlook.details || digest.marketOutlook.summary);
+      }
+    } else {
+      lines.push(String(digest.marketOutlook));
+    }
+    lines.push('');
+  }
+
+  /* Top Picks */
+  const picks = Array.isArray(digest.picks) ? digest.picks : Array.isArray(digest.top_picks) ? digest.top_picks : [];
+  if (picks.length > 0) {
+    lines.push('## Analyst Top Picks');
+    picks.forEach((pick, idx) => {
+      const stanceFlag = (pick.stance || pick.action || 'BUY').toUpperCase();
+      const tickerStr = pick.ticker ? ` (${pick.ticker.toUpperCase()})` : '';
+      const companyStr = pick.companyName || pick.company_name || pick.company || pick.name || 'Stock';
+      lines.push(`### ${idx + 1}. [${stanceFlag}] ${companyStr}${tickerStr}`);
+      if (pick.targetPrice) lines.push(`- **Target Price:** ${pick.targetPrice}`);
+      if (pick.horizon) lines.push(`- **Time Horizon:** ${pick.horizon}`);
+      if (pick.reasoning || pick.thesis) lines.push(`- **Reasoning:** ${pick.reasoning || pick.thesis}`);
+      lines.push('');
+    });
+  }
+
+  /* Caller Mentions / Q&A */
+  const callerMentions = Array.isArray(digest.callerMentions) ? digest.callerMentions : Array.isArray(digest.caller_mentions) ? digest.caller_mentions : [];
+  if (callerMentions.length > 0) {
+    lines.push('## Caller Mentions & Q&A');
+    callerMentions.forEach((call, idx) => {
+      const stanceFlag = (call.stance || call.rating || 'UNSURE').toUpperCase();
+      const tickerStr = call.ticker ? ` (${call.ticker.toUpperCase()})` : '';
+      const companyStr = call.company || call.companyName || call.ticker || 'Stock';
+      const callerStr = call.caller ? ` (Caller: ${call.caller})` : '';
+      lines.push(`### ${idx + 1}. [${stanceFlag}] ${companyStr}${tickerStr}${callerStr}`);
+      if (call.reasoning || call.summary || call.commentary) {
+        lines.push(`${call.reasoning || call.summary || call.commentary}`);
+      }
+      lines.push('');
+    });
+  }
+
+  /* Closing Notes */
+  if (digest.closingNotes) {
+    lines.push('## Closing Notes');
+    lines.push(digest.closingNotes);
+    lines.push('');
+  }
+
+  return lines.join('\n').trim();
+}
+
 /**
  * Helper to render Market Outlook cleanly:
  * 1. Safely extracts a top TL;DR takeaway banner without splitting abbreviations (e.g. / i.e. / U.S.)
@@ -778,12 +875,36 @@ function renderScannableOutlook(outlook) {
               type="button"
               onClick={handleRenewDigest}
               className="h-8 px-3.5 inline-flex items-center gap-2 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer shrink-0 group"
-              title="Clean up malformed jobs for this date and re-generate a fresh digest"
+              title="Re-generate a fresh AI digest for this episode"
             >
               <svg className="w-3.5 h-3.5 text-dim group-hover:text-prime shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               <span className="font-semibold text-prime">Renew Digest</span>
+            </button>
+
+            {/* Copy All Summary Button */}
+            <button
+              type="button"
+              onClick={handleCopyAllText}
+              className="h-8 px-3.5 inline-flex items-center gap-2 bg-surface-card hover:bg-surface-elevated rounded-full text-xs font-medium text-prime shadow-antigravity transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer shrink-0 group"
+              title="Copy full AI digest text & picks with [BUY], [SELL], [HOLD], [UNSURE] flags to clipboard"
+            >
+              {copied ? (
+                <>
+                  <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="font-semibold text-emerald-400">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5 text-dim group-hover:text-prime shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                  </svg>
+                  <span className="font-semibold text-prime">Copy All</span>
+                </>
+              )}
             </button>
           </div>
         </div>
