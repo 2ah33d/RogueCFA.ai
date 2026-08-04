@@ -126,7 +126,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     });
   };
 
-  /* Check cache on mount */
+  /* Check cache on mount & verify against Supabase DB history */
   useEffect(() => {
     const cached = getDigestCache('latest_marketcall') || getDigestCache(todayStr);
     if (cached && cached.digest) {
@@ -139,6 +139,33 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       if (cached.episodeDate) setSelectedDate(cached.episodeDate);
       setHasAttempted(true);
     }
+
+    /* Cross-check local storage cache against Supabase DB */
+    fetch('/api/marketcall-history?limit=5')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.history)) {
+          const validDates = new Set(data.history.filter((h) => h && h.digest).map((h) => h.episodeDate));
+          if (cached && cached.episodeDate && !validDates.has(cached.episodeDate)) {
+            /* Row was deleted from DB — clear stale local storage cache */
+            saveDigestCache('latest_marketcall', null);
+            saveDigestCache(cached.episodeDate, null);
+            const newestValid = data.history.find((h) => h && h.digest);
+            if (newestValid) {
+              setDigest(newestValid.digest);
+              setSelectedDate(newestValid.episodeDate);
+              setVideoInfo({
+                videoId: newestValid.videoId || '',
+                videoTitle: newestValid.videoTitle || `BNN Bloomberg MarketCall (${newestValid.episodeDate})`,
+                episodeDate: newestValid.episodeDate,
+              });
+            } else {
+              setDigest(null);
+            }
+          }
+        }
+      })
+      .catch(() => {});
   }, [todayStr]);
 
   const handleRefresh = () => {

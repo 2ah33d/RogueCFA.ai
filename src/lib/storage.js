@@ -126,6 +126,10 @@ export function getDigestCache(dateStr) {
 
 export function saveDigestCache(dateStr, digest) {
   try {
+    if (!digest) {
+      localStorage.removeItem(KEYS.DIGEST_PREFIX + dateStr);
+      return;
+    }
     localStorage.setItem(KEYS.DIGEST_PREFIX + dateStr, JSON.stringify(digest));
     /* Clean up old digest caches (keep last 7 days) */
     const today = new Date();
@@ -137,5 +141,20 @@ export function saveDigestCache(dateStr, digest) {
     }
   } catch (err) {
     console.warn('Failed to cache digest:', err.message);
+  }
+}
+
+export function clearAllDigestCaches() {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(KEYS.DIGEST_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch (err) {
+    console.warn('Failed to clear digest caches:', err.message);
   }
 }
