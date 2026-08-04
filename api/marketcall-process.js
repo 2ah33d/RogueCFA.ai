@@ -84,8 +84,10 @@ export default async function handler(req, res) {
     : getLatestMarketCallDateStr();
   const jobId = isDebug ? `debug-${Date.now()}` : generateJobId(targetDateStr);
 
-  /* ── Check if this job (or any job for this episode_date) is already completed (skip if debug) ── */
-  if (!isDebug) {
+  const { force } = req.body || {};
+
+  /* ── Check if this job (or any job for this episode_date) is already completed (skip if debug or force refresh) ── */
+  if (!isDebug && !force) {
     try {
       const { data: existing } = await supabase
         .from('digest_jobs')

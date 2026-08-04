@@ -573,45 +573,44 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     );
   }
 
-  /* Helper to return to the latest pre-saved digest from history without triggering a new generation */
-  const handleBackToLatestSaved = async () => {
-    // 1. Check local storage cache for today first
+  /* Helper to return directly to Today's date without corrupting date headers */
+  const handleGoToToday = () => {
+    setSelectedDate(todayStr);
     const todayCached = getDigestCache(todayStr);
     if (todayCached && todayCached.digest) {
       setDigest(todayCached.digest);
-      setSelectedDate(todayStr);
       setVideoInfo({
-        videoId: todayCached.videoId,
-        videoTitle: todayCached.videoTitle,
+        videoId: todayCached.videoId || '',
+        videoTitle: todayCached.videoTitle || `BNN Bloomberg MarketCall (${todayStr})`,
         episodeDate: todayStr,
       });
-      setError(null);
-      return;
+    } else {
+      setDigest(null);
+      setVideoInfo({
+        videoId: '',
+        videoTitle: `BNN Bloomberg Market Call (${todayStr})`,
+        episodeDate: todayStr,
+      });
     }
+    setError(null);
+  };
 
-    // 2. Fetch the most recent saved episode directly from history API
+  /* Helper to load the most recent saved digest from history */
+  const handleBackToLastSaved = async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/marketcall-history?limit=10');
       if (res.ok) {
         const data = await res.json();
         if (data && Array.isArray(data.history) && data.history.length > 0) {
-          // Find the newest saved item that contains a full digest
           const latestItem = data.history.find((h) => h && h.digest);
           if (latestItem && latestItem.digest) {
             const epDate = latestItem.episodeDate || todayStr;
-            setDigest(latestItem.digest);
             setSelectedDate(epDate);
+            setDigest(latestItem.digest);
             setVideoInfo({
-              videoId: latestItem.videoId,
-              videoTitle: latestItem.videoTitle,
-              episodeDate: epDate,
-            });
-            // Update cache so future loads stay fresh
-            saveDigestCache('latest_marketcall', {
-              digest: latestItem.digest,
-              videoId: latestItem.videoId,
-              videoTitle: latestItem.videoTitle,
+              videoId: latestItem.videoId || '',
+              videoTitle: latestItem.videoTitle || `BNN Bloomberg MarketCall (${epDate})`,
               episodeDate: epDate,
             });
             setError(null);
@@ -624,15 +623,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     } finally {
       setLoading(false);
     }
-
-    // 3. Fallback: reset selected date to today without auto-generating
-    setSelectedDate(todayStr);
-    setVideoInfo({
-      videoId: '',
-      videoTitle: `BNN Bloomberg Market Call (${todayStr})`,
-      episodeDate: todayStr,
-    });
-    setDigest(null);
+    handleGoToToday();
   };
 
   /* ── No digest loaded (unsaved date or initial state) — show explicit generation prompt ── */
@@ -641,29 +632,40 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     return (
       <div className="w-full max-w-3xl mx-auto animate-fade-in font-sans">
         <div className="relative bg-surface-card rounded-2xl p-8 text-center space-y-5 shadow-antigravity border border-surface-elevated/60">
-          {/* Top-Left Corner "Back to Today" Button */}
-          {isUnsavedDate && (
+          {/* Top-Left Action Bar: Back to Last Saved & Go to Today */}
+          <div className="absolute top-4 left-4 flex items-center gap-2">
             <button
               type="button"
-              onClick={handleBackToLatestSaved}
-              className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-elevated/80 text-dim hover:text-prime text-xs font-medium rounded-xl transition-all cursor-pointer shadow-sm group"
-              title="Return to latest saved episode"
+              onClick={handleBackToLastSaved}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-elevated/80 text-dim hover:text-prime text-xs font-medium rounded-xl transition-all cursor-pointer shadow-sm group"
+              title="Return to most recent saved episode in history"
             >
               <svg className="w-3.5 h-3.5 text-accent group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
               </svg>
-              <span>Back to Today</span>
+              <span>Back to Last Saved Digest</span>
             </button>
-          )}
 
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/15 flex items-center justify-center font-mono font-bold text-lg text-accent">
+            {isUnsavedDate && (
+              <button
+                type="button"
+                onClick={handleGoToToday}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-elevated/80 text-dim hover:text-prime text-xs font-medium rounded-xl transition-all cursor-pointer shadow-sm"
+                title="Go to Today's date"
+              >
+                <span>Go to Today ({todayStr})</span>
+              </button>
+            )}
+          </div>
+
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/15 flex items-center justify-center font-mono font-bold text-lg text-accent pt-2">
             <svg className="w-7 h-7 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
           <div className="space-y-1.5">
             <h3 className="text-xl font-bold text-prime">
-              {isUnsavedDate ? "This digest hasn't been saved yet" : 'BNN Bloomberg MarketCall Digest'}
+              {isUnsavedDate ? `Digest for ${selectedDate} is not saved yet` : 'BNN Bloomberg MarketCall Digest'}
             </h3>
             <p className="text-xs text-dim max-w-md mx-auto leading-relaxed">
               {isUnsavedDate
