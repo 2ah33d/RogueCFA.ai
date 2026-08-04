@@ -157,44 +157,45 @@ export default async function handler(req, res) {
       });
     }
 
-    const jobId = generateJobId(targetDateStr);
+    const jobId = (force || bypassCache) ? `renew-${targetDateStr}-${Date.now()}` : generateJobId(targetDateStr);
 
-    /* Check if there's already a job for targetDateStr */
-    try {
-      const { data: existingJob } = await supabase
-        .from('digest_jobs')
-        .select('id, status, error_message, created_at')
-        .eq('episode_date', targetDateStr)
-        .in('status', ['processing', 'complete'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    /* Check if there's already an active job for targetDateStr (skip if force refresh) */
+    if (!force && !bypassCache) {
+      try {
+        const { data: existingJob } = await supabase
+          .from('digest_jobs')
+          .select('id, status, error_message, created_at')
+          .eq('episode_date', targetDateStr)
+          .in('status', ['processing', 'complete'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (existingJob) {
-        if (existingJob.status === 'complete') {
-          /* Shouldn't reach here (Fast path B handles it), but just in case */
-          return res.status(200).json({ status: 'complete', jobId: existingJob.id });
+        if (existingJob) {
+          if (existingJob.status === 'complete') {
+            return res.status(200).json({ status: 'complete', jobId: existingJob.id });
+          }
+          /* If processing, check for staleness */
+          const jobAge = Date.now() - new Date(existingJob.created_at).getTime();
+          if (jobAge > 5 * 60 * 1000) {
+            console.warn(`[marketcall-digest] Stale job ${existingJob.id} — marking as error`);
+            await supabase
+              .from('digest_jobs')
+              .update({ status: 'error', error_message: 'Job timed out', updated_at: new Date().toISOString() })
+              .eq('id', existingJob.id);
+            /* Fall through to create fresh job */
+          } else {
+            /* Active job — tell client to poll it AND kick off process (idempotent) */
+            return res.status(200).json({
+              status: 'processing',
+              jobId: existingJob.id,
+              message: 'Digest is being generated.',
+            });
+          }
         }
-        /* If processing, check for staleness */
-        const jobAge = Date.now() - new Date(existingJob.created_at).getTime();
-        if (jobAge > 5 * 60 * 1000) {
-          console.warn(`[marketcall-digest] Stale job ${existingJob.id} — marking as error`);
-          await supabase
-            .from('digest_jobs')
-            .update({ status: 'error', error_message: 'Job timed out', updated_at: new Date().toISOString() })
-            .eq('id', existingJob.id);
-          /* Fall through to create fresh job */
-        } else {
-          /* Active job — tell client to poll it AND kick off process (idempotent) */
-          return res.status(200).json({
-            status: 'processing',
-            jobId: existingJob.id,
-            message: 'Digest is being generated.',
-          });
-        }
+      } catch {
+        /* proceed */
       }
-    } catch {
-      /* proceed */
     }
 
     /* Create fresh job row */

@@ -725,6 +725,8 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
 
   const handleRenewDigest = () => {
     const epDate = videoInfo?.episodeDate || selectedDate || todayStr;
+    saveDigestCache(epDate, null);
+    saveDigestCache('latest_marketcall', null);
     setDigest(null);
     fetchDigest(true, epDate);
   };
