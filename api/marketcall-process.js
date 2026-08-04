@@ -83,7 +83,7 @@ export default async function handler(req, res) {
   const targetDateStr = (rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate))
     ? rawDate
     : getLatestMarketCallDateStr();
-  const jobId = isDebug ? `debug-${Date.now()}` : generateJobId(targetDateStr);
+  const jobId = req.body?.jobId || (isDebug ? `debug-${Date.now()}` : generateJobId(targetDateStr));
 
   const { force } = req.body || {};
 
