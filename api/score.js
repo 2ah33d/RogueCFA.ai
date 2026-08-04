@@ -41,15 +41,19 @@ export default async function handler(req, res) {
 
     /* Merge: math engine owns the score, LLM owns the narrative */
     const result = {
-      /* Math-layer fields (authoritative — never overridden by LLM) */
-      ticker: mathScore?.ticker || narrative.ticker || '',
-      score: mathScore?.score ?? 0,
-      grade: mathScore?.grade || 'C',
-      signal: mathScore?.signal || 'WATCH',
-      score_breakdown: mathScore?.breakdown || {},
-      coverageDepth: mathScore?.coverageDepth ?? null,
-      coverageModifier: mathScore?.coverageModifier ?? 1.0,
-      hasAlphaVantage: mathScore?.hasAlphaVantage || false,
+      /* Math-layer fields (authoritative — included if mathScore passed) */
+      ...(mathScore
+        ? {
+            ticker: mathScore.ticker || narrative.ticker || '',
+            score: mathScore.score ?? 0,
+            grade: mathScore.grade || 'C',
+            signal: mathScore.signal || 'WATCH',
+            score_breakdown: mathScore.breakdown || {},
+            coverageDepth: mathScore.coverageDepth ?? null,
+            coverageModifier: mathScore.coverageModifier ?? 1.0,
+            hasAlphaVantage: mathScore.hasAlphaVantage || false,
+          }
+        : {}),
 
       /* LLM narrative fields */
       thesis: narrative.thesis || '',
