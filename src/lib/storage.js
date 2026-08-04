@@ -15,9 +15,9 @@ const KEYS = {
 /* ── API keys ── */
 
 export function getKeys() {
-  const finnhubKey = localStorage.getItem(KEYS.FINNHUB) || '';
-  const llmKey = localStorage.getItem(KEYS.LLM) || '';
-  const alphaVantageKey = localStorage.getItem(KEYS.ALPHAVANTAGE) || '';
+  const finnhubKey = localStorage.getItem(KEYS.FINNHUB) || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FINNHUB_KEY) || '';
+  const llmKey = localStorage.getItem(KEYS.LLM) || (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_LLM_KEY || import.meta.env?.VITE_GEMINI_KEY)) || '';
+  const alphaVantageKey = localStorage.getItem(KEYS.ALPHAVANTAGE) || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ALPHAVANTAGE_KEY) || '';
   return {
     finnhubKey,
     llmKey,
@@ -38,9 +38,8 @@ export function saveKeys(finnhubKey, llmKey, alphaVantageKey) {
 }
 
 export function hasKeys() {
-  return Boolean(
-    localStorage.getItem(KEYS.FINNHUB) && localStorage.getItem(KEYS.LLM)
-  );
+  /* Bypass mandatory BYOK screen modal: environment variables and backend process.env fallbacks are available */
+  return true;
 }
 
 export function clearKeys() {
@@ -53,7 +52,7 @@ export function clearKeys() {
 /* ── LLM provider ── */
 
 export function getProvider() {
-  return localStorage.getItem(KEYS.PROVIDER) || 'gemini';
+  return localStorage.getItem(KEYS.PROVIDER) || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_LLM_PROVIDER) || 'gemini';
 }
 
 export function saveProvider(provider) {
@@ -87,7 +86,7 @@ export function clearHistory() {
 /* ── YouTube API key (optional — for MarketCall Digest) ── */
 
 export function getYoutubeKey() {
-  return localStorage.getItem(KEYS.YOUTUBE) || '';
+  return localStorage.getItem(KEYS.YOUTUBE) || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_YOUTUBE_KEY) || '';
 }
 
 export function saveYoutubeKey(key) {
@@ -101,7 +100,7 @@ export function saveYoutubeKey(key) {
 /* ── Groq API key (for Free Whisper Audio Transcription) ── */
 
 export function getGroqKey() {
-  return localStorage.getItem(KEYS.GROQ) || '';
+  return localStorage.getItem(KEYS.GROQ) || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_KEY) || '';
 }
 
 export function saveGroqKey(key) {

@@ -48,12 +48,52 @@ export default async function handler(req, res) {
   }
 
   /* ── Parse Request Body Payload ── */
-  const { show, raw_text, rawText, segments } = req.body || {};
+  const { show, raw_text, rawText, segments, audioUrl, audio_url, episodeDate, audioSizeMb } = req.body || {};
   const fullText = raw_text || rawText || '';
+  const targetAudioUrl = audioUrl || audio_url || '';
+
+  const todayStr = episodeDate || getLatestMarketCallDateStr();
+  const showName = show || 'Market Call';
+  const jobId = `live-${todayStr}`;
+
+  /* ── Fast Path A: Modal CPU Live Audio Upload Notification ── */
+  if (targetAudioUrl) {
+    console.log(`[api/ingest] Received Modal live capture audio notification for ${todayStr}: ${targetAudioUrl} (${audioSizeMb || 'N/A'} MB)`);
+    try {
+      await supabase
+        .from('digest_jobs')
+        .upsert({
+          id: `audio-${todayStr}`,
+          episode_date: todayStr,
+          status: 'audio_uploaded',
+          result: {
+            audioUrl: targetAudioUrl,
+            audioSizeMb,
+            episodeDate: todayStr,
+            uploadedAt: new Date().toISOString(),
+            source: 'modal_live_audio',
+          },
+          error_message: null,
+          is_debug: false,
+          video_id: '',
+          video_title: `BNN Bloomberg ${showName} (Live Audio Capture - ${todayStr})`,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+    } catch (dbErr) {
+      console.warn('[api/ingest] Supabase audio notification upsert warning:', dbErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      status: 'audio_uploaded',
+      episodeDate: todayStr,
+      audioUrl: targetAudioUrl,
+    });
+  }
 
   if (!fullText || fullText.trim().length < 100) {
     return res.status(400).json({
-      error: 'Invalid payload: raw_text must be provided and contain at least 100 characters.',
+      error: 'Invalid payload: raw_text or audioUrl must be provided.',
     });
   }
 

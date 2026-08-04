@@ -8,10 +8,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { alphaVantageKey, ticker } = req.body || {};
+  const { alphaVantageKey: bodyKey, ticker } = req.body || {};
+  const alphaVantageKey = bodyKey || process.env.ALPHAVANTAGE_KEY || process.env.VITE_ALPHAVANTAGE_KEY;
 
   if (!alphaVantageKey || !ticker) {
-    return res.status(400).json({ error: 'Missing alphaVantageKey or ticker.' });
+    return res.status(400).json({ error: 'Missing AlphaVantage API key or ticker.' });
   }
 
   const symbol = ticker.toUpperCase().trim();

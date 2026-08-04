@@ -17,6 +17,7 @@ import {
   findRecentMarketCallVideos,
   fetchTranscript,
   fetchRssPodcastFallback,
+  fetchSupabaseStorageAudioFallback,
   cleanRawTranscript,
   buildDigestPrompt,
   callLLM,
@@ -65,10 +66,10 @@ export default async function handler(req, res) {
   } else {
     /* ── Standard or Debug Client Invocation (POST) ── */
     const body = req.body || {};
-    youtubeKey = body.youtubeKey;
-    llmKey = body.llmKey;
-    provider = body.provider;
-    groqKey = body.groqKey;
+    youtubeKey = body.youtubeKey || process.env.CRON_YOUTUBE_KEY || process.env.VITE_YOUTUBE_KEY || process.env.YOUTUBE_KEY || '';
+    llmKey = body.llmKey || process.env.CRON_LLM_KEY || process.env.VITE_LLM_KEY || process.env.LLM_KEY || process.env.GEMINI_KEY || process.env.OPENAI_API_KEY || '';
+    provider = body.provider || process.env.CRON_LLM_PROVIDER || process.env.VITE_LLM_PROVIDER || process.env.LLM_PROVIDER || 'gemini';
+    groqKey = body.groqKey || process.env.CRON_GROQ_KEY || process.env.VITE_GROQ_KEY || process.env.GROQ_KEY || '';
 
     if (body.debugSecret && body.debugSecret === process.env.DEBUG_SECRET) {
       isDebug = true;
@@ -168,14 +169,18 @@ export default async function handler(req, res) {
 
       const existingRawText = savedJob?.result?.rawText || savedJob?.result?.raw_text || savedJob?.result?.text;
       if (existingRawText && existingRawText.length >= 200) {
+        const matchingYtVid = candidateVideos.find((v) => v.isTodayMatch || v.publishDate === targetDateStr);
+        const resolvedVideoId = savedJob?.result?.videoId || matchingYtVid?.videoId || '';
+        const resolvedVideoTitle = matchingYtVid?.title || savedJob?.video_title || savedJob?.result?.videoTitle || `BNN Bloomberg MarketCall (${targetDateStr})`;
+
         selectedVideo = {
-          videoId: savedJob?.result?.videoId || '',
-          videoTitle: savedJob?.video_title || savedJob?.result?.videoTitle || `BNN Bloomberg MarketCall (${targetDateStr})`,
+          videoId: resolvedVideoId,
+          videoTitle: resolvedVideoTitle,
           episodeDate: targetDateStr,
           source: 'database_transcript_cache',
         };
         cleanedTranscript = cleanRawTranscript(existingRawText);
-        console.log(`[marketcall-process] Reusing pre-existing transcript from database for ${targetDateStr} (${cleanedTranscript.length} chars)`);
+        console.log(`[marketcall-process] Reusing pre-existing transcript from database for ${targetDateStr} (${cleanedTranscript.length} chars), videoId: ${resolvedVideoId}`);
       }
     } catch (cacheLookErr) {
       console.warn('[marketcall-process] Database transcript lookup failed:', cacheLookErr.message);
@@ -188,15 +193,34 @@ export default async function handler(req, res) {
       timer.end('Groq Whisper RSS pipeline');
 
       if (rssResult && rssResult.text && rssResult.text.length >= 200) {
+        const matchingYtVid = candidateVideos.find((v) => v.isTodayMatch || v.publishDate === targetDateStr);
         selectedVideo = {
-          videoId: '',
-          videoTitle: rssResult.rssItemTitle || `BNN Bloomberg MarketCall (${targetDateStr})`,
+          videoId: matchingYtVid?.videoId || '',
+          videoTitle: rssResult.rssItemTitle || matchingYtVid?.title || `BNN Bloomberg MarketCall (${targetDateStr})`,
           episodeDate: rssResult.rssItemDate || targetDateStr,
           source: 'bnn_rss_podcast',
         };
         cleanedTranscript = cleanRawTranscript(rssResult.text);
       } else if (rssResult && rssResult.groqDiagnostic) {
         groqDiagnosticMsg = ` [DIAGNOSTIC: Groq Whisper MP3 transcription issue: ${rssResult.groqDiagnostic}]`;
+      }
+    }
+
+    /* ── Priority 1.5: Stitched Live Capture Audio from Supabase Storage + Groq Whisper ── */
+    if ((!selectedVideo || !cleanedTranscript) && groqKey && groqKey.startsWith('gsk_')) {
+      timer.start('Supabase Storage audio fallback');
+      const storageAudioResult = await fetchSupabaseStorageAudioFallback(groqKey, timer, targetDateStr);
+      timer.end('Supabase Storage audio fallback');
+
+      if (storageAudioResult && storageAudioResult.text && storageAudioResult.text.length >= 200) {
+        const matchingYtVid = candidateVideos.find((v) => v.isTodayMatch || v.publishDate === targetDateStr);
+        selectedVideo = {
+          videoId: matchingYtVid?.videoId || '',
+          videoTitle: storageAudioResult.rssItemTitle || matchingYtVid?.title || `BNN Bloomberg MarketCall (${targetDateStr})`,
+          episodeDate: targetDateStr,
+          source: 'supabase_storage_live_audio',
+        };
+        cleanedTranscript = cleanRawTranscript(storageAudioResult.text);
       }
     }
 

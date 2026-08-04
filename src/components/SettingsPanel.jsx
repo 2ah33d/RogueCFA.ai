@@ -180,65 +180,65 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                 <form onSubmit={handleSaveKeys} className="space-y-4 animate-fade-in">
                   <div>
                     <label className="block text-xs font-semibold text-dim uppercase tracking-wider mb-1.5">
-                      Finnhub API Key <span className="text-danger">*</span>
+                      Finnhub API Key <span className="text-dim font-normal lowercase">(Optional — leave blank to use server key)</span>
                     </label>
                     <input
                       type="password"
                       value={finnhubKey}
                       onChange={(e) => setFinnhubKey(e.target.value)}
-                      placeholder="Your Finnhub API key"
+                      placeholder="Leave blank to use server environment variable"
                       className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-sm text-prime font-mono placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-accent/50 shadow-inner"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-dim uppercase tracking-wider mb-1.5">
-                      LLM API Key ({provider}) <span className="text-danger">*</span>
+                      LLM API Key ({provider}) <span className="text-dim font-normal lowercase">(Optional — leave blank to use server key)</span>
                     </label>
                     <input
                       type="password"
                       value={llmKey}
                       onChange={(e) => setLlmKey(e.target.value)}
-                      placeholder="Your LLM API key (Google / OpenAI / Anthropic)"
+                      placeholder="Leave blank to use server environment variable"
                       className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-sm text-prime font-mono placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-accent/50 shadow-inner"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-dim uppercase tracking-wider mb-1.5">
-                      YouTube Data API Key <span className="text-dim font-normal">(MarketCall Digest)</span>
+                      YouTube Data API Key <span className="text-dim font-normal lowercase">(Optional — for Digest)</span>
                     </label>
                     <input
                       type="password"
                       value={youtubeKey}
                       onChange={(e) => setYoutubeKey(e.target.value)}
-                      placeholder="Optional — enables MarketCall episode digests"
+                      placeholder="Optional — leave blank to use server key"
                       className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-sm text-prime font-mono placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-accent/50 shadow-inner"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-dim uppercase tracking-wider mb-1.5">
-                      Groq Whisper API Key <span className="text-dim font-normal">(Free Audio Transcription)</span>
+                      Groq Whisper API Key <span className="text-dim font-normal lowercase">(Optional — Audio Transcription)</span>
                     </label>
                     <input
                       type="password"
                       value={groqKey}
                       onChange={(e) => setGroqKey(e.target.value)}
-                      placeholder="Optional — gsk_... for free MP3 audio transcription"
+                      placeholder="Optional — leave blank to use server key"
                       className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-sm text-prime font-mono placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-accent/50 shadow-inner"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-dim uppercase tracking-wider mb-1.5">
-                      Alpha Vantage API Key <span className="text-dim font-normal">(Optional Fundamentals)</span>
+                      Alpha Vantage API Key <span className="text-dim font-normal lowercase">(Optional Fundamentals)</span>
                     </label>
                     <input
                       type="password"
                       value={alphaVantageKey}
                       onChange={(e) => setAlphaVantageKey(e.target.value)}
-                      placeholder="Optional — earnings &amp; fundamental ratios"
+                      placeholder="Optional — leave blank to use server key"
                       className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-sm text-prime font-mono placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-accent/50 shadow-inner"
                     />
                   </div>
@@ -265,7 +265,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                     <div>
                       <div className="text-xs text-dim font-sans mb-0.5">Finnhub Market Data</div>
                       <div className="text-sm text-prime font-bold">
-                        {maskKey(finnhubKey)}
+                        {finnhubKey ? maskKey(finnhubKey) : <span className="text-dim italic font-sans">Server Default (Environment Variable)</span>}
                       </div>
                     </div>
                     <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
@@ -277,7 +277,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                         LLM Engine ({provider})
                       </div>
                       <div className="text-sm text-prime font-bold">
-                        {maskKey(llmKey)}
+                        {llmKey ? maskKey(llmKey) : <span className="text-dim italic font-sans">Server Default (Environment Variable)</span>}
                       </div>
                     </div>
                     <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
@@ -287,57 +287,30 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                     <div>
                       <div className="text-xs text-dim font-sans mb-0.5">YouTube Data API</div>
                       <div className="text-sm text-prime font-bold">
-                        {youtubeKey ? maskKey(youtubeKey) : <span className="text-dim italic font-sans">Not configured</span>}
+                        {youtubeKey ? maskKey(youtubeKey) : <span className="text-dim italic font-sans">Server Default (Environment Variable)</span>}
                       </div>
                     </div>
-                    {youtubeKey ? (
-                      <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
-                    ) : (
-                      <button
-                        onClick={() => setIsEditingKeys(true)}
-                        className="text-xs font-semibold text-accent hover:underline font-sans"
-                      >
-                        + Add Key
-                      </button>
-                    )}
+                    <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
                   </div>
 
                   <div className="bg-surface-elevated p-4 rounded-xl flex items-center justify-between shadow-inner">
                     <div>
                       <div className="text-xs text-dim font-sans mb-0.5">Groq Whisper (Audio)</div>
                       <div className="text-sm text-prime font-bold">
-                        {groqKey ? maskKey(groqKey) : <span className="text-dim italic font-sans">Not configured</span>}
+                        {groqKey ? maskKey(groqKey) : <span className="text-dim italic font-sans">Server Default (Environment Variable)</span>}
                       </div>
                     </div>
-                    {groqKey ? (
-                      <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
-                    ) : (
-                      <button
-                        onClick={() => setIsEditingKeys(true)}
-                        className="text-xs font-semibold text-accent hover:underline font-sans"
-                      >
-                        + Add Key
-                      </button>
-                    )}
+                    <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
                   </div>
 
                   <div className="bg-surface-elevated p-4 rounded-xl flex items-center justify-between shadow-inner">
                     <div>
                       <div className="text-xs text-dim font-sans mb-0.5">Alpha Vantage (Fundamentals)</div>
                       <div className="text-sm text-prime font-bold">
-                        {alphaVantageKey ? maskKey(alphaVantageKey) : <span className="text-dim italic font-sans">Not configured</span>}
+                        {alphaVantageKey ? maskKey(alphaVantageKey) : <span className="text-dim italic font-sans">Server Default (Environment Variable)</span>}
                       </div>
                     </div>
-                    {alphaVantageKey ? (
-                      <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
-                    ) : (
-                      <button
-                        onClick={() => setIsEditingKeys(true)}
-                        className="text-xs font-semibold text-accent hover:underline font-sans"
-                      >
-                        + Add Key
-                      </button>
-                    )}
+                    <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
                   </div>
                 </div>
               )}

@@ -5,6 +5,7 @@ import { calculateDigestCost } from '../lib/tokenPricing';
 import AnalystBubble from './AnalystBubble';
 import DigestPickCard from './DigestPickCard';
 import HistoryBrowser from './HistoryBrowser';
+import GoldenGoosePanel from './GoldenGoosePanel';
 
 /**
  * Format the entire AI output into markdown text for clipboard copying,
@@ -104,6 +105,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasAttempted, setHasAttempted] = useState(false);
+  const [historyEpisodes, setHistoryEpisodes] = useState([]);
   /* Async polling state */
   const [activeJobId, setActiveJobId] = useState(null);
   const [pollingElapsed, setPollingElapsed] = useState(0);
@@ -141,10 +143,11 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     }
 
     /* Cross-check local storage cache against Supabase DB */
-    fetch('/api/marketcall-history?limit=5')
+    fetch('/api/marketcall-history?limit=10')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && Array.isArray(data.history)) {
+          setHistoryEpisodes(data.history);
           const validDates = new Set(data.history.filter((h) => h && h.digest).map((h) => h.episodeDate));
           if (cached && cached.episodeDate && !validDates.has(cached.episodeDate)) {
             /* Row was deleted from DB — clear stale local storage cache */
@@ -161,6 +164,26 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               });
             } else {
               setDigest(null);
+            }
+          } else if (cached && cached.episodeDate) {
+            /* If DB now has a videoId for this cached date, sync it */
+            const matchingDBRow = data.history.find((h) => h.episodeDate === cached.episodeDate);
+            if (matchingDBRow && matchingDBRow.videoId && (!cached.videoId || cached.videoId !== matchingDBRow.videoId)) {
+              setVideoInfo((prev) => ({
+                ...prev,
+                videoId: matchingDBRow.videoId,
+                videoTitle: matchingDBRow.videoTitle || prev?.videoTitle,
+              }));
+              saveDigestCache(cached.episodeDate, {
+                ...cached,
+                videoId: matchingDBRow.videoId,
+                videoTitle: matchingDBRow.videoTitle || cached.videoTitle,
+              });
+              saveDigestCache('latest_marketcall', {
+                ...cached,
+                videoId: matchingDBRow.videoId,
+                videoTitle: matchingDBRow.videoTitle || cached.videoTitle,
+              });
             }
           }
         }
@@ -179,24 +202,6 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     const groqKey = getGroqKey();
     const { llmKey } = getKeys();
     const provider = getProvider();
-
-    if (!youtubeKey) {
-      setError({
-        type: 'no_key',
-        message: 'YouTube API key is required for the MarketCall Digest.',
-      });
-      setHasAttempted(true);
-      return;
-    }
-
-    if (!llmKey) {
-      setError({
-        type: 'no_key',
-        message: 'LLM API key is required. Set it up in Settings.',
-      });
-      setHasAttempted(true);
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -983,6 +988,13 @@ function renderScannableOutlook(outlook) {
           </div>
         )}
       </div>
+
+      {/* Golden Goose & Multi-Analyst Convergence Panel */}
+      <GoldenGoosePanel
+        episodes={historyEpisodes.length > 0 ? historyEpisodes : (digest ? [{ episodeDate: videoInfo?.episodeDate || selectedDate, digest }] : [])}
+        onScoreTicker={onScoreTicker}
+        onSelectGuest={onSelectGuest}
+      />
 
       {/* 2-Column Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">

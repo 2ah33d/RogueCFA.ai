@@ -8,10 +8,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { finnhubKey, ticker } = req.body || {};
+  const { finnhubKey: bodyKey, ticker } = req.body || {};
+  const finnhubKey = bodyKey || process.env.FINNHUB_KEY || process.env.VITE_FINNHUB_KEY;
 
   if (!finnhubKey || !ticker) {
-    return res.status(400).json({ error: 'Missing finnhubKey or ticker.' });
+    return res.status(400).json({ error: 'Missing Finnhub API key or ticker symbol.' });
   }
 
   const symbol = ticker.toUpperCase().trim().replace(/\.(TO|TSX)$/i, '');

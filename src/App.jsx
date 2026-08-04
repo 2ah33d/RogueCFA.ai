@@ -112,12 +112,6 @@ export default function App() {
       const llmApiKey = keys.llmKey || keys.llm || keys[provider];
       const alphaVantageKey = keys.alphaVantageKey || keys.alphavantage;
 
-      if (!finnhubKey) {
-        addToast('Finnhub API Key is required to score tickers.');
-        setShowSettings(true);
-        return;
-      }
-
       setLoading(true);
       setLoadingTickers(tickers);
       setScorecards([]);

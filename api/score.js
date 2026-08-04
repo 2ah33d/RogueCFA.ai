@@ -8,10 +8,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { llmKey, provider, systemPrompt, userPrompt, mathScore } = req.body || {};
+  const { llmKey: bodyKey, provider: bodyProvider, systemPrompt, userPrompt, mathScore } = req.body || {};
+  const llmKey = bodyKey || process.env.LLM_KEY || process.env.CRON_LLM_KEY || process.env.VITE_LLM_KEY || process.env.GEMINI_KEY || process.env.OPENAI_API_KEY;
+  const provider = bodyProvider || process.env.LLM_PROVIDER || process.env.CRON_LLM_PROVIDER || process.env.VITE_LLM_PROVIDER || 'gemini';
 
   if (!llmKey || !provider || !systemPrompt || !userPrompt) {
-    return res.status(400).json({ error: 'Missing required fields.' });
+    return res.status(400).json({ error: 'Missing required fields or LLM key.' });
   }
 
   try {

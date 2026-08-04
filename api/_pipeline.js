@@ -519,7 +519,77 @@ export async function fetchRssPodcastFallback(groqKey = '', timer, targetDate = 
       /* continue to next RSS URL for non-Groq paths */
     }
   }
-  return { text: '', groqDiagnostic: groqKey ? 'No MarketCall episode found in any RSS feed.' : null };
+
+  return null;
+}
+
+/**
+ * Fallback: Check Supabase Storage bucket 'marketcall-audio' for compressed live capture audio (marketcall-{targetDateStr}.m4a).
+ * If found, download the ~21MB .m4a file and transcribe via Groq Whisper API (< 25MB limit).
+ */
+export async function fetchSupabaseStorageAudioFallback(groqKey = '', timer, targetDate = null) {
+  const targetDateStr = targetDate || getLatestMarketCallDateStr();
+  const filename = `marketcall-${targetDateStr}.m4a`;
+
+  try {
+    timer?.start('Supabase Storage audio lookup');
+    const { supabase } = await import('./_supabaseClient.js');
+
+    const { data: fileData, error: downloadErr } = await supabase
+      .storage
+      .from('marketcall-audio')
+      .download(filename);
+
+    timer?.end('Supabase Storage audio lookup');
+
+    if (downloadErr || !fileData) {
+      console.log(`[Supabase Storage Fallback] No stored live audio found for ${filename}: ${downloadErr?.message || 'File not found'}`);
+      return null;
+    }
+
+    const audioBuffer = await fileData.arrayBuffer();
+    const sizeMb = (audioBuffer.byteLength / 1024 / 1024).toFixed(1);
+    console.log(`[Supabase Storage Fallback] Found stored live capture audio for ${targetDateStr} (${sizeMb} MB)`);
+
+    if (!groqKey || !groqKey.startsWith('gsk_')) {
+      return { text: '', groqDiagnostic: 'Groq API key required for transcription of stored live capture audio.' };
+    }
+
+    timer?.start('Groq Whisper Live Audio Transcription');
+    const formData = new FormData();
+    formData.append('file', new Blob([audioBuffer], { type: 'audio/mp4' }), filename);
+    formData.append('model', 'whisper-large-v3-turbo');
+    formData.append('response_format', 'json');
+
+    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${groqKey}` },
+      body: formData,
+      signal: AbortSignal.timeout(90000),
+    });
+    timer?.end('Groq Whisper Live Audio Transcription');
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.warn(`[Supabase Storage Fallback] Groq Whisper API error (${res.status}): ${errText}`);
+      return { text: '', groqDiagnostic: `Groq Whisper API returned HTTP ${res.status}: ${errText}` };
+    }
+
+    const data = await res.json();
+    const text = (data.text || '').trim();
+    if (text.length >= 200) {
+      console.log(`[Supabase Storage Fallback] Successfully transcribed live capture audio for ${targetDateStr} (${text.length} chars)`);
+      return {
+        text,
+        rssItemTitle: `BNN Bloomberg Market Call (Live Stream Capture - ${targetDateStr})`,
+        rssItemDate: targetDateStr,
+      };
+    }
+  } catch (err) {
+    console.warn(`[Supabase Storage Fallback] Error fetching/transcribing stored audio for ${targetDateStr}:`, err.message);
+  }
+
+  return null;
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -630,6 +700,7 @@ export function sanitizeAnalystName(rawGuest, videoTitle = '', description = '')
 export const CANONICAL_TICKER_MAP = {
   'COGECO': { ticker: 'CCA', company: 'Cogeco Communications' },
   'COGECO COMMUNICATIONS': { ticker: 'CCA', company: 'Cogeco Communications' },
+  'COGECO INC': { ticker: 'CCA', company: 'Cogeco Communications' },
   'KOJIKO': { ticker: 'CCA', company: 'Cogeco Communications' },
   'KOJIKO COMMUNICATIONS': { ticker: 'CCA', company: 'Cogeco Communications' },
   'QUEBECOR': { ticker: 'QBR.B', company: 'Quebecor Inc' },
@@ -649,26 +720,110 @@ export const CANONICAL_TICKER_MAP = {
   'ABBOTT LABS': { ticker: 'ABT', company: 'Abbott Laboratories' },
   'CHIPOTLE': { ticker: 'CMG', company: 'Chipotle Mexican Grill' },
   'MOTOROLA': { ticker: 'MSI', company: 'Motorola Solutions' },
+  'ELEMENT FLEET': { ticker: 'EFN', company: 'Element Fleet Management' },
+  'ELEMENT FLEET MANAGEMENT': { ticker: 'EFN', company: 'Element Fleet Management' },
 };
 
 /**
- * Sanitizes, deduplicates, and resolves ASR phonetic mishearings in the LLM digest.
+ * Reverse ticker lookup map: maps hallucinated or ambiguous tickers
+ * to their verified canonical ticker & company name.
  */
-export function sanitizeDigestResult(digest) {
+export const CANONICAL_REVERSE_TICKER_MAP = {
+  'CCI': { ticker: 'CCA', company: 'Cogeco Communications' },
+  'CJR': { ticker: 'CCA', company: 'Cogeco Communications' },
+  'CJR.B': { ticker: 'CCA', company: 'Cogeco Communications' },
+  'CGO': { ticker: 'CCA', company: 'Cogeco Communications' },
+  'EFP': { ticker: 'EFN', company: 'Element Fleet Management' },
+  'BIRD': { ticker: 'BDT', company: 'Bird Construction' },
+  'CCA': { ticker: 'CCA', company: 'Cogeco Communications' },
+  'QBR.B': { ticker: 'QBR.B', company: 'Quebecor Inc' },
+  'QBR': { ticker: 'QBR.B', company: 'Quebecor Inc' },
+  'BDT': { ticker: 'BDT', company: 'Bird Construction' },
+  'CBRS': { ticker: 'CBRS', company: 'Cerebras Systems' },
+  'RY': { ticker: 'RY', company: 'Royal Bank of Canada' },
+  'TD': { ticker: 'TD', company: 'Toronto-Dominion Bank' },
+  'BMO': { ticker: 'BMO', company: 'Bank of Montreal' },
+  'ABT': { ticker: 'ABT', company: 'Abbott Laboratories' },
+  'CMG': { ticker: 'CMG', company: 'Chipotle Mexican Grill' },
+  'MSI': { ticker: 'MSI', company: 'Motorola Solutions' },
+  'EFN': { ticker: 'EFN', company: 'Element Fleet Management' },
+};
+
+/**
+ * Helper to perform word-boundary-aware fuzzy string matching.
+ * Ensures short keys (e.g. 'TD' or 'BIRD') match full word phrases rather than arbitrary substrings.
+ */
+function isWordBoundaryMatch(text, patternKey) {
+  if (!text || !patternKey) return false;
+  if (text === patternKey) return true;
+
+  const escapedPattern = patternKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patternRegex = new RegExp(`(?:^|\\s)${escapedPattern}(?:$|\\s)`, 'i');
+  if (patternRegex.test(text)) return true;
+
+  const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const textRegex = new RegExp(`(?:^|\\s)${escapedText}(?:$|\\s)`, 'i');
+  if (textRegex.test(patternKey)) return true;
+
+  return false;
+}
+
+/**
+ * Sanitizes, deduplicates, and resolves ASR phonetic mishearings in the LLM digest.
+ *
+ * @param {object} digest - Raw LLM output object
+ * @param {string} [transcriptText] - Optional source transcript text to check for Past Picks markers
+ */
+export function sanitizeDigestResult(digest, transcriptText = '') {
   if (!digest || typeof digest !== 'object') return digest;
+
+  if (!Array.isArray(digest._warnings)) {
+    digest._warnings = [];
+  }
 
   const normalizeItem = (item) => {
     if (!item) return item;
-    const rawComp = (item.company || item.companyName || '').trim().toUpperCase();
+    let rawComp = (item.company || item.companyName || '').trim();
+    // 1. Remove fabricated parentheticals from corporate names (e.g. "(Videotron/Cable subsidiary)")
+    rawComp = rawComp.replace(/\(.*?\)/g, '').trim();
+
+    const uppercaseComp = rawComp.toUpperCase();
     const rawTick = (item.ticker || '').trim().toUpperCase();
 
-    if (CANONICAL_TICKER_MAP[rawComp]) {
-      item.ticker = CANONICAL_TICKER_MAP[rawComp].ticker;
-      item.company = CANONICAL_TICKER_MAP[rawComp].company;
-    } else if (CANONICAL_TICKER_MAP[rawTick]) {
-      item.ticker = CANONICAL_TICKER_MAP[rawTick].ticker;
-      item.company = CANONICAL_TICKER_MAP[rawTick].company;
+    // 2. Strip trailing parentheticals and corporate suffixes for fuzzy matching
+    const stripped = uppercaseComp
+      .replace(/\b(INC\.?|CORP\.?|CORPORATION|COMMUNICATIONS|LTD\.?|LIMITED|PLC\.?|CO\.?|HOLDINGS?|SUBSIDIARY)\b/g, '')
+      .replace(/[^A-Z0-9\s]/g, '')
+      .trim();
+
+    // 3. Match against CANONICAL_TICKER_MAP via exact or word-boundary token match, or reverse ticker lookup
+    let matchedCanonical = null;
+
+    if (CANONICAL_TICKER_MAP[uppercaseComp]) {
+      matchedCanonical = CANONICAL_TICKER_MAP[uppercaseComp];
+    } else if (stripped) {
+      const matchKey = Object.keys(CANONICAL_TICKER_MAP).find((k) => {
+        const kStripped = k
+          .replace(/\b(INC\.?|CORP\.?|CORPORATION|COMMUNICATIONS|LTD\.?|LIMITED|PLC\.?|CO\.?|HOLDINGS?|SUBSIDIARY)\b/g, '')
+          .replace(/[^A-Z0-9\s]/g, '')
+          .trim();
+        return isWordBoundaryMatch(stripped, kStripped);
+      });
+      if (matchKey) {
+        matchedCanonical = CANONICAL_TICKER_MAP[matchKey];
+      }
     }
+
+    if (matchedCanonical) {
+      item.ticker = matchedCanonical.ticker;
+      item.company = matchedCanonical.company;
+    } else if (CANONICAL_REVERSE_TICKER_MAP[rawTick]) {
+      item.ticker = CANONICAL_REVERSE_TICKER_MAP[rawTick].ticker;
+      item.company = CANONICAL_REVERSE_TICKER_MAP[rawTick].company;
+    } else {
+      item.company = rawComp;
+    }
+
     return item;
   };
 
@@ -698,6 +853,20 @@ export function sanitizeDigestResult(digest) {
     digest.pastPicks = deduplicateList(rawPast);
   }
 
+  // Check for missing pastPicks when transcript contains Past Picks segment markers
+  const textToCheck = transcriptText || digest.rawText || digest.transcript || '';
+  if (textToCheck && typeof textToCheck === 'string') {
+    const hasPastPicksMarkers = /past\s+picks|we\s+did\s+sell|looking\s+back\s+at|picks\s+from|prior\s+episode|months\s+ago|year\s+ago/i.test(textToCheck);
+    const hasPastPicksItems = Array.isArray(digest.pastPicks) && digest.pastPicks.length > 0;
+    if (hasPastPicksMarkers && !hasPastPicksItems) {
+      const warnMsg = 'Transcript text contains Past Picks review markers but digest.pastPicks is empty.';
+      console.warn(`[sanitizeDigestResult] WARNING: ${warnMsg}`);
+      if (!digest._warnings.includes(warnMsg)) {
+        digest._warnings.push(warnMsg);
+      }
+    }
+  }
+
   return digest;
 }
 
@@ -712,26 +881,26 @@ export function buildDigestPrompt(transcript, videoTitle = '', description = '')
 Your job is to produce a structured, highly accurate digest from the provided episode transcript.
 
 STRICT ACCURACY & GROUNDING RULES:
-1. ONLY reference what the guest ACTUALLY SAID in the transcript. Do NOT add outside analysis, opinion, or unstated facts not present in the transcript.
+1. ONLY reference what the guest ACTUALLY SAID in the transcript. Do NOT add outside analysis, opinion, or unstated facts not present in the transcript. Do NOT add corporate structure, ownership, or subsidiary relationship details (e.g. parentheticals like "(Videotron/Cable subsidiary)") unless explicitly stated in the transcript.
 2. PRESERVE THE OFFICIAL GUEST NAME: ${officialGuest ? `The verified official guest name extracted from YouTube is "${officialGuest}". ALWAYS set "guest": "${officialGuest}".` : `Extract the guest's official real name from YouTube title/transcript accurately.`} Do NOT output phonetic Whisper mishearings (e.g. "Julian Nono-Wamden").
 3. ENTITY RESOLUTION & NO INVENTED TICKERS:
-   - Silently resolve phonetic ASR errors to real company names & tickers (e.g. "Kojiko" → Cogeco Communications / CCA; "Quebecois" → Quebecor Inc / QBR.B; "Bird Construction" → BDT).
-   - Verify every ticker symbol. If a company ticker is unverified, use the official exchange symbol or set ticker to empty string rather than guessing an unrelated symbol (e.g. Bird Construction is BDT on TSX, NOT BIRD; Cogeco Communications is CCA on TSX, NOT CJR or CGO).
+   - Silently resolve phonetic ASR errors to real company names & tickers (e.g. "Kojiko" → Cogeco Communications / CCA; "Quebecois" → Quebecor Inc / QBR.B; "Bird Construction" → BDT; "Element Fleet" → EFN).
+   - Verify every ticker symbol. If you are not fully certain of a ticker, do not substitute a similar-sounding real ticker from a different company — leave the ticker field as an empty string instead (e.g. do not output CCI or CJR for Cogeco; do not output EFP for Element Fleet Management).
    - ONE ENTRY PER COMPANY: Combine all discussions of the same company into ONE single entry. Never emit multiple duplicate entries or alternative listing tickers for the same underlying company.
-4. STRICT OWNERSHIP & RECOMMENDATION TRUTH:
+4. STRICT OWNERSHIP, RECOMMENDATION TRUTH & NARRATIVE DIRECTION:
    - Pay strict attention to whether the analyst explicitly states they OWN or DO NOT OWN the stock.
-   - If the analyst says "Not a stock that we own" or "I'd stay clear personally", set stance to "hold" or "sell" (never "buy") and explicitly state in reasoning that the analyst does NOT own it.
+   - When an analyst compares two companies and states a preference, identify clearly which company is the one being discussed/asked about and which is the preferred alternative — do not attribute the preference statement to the company under discussion (e.g. if the analyst avoids Cogeco and prefers Quebecor, state clearly that Quebecor is the preferred alternative, NOT Cogeco).
+   - STANCE TAXONOMY:
+     * "buy": Analyst explicitly recommends buying, adding, or gives a clear positive/bullish recommendation.
+     * "sell": Analyst explicitly recommends selling, trimming, or exiting a position they currently hold, or explicitly says to sell/exit if you own it.
+     * "hold": Analyst recommends holding, neutral posture, wait-and-see, fair valuation, or is not owned + waiting for a specific condition to improve (e.g. staying on the sidelines pending proof of a turnaround = HOLD, not SELL).
+     * "unsure": Analyst is uncertain, hesitant, declined to take a position, or gives a mixed/ambiguous opinion.
 5. COMPLETE COVERAGE OF ALL SEGMENTS:
    - "picks": MUST contain EXACTLY the guest's NEW official featured Top Picks (typically 3 stocks) introduced for today's market.
    - "callerMentions": MUST contain ALL caller Q&A stock discussions and sector overviews (e.g. Canadian Banks like RY, TD, BMO). Do NOT drop caller turns or sector exchanges.
-   - "pastPicks": MUST contain historical "Past Picks" reviewed during the episode (e.g. Abbott Labs, Chipotle, Motorola Solutions). Indicate whether each was exited at a loss, gain, or held.
+   - "pastPicks": MUST contain historical "Past Picks" reviewed during the episode whenever present (e.g. Abbott Labs, Chipotle, Motorola Solutions). Indicate whether each was exited at a loss, gain, or held.
 6. NO UNSTATED QUALIFIERS: Do NOT add time-bound or quantitative qualifiers (such as "year-to-date", "quarter-over-quarter", or "52-week") unless explicitly stated in the source transcript text.
-7. ANALYST STANCE / EVALUATION: For each stock in "callerMentions" and "picks", analyze the guest analyst's verbal assessment:
-   - "buy": Analyst explicitly recommends buying, adding, or gives a clear positive/bullish recommendation.
-   - "sell": Analyst explicitly recommends selling, trimming, avoiding, or gives a clear negative/bearish stance.
-   - "hold": Analyst recommends holding, neutral posture, wait-and-see, or fair valuation.
-   - "unsure": Analyst is uncertain, hesitant, declined to take a position, or gives a mixed/ambiguous opinion.
-11. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
+7. CRITICAL JSON ESCAPING & STRUCTURE: Ensure your output is perfectly valid JSON. Do NOT use unescaped double quotes inside strings (escape them as \"). ALWAYS close all open arrays with ] before closing the root object with }.
 
 OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 {
@@ -758,14 +927,15 @@ OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
       "stance": "buy" | "sell" | "hold" | "unsure"
     }
   ],
-  "closingNotes": "Optional 50-100 words. Any general macro risks or concluding thoughts the guest mentioned. Empty string if none.",
-  "corrections": [
+  "pastPicks": [
     {
-      "heard": "phonetic text from transcript",
-      "corrected": "actual name/ticker",
-      "type": "ticker|company|person"
+      "ticker": "TICKER",
+      "company": "Company Name",
+      "reasoning": "40-80 words summarizing the past pick evaluation, performance since prior pick date, and current posture (held/exited).",
+      "stance": "buy" | "sell" | "hold" | "unsure"
     }
-  ]
+  ],
+  "closingNotes": "Optional 50-100 words. Any general macro risks or concluding thoughts the guest mentioned. Empty string if none."
 }`;
 
   const userPrompt = `Here is the transcript from today's BNN Bloomberg MarketCall episode${videoTitle ? ` titled "${videoTitle}"` : ''}:
