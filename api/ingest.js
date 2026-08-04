@@ -19,6 +19,7 @@ import {
   extractJSON,
   getLatestMarketCallDateStr,
   sanitizeAnalystName,
+  sanitizeDigestResult,
 } from './_pipeline.js';
 
 export const config = { maxDuration: 300 };
@@ -84,7 +85,7 @@ export default async function handler(req, res) {
     const rawLLMResponse = await callLLM(provider, llmKey, systemPrompt, userPrompt, timer);
     const llmText = typeof rawLLMResponse === 'string' ? rawLLMResponse : rawLLMResponse.text;
     const llmUsage = typeof rawLLMResponse === 'object' ? rawLLMResponse.usage : null;
-    const digest = extractJSON(llmText);
+    let digest = extractJSON(llmText);
     timer.end('LLM Digest Generation');
 
     if (!digest || !digest.guest) {
@@ -93,7 +94,8 @@ export default async function handler(req, res) {
       });
     }
 
-    /* ── Step 4: Sanitize Analyst Name & Attach Metadata ── */
+    /* ── Step 4: Sanitize Entities, Tickers, Analyst Name & Attach Metadata ── */
+    digest = sanitizeDigestResult(digest);
     digest.guest = sanitizeAnalystName(digest.guest, videoTitle);
     if (llmUsage) {
       digest.usage = llmUsage;

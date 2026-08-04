@@ -1020,6 +1020,33 @@ function renderScannableOutlook(outlook) {
             </div>
           )}
 
+          {/* Past Picks (Historical Performance Review) */}
+          {(Array.isArray(digest.pastPicks) && digest.pastPicks.length > 0 ? digest.pastPicks : Array.isArray(digest.past_picks) && digest.past_picks.length > 0 ? digest.past_picks : null) && (
+            <div>
+              <h3 className="text-xs font-semibold text-dim uppercase tracking-wider mb-3 flex items-center justify-between">
+                <span>Past Picks (Historical Review)</span>
+                <span className="text-[11px] font-normal text-dim">
+                  {(digest.pastPicks || digest.past_picks).length} historical call{(digest.pastPicks || digest.past_picks).length !== 1 ? 's' : ''}
+                </span>
+              </h3>
+              <div className="space-y-3">
+                {(digest.pastPicks || digest.past_picks).map((pick, idx) => (
+                  <DigestPickCard
+                    key={`past-${pick.ticker}-${idx}`}
+                    ticker={pick.ticker}
+                    company={pick.company}
+                    reasoning={pick.reasoning || pick.summary}
+                    guestName={digest.guest}
+                    onScoreTicker={onScoreTicker}
+                    index={idx}
+                    isCallerMention={true}
+                    stance={pick.action === 'exited_loss' || pick.action === 'exited_gain' ? 'sell' : 'hold'}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Closing Notes */}
           {digest.closingNotes && (
             <div className="bg-surface-card rounded-2xl p-6 sm:p-7 shadow-antigravity space-y-3 border border-surface-elevated/40">

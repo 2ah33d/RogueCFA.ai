@@ -23,6 +23,7 @@ import {
   extractJSON,
   getLatestMarketCallDateStr,
   sanitizeAnalystName,
+  sanitizeDigestResult,
 } from './_pipeline.js';
 
 export const config = { maxDuration: 300 };
@@ -274,7 +275,8 @@ export default async function handler(req, res) {
     const rawLLMResponse = await callLLM(provider, llmKey, systemPrompt, userPrompt, timer);
     const llmText = typeof rawLLMResponse === 'string' ? rawLLMResponse : rawLLMResponse.text;
     const llmUsage = typeof rawLLMResponse === 'object' ? rawLLMResponse.usage : null;
-    const digest = extractJSON(llmText);
+    /* Sanitize entities, tickers, analyst name & attach metadata */
+    let digest = extractJSON(llmText);
 
     if (!digest || !digest.guest) {
       const errMsg = `LLM returned an unparseable digest.${groqDiagnosticMsg}`;
@@ -282,7 +284,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ jobId, status: 'error', error: errMsg });
     }
 
-    /* Sanitize analyst name against YouTube video title & phonetic mishearing dictionary */
+    digest = sanitizeDigestResult(digest);
     if (digest && digest.guest) {
       digest.guest = sanitizeAnalystName(digest.guest, selectedVideo.videoTitle, selectedVideo.description);
     }

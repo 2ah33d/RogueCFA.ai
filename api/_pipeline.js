@@ -624,32 +624,109 @@ export function sanitizeAnalystName(rawGuest, videoTitle = '', description = '')
 }
 
 /* ════════════════════════════════════════════════════════════════
+   Digest post-processing & canonical entity sanitization
+   ════════════════════════════════════════════════════════════════ */
+
+export const CANONICAL_TICKER_MAP = {
+  'COGECO': { ticker: 'CCA', company: 'Cogeco Communications' },
+  'COGECO COMMUNICATIONS': { ticker: 'CCA', company: 'Cogeco Communications' },
+  'KOJIKO': { ticker: 'CCA', company: 'Cogeco Communications' },
+  'KOJIKO COMMUNICATIONS': { ticker: 'CCA', company: 'Cogeco Communications' },
+  'QUEBECOR': { ticker: 'QBR.B', company: 'Quebecor Inc' },
+  'QUEBECOIS': { ticker: 'QBR.B', company: 'Quebecor Inc' },
+  'BIRD CONSTRUCTION': { ticker: 'BDT', company: 'Bird Construction' },
+  'BIRD': { ticker: 'BDT', company: 'Bird Construction' },
+  'CEREBRAS': { ticker: 'CBRS', company: 'Cerebras Systems' },
+  'CEREBRAS SYSTEMS': { ticker: 'CBRS', company: 'Cerebras Systems' },
+  'ANTHROPIC': { ticker: '', company: 'Anthropic' },
+  'ANTHROPIK': { ticker: '', company: 'Anthropic' },
+  'ROYAL BANK': { ticker: 'RY', company: 'Royal Bank of Canada' },
+  'TD BANK': { ticker: 'TD', company: 'Toronto-Dominion Bank' },
+  'TORONTO DOMINION': { ticker: 'TD', company: 'Toronto-Dominion Bank' },
+  'BMO': { ticker: 'BMO', company: 'Bank of Montreal' },
+  'BANK OF MONTREAL': { ticker: 'BMO', company: 'Bank of Montreal' },
+  'ABBOTT': { ticker: 'ABT', company: 'Abbott Laboratories' },
+  'ABBOTT LABS': { ticker: 'ABT', company: 'Abbott Laboratories' },
+  'CHIPOTLE': { ticker: 'CMG', company: 'Chipotle Mexican Grill' },
+  'MOTOROLA': { ticker: 'MSI', company: 'Motorola Solutions' },
+};
+
+/**
+ * Sanitizes, deduplicates, and resolves ASR phonetic mishearings in the LLM digest.
+ */
+export function sanitizeDigestResult(digest) {
+  if (!digest || typeof digest !== 'object') return digest;
+
+  const normalizeItem = (item) => {
+    if (!item) return item;
+    const rawComp = (item.company || item.companyName || '').trim().toUpperCase();
+    const rawTick = (item.ticker || '').trim().toUpperCase();
+
+    if (CANONICAL_TICKER_MAP[rawComp]) {
+      item.ticker = CANONICAL_TICKER_MAP[rawComp].ticker;
+      item.company = CANONICAL_TICKER_MAP[rawComp].company;
+    } else if (CANONICAL_TICKER_MAP[rawTick]) {
+      item.ticker = CANONICAL_TICKER_MAP[rawTick].ticker;
+      item.company = CANONICAL_TICKER_MAP[rawTick].company;
+    }
+    return item;
+  };
+
+  const deduplicateList = (list) => {
+    if (!Array.isArray(list)) return [];
+    const map = new Map();
+    for (const rawItem of list) {
+      const item = normalizeItem(rawItem);
+      const key = (item.ticker || item.company || '').toUpperCase();
+      if (!key) continue;
+      if (!map.has(key)) {
+        map.set(key, item);
+      } else {
+        const existing = map.get(key);
+        if (item.reasoning && !existing.reasoning.includes(item.reasoning)) {
+          existing.reasoning += ` ${item.reasoning}`;
+        }
+      }
+    }
+    return Array.from(map.values());
+  };
+
+  if (digest.picks) digest.picks = deduplicateList(digest.picks);
+  if (digest.callerMentions) digest.callerMentions = deduplicateList(digest.callerMentions);
+  if (digest.pastPicks || digest.past_picks) {
+    const rawPast = digest.pastPicks || digest.past_picks;
+    digest.pastPicks = deduplicateList(rawPast);
+  }
+
+  return digest;
+}
+
+/* ════════════════════════════════════════════════════════════════
    Digest prompt construction
    ════════════════════════════════════════════════════════════════ */
 
 export function buildDigestPrompt(transcript, videoTitle = '', description = '') {
   const officialGuest = extractAnalystFromYouTubeTitle(videoTitle, description);
 
-  const systemPrompt = `You are a financial research assistant that summarizes BNN Bloomberg MarketCall episodes.
-Your job is to produce a structured digest from the provided episode transcript.
+  const systemPrompt = `You are a CFA-level financial research assistant that summarizes BNN Bloomberg MarketCall episodes.
+Your job is to produce a structured, highly accurate digest from the provided episode transcript.
 
-STRICT RULES:
-1. ONLY reference what the guest ACTUALLY SAID in the transcript. Do NOT add outside analysis, opinion, or information not present in the transcript.
+STRICT ACCURACY & GROUNDING RULES:
+1. ONLY reference what the guest ACTUALLY SAID in the transcript. Do NOT add outside analysis, opinion, or unstated facts not present in the transcript.
 2. PRESERVE THE OFFICIAL GUEST NAME: ${officialGuest ? `The verified official guest name extracted from YouTube is "${officialGuest}". ALWAYS set "guest": "${officialGuest}".` : `Extract the guest's official real name from YouTube title/transcript accurately.`} Do NOT output phonetic Whisper mishearings (e.g. "Julian Nono-Wamden").
-3. NORMALIZE ALL NAMES — this transcript comes from automatic speech-to-text and WILL contain phonetic errors in company names, tickers, and people's names. Before writing any field:
-   - For every company/stock mentioned, silently resolve it to its real, correct company name and ticker using your own knowledge of public markets (e.g. "Barrick Gould" → Barrick Gold / ABX; a garbled ticker spoken aloud like "boy alphabet" → Alphabet / GOOGL).
-   - Do the same for any person named in the transcript (other analysts, hosts, companies' executives, etc.), not just the guest.
-   - If you cannot confidently resolve a name, keep the closest plausible real match — never invent a company or person that doesn't exist, and never leave an obvious phonetic garble in the output.
-   - Write ONLY the corrected forms in every output field. Do not mention or explain the correction inline in the prose.
-4. Preserve the guest's SPECIFIC language and reasoning — not generic boilerplate. Instead of "the guest is bullish on energy", quote their actual logic: their stated thesis, metrics, catalysts, and price targets.
-5. Every stock pick MUST include the guest's stated reasoning (WHY they like it). A bare ticker list is worthless.
-6. Output 500–1000 words total.
-7. If the guest mentions a price target, timeframe, or specific catalyst, include it.
-8. CRITICAL DISTINCTION FOR PICKS VS CALLER Q&A:
+3. ENTITY RESOLUTION & NO INVENTED TICKERS:
+   - Silently resolve phonetic ASR errors to real company names & tickers (e.g. "Kojiko" → Cogeco Communications / CCA; "Quebecois" → Quebecor Inc / QBR.B; "Bird Construction" → BDT).
+   - Verify every ticker symbol. If a company ticker is unverified, use the official exchange symbol or set ticker to empty string rather than guessing an unrelated symbol (e.g. Bird Construction is BDT on TSX, NOT BIRD; Cogeco Communications is CCA on TSX, NOT CJR or CGO).
+   - ONE ENTRY PER COMPANY: Combine all discussions of the same company into ONE single entry. Never emit multiple duplicate entries or alternative listing tickers for the same underlying company.
+4. STRICT OWNERSHIP & RECOMMENDATION TRUTH:
+   - Pay strict attention to whether the analyst explicitly states they OWN or DO NOT OWN the stock.
+   - If the analyst says "Not a stock that we own" or "I'd stay clear personally", set stance to "hold" or "sell" (never "buy") and explicitly state in reasoning that the analyst does NOT own it.
+5. COMPLETE COVERAGE OF ALL SEGMENTS:
    - "picks": MUST contain EXACTLY the guest's NEW official featured Top Picks (typically 3 stocks) introduced for today's market.
-   - "callerMentions": MUST contain any additional stocks discussed by the guest when answering caller questions or viewer emails during the Q&A segment. DO NOT mix caller Q&A stocks into "picks".
-9. EXCLUDE PAST PICKS REVIEWS: Do NOT include historical "Past Picks" reviewed during the episode. "picks" MUST ONLY contain NEW, CURRENT actionable Top Picks.
-10. ANALYST STANCE / EVALUATION: For each stock in "callerMentions" (and "picks"), analyze the guest analyst's verbal assessment, sentiment, and recommendation to determine their explicit stance:
+   - "callerMentions": MUST contain ALL caller Q&A stock discussions and sector overviews (e.g. Canadian Banks like RY, TD, BMO). Do NOT drop caller turns or sector exchanges.
+   - "pastPicks": MUST contain historical "Past Picks" reviewed during the episode (e.g. Abbott Labs, Chipotle, Motorola Solutions). Indicate whether each was exited at a loss, gain, or held.
+6. NO UNSTATED QUALIFIERS: Do NOT add time-bound or quantitative qualifiers (such as "year-to-date", "quarter-over-quarter", or "52-week") unless explicitly stated in the source transcript text.
+7. ANALYST STANCE / EVALUATION: For each stock in "callerMentions" and "picks", analyze the guest analyst's verbal assessment:
    - "buy": Analyst explicitly recommends buying, adding, or gives a clear positive/bullish recommendation.
    - "sell": Analyst explicitly recommends selling, trimming, avoiding, or gives a clear negative/bearish stance.
    - "hold": Analyst recommends holding, neutral posture, wait-and-see, or fair valuation.
