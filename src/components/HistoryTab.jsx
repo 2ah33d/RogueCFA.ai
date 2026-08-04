@@ -63,23 +63,23 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
       {/* Summary Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-surface-card rounded-2xl shadow-antigravity font-sans">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-surface-elevated rounded-xl text-prime font-mono font-semibold text-xs shadow-inner">
+          <div className="p-3 bg-surface-elevated rounded-xl text-prime font-sans font-semibold text-xs shadow-inner">
             SUM
           </div>
           <div>
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Total Scored</span>
-            <span className="text-2xl font-bold font-mono text-prime">{totalScored}</span>
+            <span className="text-2xl font-bold font-sans text-prime">{totalScored}</span>
             <span className="text-xs text-dim block mt-0.5 font-sans">Historical evaluations</span>
           </div>
         </div>
 
         <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-surface-elevated/40 pt-4 md:pt-0 md:pl-6">
-          <div className="p-3 bg-signal-buy/15 rounded-xl text-signal-buy font-mono font-semibold text-xs">
+          <div className="p-3 bg-signal-buy/15 rounded-xl text-signal-buy font-sans font-semibold text-xs">
             ACC
           </div>
           <div>
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Correct %</span>
-            <span className="text-2xl font-bold font-mono text-signal-buy">{correctPct}%</span>
+            <span className="text-2xl font-bold font-sans text-signal-buy">{correctPct}%</span>
             <span className="text-xs text-dim block mt-0.5 font-sans">
               {correctCount} of {resolvedCount} resolved calls
             </span>
@@ -87,12 +87,12 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
         </div>
 
         <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-surface-elevated/40 pt-4 md:pt-0 md:pl-6">
-          <div className="p-3 bg-surface-elevated rounded-xl text-prime font-mono text-xs shadow-inner">
+          <div className="p-3 bg-surface-elevated rounded-xl text-prime font-sans text-xs shadow-inner">
             RET
           </div>
           <div>
             <span className="text-xs text-dim uppercase tracking-wider font-semibold block">Avg BUY Return</span>
-            <span className={`text-2xl font-bold font-mono ${Number(avgBuyReturn) >= 0 ? 'text-signal-buy' : 'text-signal-avoid'}`}>
+            <span className={`text-2xl font-bold font-sans ${Number(avgBuyReturn) >= 0 ? 'text-signal-buy' : 'text-signal-avoid'}`}>
               {Number(avgBuyReturn) >= 0 ? '+' : ''}{avgBuyReturn}%
             </span>
             <span className="text-xs text-dim block mt-0.5 font-sans">Across BUY calls</span>
@@ -158,7 +158,7 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                 <th className="py-3 px-6 font-semibold">Outcome</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-surface-elevated/40 font-mono">
+            <tbody className="divide-y divide-surface-elevated/40 font-sans">
               {history.map((entry, idx) => {
                 const isExpanded = expandedId === entry.id;
                 const dateStr = entry.date
@@ -212,7 +212,7 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                       onClick={() => setExpandedId(isExpanded ? null : entry.id)}
                       className="hover:bg-surface-elevated transition-colors cursor-pointer select-none group"
                     >
-                      <td className="py-4 px-4 text-center text-dim group-hover:text-prime font-mono">
+                      <td className="py-4 px-4 text-center text-dim group-hover:text-prime font-sans">
                         <span>{isExpanded ? '▼' : '▶'}</span>
                       </td>
                       <td className="py-4 px-4 font-bold text-prime text-sm">
@@ -222,7 +222,7 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                             e.stopPropagation();
                             if (onSelectTicker) onSelectTicker(entry.ticker);
                           }}
-                          className="hover:text-prime underline decoration-dim transition-colors text-left font-mono"
+                          className="hover:text-prime underline decoration-dim transition-colors text-left font-sans"
                           title={`Click to score ${entry.ticker}`}
                         >
                           {entry.ticker}
@@ -231,9 +231,9 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                           {entry.companyName || entry.ticker}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-dim whitespace-nowrap font-mono">{dateStr}</td>
-                      <td className="py-4 px-4 text-prime font-mono">{entry.holdPeriod || '6M'}</td>
-                      <td className="py-4 px-4 font-mono">
+                      <td className="py-4 px-4 text-dim whitespace-nowrap font-sans">{dateStr}</td>
+                      <td className="py-4 px-4 text-prime font-sans">{entry.holdPeriod || '6M'}</td>
+                      <td className="py-4 px-4 font-sans">
                         <span className="font-bold text-base text-prime">{entry.score}</span>
                         <span className="text-xs text-dim">/100 ({entry.grade})</span>
                       </td>
@@ -250,7 +250,7 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                           {entry.signal === 'BUY_SIGNAL' ? 'BUY' : entry.signal || 'WATCH'}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-right font-mono font-bold">
+                      <td className="py-4 px-4 text-right font-sans font-bold">
                         {entry.actualReturn != null && !isNaN(entry.actualReturn) ? (
                           <span
                             className={
@@ -279,19 +279,19 @@ export default function HistoryTab({ onSelectTicker, className = '' }) {
                             <div className="flex items-center justify-between text-xs text-dim bg-surface-card p-4 rounded-xl shadow-antigravity">
                               <div>
                                 <span className="text-dim">Scored Price: </span>
-                                <span className="text-prime font-semibold font-mono">
+                                <span className="text-prime font-semibold font-sans">
                                   {entry.priceAtScore > 0 ? `$${Number(entry.priceAtScore).toFixed(2)}` : 'N/A'}
                                 </span>
                               </div>
                               <div>
                                 <span className="text-dim">Current/Final Price: </span>
-                                <span className="text-prime font-semibold font-mono">
+                                <span className="text-prime font-semibold font-sans">
                                   {entry.finalPrice > 0 ? `$${Number(entry.finalPrice).toFixed(2)}` : 'Pending'}
                                 </span>
                               </div>
                               <div>
                                 <span className="text-dim">Target Resolution Date: </span>
-                                <span className="text-prime font-semibold font-mono">
+                                <span className="text-prime font-semibold font-sans">
                                   {entry.targetDate ? new Date(entry.targetDate).toLocaleDateString() : 'N/A'}
                                 </span>
                               </div>

@@ -31,7 +31,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
               <span className="text-[11px] font-semibold uppercase tracking-wider text-signal-buy block">
                 Top Quantitative Candidate
               </span>
-              <span className="text-base font-bold font-mono text-signal-buy">
+              <span className="text-base font-bold font-sans text-signal-buy">
                 {winnerTicker}
               </span>
             </div>
@@ -56,7 +56,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
                   card.country === 'CA';
                 return (
                   <th key={card.ticker} className={`py-3 px-4 text-center ${isWinner ? 'bg-surface-card font-bold text-prime' : 'text-dim'}`}>
-                    <div className="text-base font-mono font-bold text-prime flex items-center justify-center gap-1.5">
+                    <div className="text-base font-sans font-bold text-prime flex items-center justify-center gap-1.5">
                       {card.ticker}
                       {isWinner && <span className="text-xs text-signal-buy">★</span>}
                       {isTSX && (
@@ -80,7 +80,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
               {scorecards.map((card) => {
                 const isWinner = card.ticker === winnerTicker;
                 return (
-                  <td key={card.ticker} className={`py-3.5 px-4 text-center font-mono font-bold ${isWinner ? 'text-prime' : 'text-dim'}`}>
+                  <td key={card.ticker} className={`py-3.5 px-4 text-center font-sans font-bold ${isWinner ? 'text-prime' : 'text-dim'}`}>
                     <span className="text-lg">{card.score}</span>
                     <span className="text-xs text-dim">/100 ({card.grade})</span>
                   </td>
@@ -112,7 +112,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
             <tr>
               <td className="py-3.5 px-4 font-normal text-dim">Analyst Consensus</td>
               {scorecards.map((card) => (
-                <td key={card.ticker} className="py-3.5 px-4 text-center font-mono text-prime">
+                <td key={card.ticker} className="py-3.5 px-4 text-center font-sans text-prime">
                   {card.score_breakdown?.consensus ?? '—'} pts
                 </td>
               ))}
@@ -122,7 +122,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
             <tr>
               <td className="py-3.5 px-4 font-normal text-dim">Price Momentum</td>
               {scorecards.map((card) => (
-                <td key={card.ticker} className="py-3.5 px-4 text-center font-mono text-prime">
+                <td key={card.ticker} className="py-3.5 px-4 text-center font-sans text-prime">
                   {card.score_breakdown?.momentum ?? '—'} pts
                 </td>
               ))}
@@ -132,7 +132,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
             <tr>
               <td className="py-3.5 px-4 font-normal text-dim">Valuation Reasonableness</td>
               {scorecards.map((card) => (
-                <td key={card.ticker} className="py-3.5 px-4 text-center font-mono text-prime">
+                <td key={card.ticker} className="py-3.5 px-4 text-center font-sans text-prime">
                   {card.score_breakdown?.valuation != null ? `${card.score_breakdown.valuation} pts` : <span className="text-dim text-xs font-sans">N/A</span>}
                 </td>
               ))}
@@ -142,7 +142,7 @@ export default function ComparisonMatrix({ scorecards, comparisonResult }) {
             <tr>
               <td className="py-3.5 px-4 font-normal text-dim">Earnings Beat / Trend</td>
               {scorecards.map((card) => (
-                <td key={card.ticker} className="py-3.5 px-4 text-center font-mono text-prime">
+                <td key={card.ticker} className="py-3.5 px-4 text-center font-sans text-prime">
                   {card.score_breakdown?.earnings != null ? `${card.score_breakdown.earnings} pts` : <span className="text-dim text-xs font-sans">N/A</span>}
                 </td>
               ))}

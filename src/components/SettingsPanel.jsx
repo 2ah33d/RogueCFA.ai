@@ -276,7 +276,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                     <div>
                       <div className="text-xs text-dim font-sans mb-0.5">Finnhub Market Data</div>
                       <div className="text-sm text-prime font-medium">
-                        {finnhubKey ? <span className="font-mono">{maskKey(finnhubKey)}</span> : <span className="text-dim text-xs">Server Default (Environment Variable)</span>}
+                        {finnhubKey ? <span className="font-sans">{maskKey(finnhubKey)}</span> : <span className="text-dim text-xs">Server Default (Environment Variable)</span>}
                       </div>
                     </div>
                     <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
@@ -288,7 +288,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                         LLM Engine ({provider})
                       </div>
                       <div className="text-sm text-prime font-medium">
-                        {llmKey ? <span className="font-mono">{maskKey(llmKey)}</span> : <span className="text-dim text-xs">Server Default (Environment Variable)</span>}
+                        {llmKey ? <span className="font-sans">{maskKey(llmKey)}</span> : <span className="text-dim text-xs">Server Default (Environment Variable)</span>}
                       </div>
                     </div>
                     <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
@@ -298,7 +298,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                     <div>
                       <div className="text-xs text-dim font-sans mb-0.5">YouTube Data API</div>
                       <div className="text-sm text-prime font-medium">
-                        {youtubeKey ? <span className="font-mono">{maskKey(youtubeKey)}</span> : <span className="text-dim text-xs">Server Default (Environment Variable)</span>}
+                        {youtubeKey ? <span className="font-sans">{maskKey(youtubeKey)}</span> : <span className="text-dim text-xs">Server Default (Environment Variable)</span>}
                       </div>
                     </div>
                     <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
@@ -308,7 +308,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                     <div>
                       <div className="text-xs text-dim font-sans mb-0.5">Groq Whisper (Audio)</div>
                       <div className="text-sm text-prime font-medium">
-                        {groqKey ? <span className="font-mono">{maskKey(groqKey)}</span> : <span className="text-dim text-xs">Server Default (Environment Variable)</span>}
+                        {groqKey ? <span className="font-sans">{maskKey(groqKey)}</span> : <span className="text-dim text-xs">Server Default (Environment Variable)</span>}
                       </div>
                     </div>
                     <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
@@ -318,7 +318,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                     <div>
                       <div className="text-xs text-dim font-sans mb-0.5">Alpha Vantage (Fundamentals)</div>
                       <div className="text-sm text-prime font-bold">
-                        {alphaVantageKey ? <span className="font-mono">{maskKey(alphaVantageKey)}</span> : <span className="text-dim text-xs font-normal">Server Default (Environment Variable)</span>}
+                        {alphaVantageKey ? <span className="font-sans">{maskKey(alphaVantageKey)}</span> : <span className="text-dim text-xs font-normal">Server Default (Environment Variable)</span>}
                       </div>
                     </div>
                     <span className="text-[10px] text-signal-buy bg-signal-buy/15 font-sans px-2.5 py-0.5 rounded-full">Active</span>
@@ -387,7 +387,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                   {debugLoading ? 'Running Pipeline...' : 'Force Regenerate Pipeline'}
                 </button>
                 {debugResult && (
-                  <pre className="text-[10px] bg-surface-elevated p-3 rounded-xl text-dim overflow-x-auto max-h-48 font-mono shadow-inner">
+                  <pre className="text-[10px] bg-surface-elevated p-3 rounded-xl text-dim overflow-x-auto max-h-48 font-sans shadow-inner">
                     {JSON.stringify(debugResult, null, 2)}
                   </pre>
                 )}

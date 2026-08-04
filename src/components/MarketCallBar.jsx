@@ -77,7 +77,7 @@ export default function MarketCallBar({ onSelectTicker, onSelectGuest, className
               <button
                 type="button"
                 onClick={() => onSelectTicker && onSelectTicker(ticker, pick.guest)}
-                className="font-mono font-bold text-prime hover:text-white transition-colors"
+                className="font-sans font-bold text-prime hover:text-white transition-colors"
                 title={`Click to score ${ticker}`}
               >
                 {ticker}
@@ -91,7 +91,7 @@ export default function MarketCallBar({ onSelectTicker, onSelectGuest, className
                 {pick.guest}
               </button>
               {winRate && (
-                <span className="font-mono text-[10px] text-signal-buy font-semibold bg-signal-buy/15 px-2 py-0.5 rounded-full">
+                <span className="font-sans text-[10px] text-signal-buy font-semibold bg-signal-buy/15 px-2 py-0.5 rounded-full">
                   {winRate}
                 </span>
               )}

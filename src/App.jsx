@@ -217,7 +217,7 @@ export default function App() {
                 target="_blank"
                 rel="noreferrer"
                 title="Active Deployed Commit SHA (Click to view on GitHub)"
-                className="px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider bg-surface-card/80 border border-white/10 text-dim hover:text-prime hover:border-accent/40 transition-all flex items-center gap-1.5 select-none"
+                className="px-2 py-0.5 rounded-full text-[10px] font-sans tracking-wider bg-surface-card/80 border border-white/10 text-dim hover:text-prime hover:border-accent/40 transition-all flex items-center gap-1.5 select-none"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-signal-buy animate-pulse" />
                 <span>v{typeof __COMMIT_SHA__ !== 'undefined' ? __COMMIT_SHA__ : 'dev'}</span>

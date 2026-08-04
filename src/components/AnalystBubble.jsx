@@ -56,7 +56,7 @@ function ScoreCircle({ score, loading }) {
           />
         </svg>
         {/* Score number inside circle */}
-        <span className="absolute font-mono font-bold text-xs text-prime">
+        <span className="absolute font-sans font-bold text-xs text-prime">
           {score != null ? clamped : '--'}
         </span>
       </div>

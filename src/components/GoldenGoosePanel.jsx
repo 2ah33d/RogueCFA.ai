@@ -67,7 +67,7 @@ export default function GoldenGoosePanel({ episodes = [], onScoreTicker, onSelec
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xl">🪿</span>
               <h2 className="text-lg font-bold text-prime tracking-tight">Golden Goose Radar</h2>
-              <span className="px-2 py-0.5 text-[10px] font-mono font-semibold uppercase bg-amber-500/15 border border-amber-500/40 text-amber-400 rounded-full">
+              <span className="px-2 py-0.5 text-[10px] font-sans font-semibold uppercase bg-amber-500/15 border border-amber-500/40 text-amber-400 rounded-full">
                 7-Day Window (5 Episodes)
               </span>
             </div>
@@ -76,7 +76,7 @@ export default function GoldenGoosePanel({ episodes = [], onScoreTicker, onSelec
             </p>
           </div>
 
-          <div className="flex items-center gap-3 text-xs font-mono">
+          <div className="flex items-center gap-3 text-xs font-sans">
             <div className="px-3 py-1.5 bg-surface-elevated/80 border border-edge rounded-xl text-dim">
               <span className="text-amber-400 font-bold mr-1.5">+{goldenPicks.length}</span>
               <span>Golden Pick{goldenPicks.length === 1 ? '' : 's'}</span>
@@ -117,14 +117,14 @@ export default function GoldenGoosePanel({ episodes = [], onScoreTicker, onSelec
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-lg font-extrabold font-mono text-prime group-hover:text-amber-400 transition-colors">
+                          <span className="text-lg font-extrabold font-sans text-prime group-hover:text-amber-400 transition-colors">
                             {ticker}
                           </span>
                           
                           {/* Fire Logo for Persistent Multi-Week Picks */}
                           {pick.isPersistentHotPick && (
                             <span
-                              className="px-2 py-0.5 text-[10px] font-mono font-bold bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-orange-500/50 text-orange-300 rounded-md flex items-center gap-1 shadow-sm"
+                              className="px-2 py-0.5 text-[10px] font-sans font-bold bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-orange-500/50 text-orange-300 rounded-md flex items-center gap-1 shadow-sm"
                               title="Persistent Hot Pick: Mentioned across multiple weeks or episodes spanning >7 days"
                             >
                               <span>🔥</span>
@@ -133,7 +133,7 @@ export default function GoldenGoosePanel({ episodes = [], onScoreTicker, onSelec
                           )}
 
                           {pick.convergenceBonusApplied && (
-                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-400/20 border border-amber-400/50 text-amber-300 rounded-md">
+                            <span className="px-2 py-0.5 text-[10px] font-sans font-bold bg-amber-400/20 border border-amber-400/50 text-amber-300 rounded-md">
                               +4.5 CONVERGENCE
                             </span>
                           )}
@@ -142,10 +142,10 @@ export default function GoldenGoosePanel({ episodes = [], onScoreTicker, onSelec
                       </div>
 
                       <div className="text-right">
-                        <div className="text-xl font-black font-mono text-amber-400">
+                        <div className="text-xl font-black font-sans text-amber-400">
                           +{pick.score} <span className="text-[10px] text-faint font-normal">PTS</span>
                         </div>
-                        <div className="text-[10px] font-mono text-dim">
+                        <div className="text-[10px] font-sans text-dim">
                           {pick.positiveEpisodes} episode{pick.positiveEpisodes === 1 ? '' : 's'}
                         </div>
                       </div>
@@ -253,10 +253,10 @@ export default function GoldenGoosePanel({ episodes = [], onScoreTicker, onSelec
                 <div>
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <span className="text-base font-bold font-mono text-rose-300">{sell.ticker}</span>
+                      <span className="text-base font-bold font-sans text-rose-300">{sell.ticker}</span>
                       <p className="text-xs text-dim">{sell.companyName}</p>
                     </div>
-                    <span className="text-sm font-black font-mono text-rose-400">{sell.score} PTS</span>
+                    <span className="text-sm font-black font-sans text-rose-400">{sell.score} PTS</span>
                   </div>
                   <p className="text-xs text-rose-200/80 mb-3">
                     Flagged across {sell.negativeEpisodes} distinct episode{sell.negativeEpisodes === 1 ? '' : 's'} with Sell/Avoid analyst stances.
@@ -297,7 +297,7 @@ export default function GoldenGoosePanel({ episodes = [], onScoreTicker, onSelec
 
           {showAllRankings && (
             <div className="mt-3 bg-surface-card border border-edge rounded-2xl overflow-hidden shadow-inner">
-              <table className="w-full text-left text-xs font-mono">
+              <table className="w-full text-left text-xs font-sans">
                 <thead className="bg-surface-elevated border-b border-edge text-dim uppercase text-[10px]">
                   <tr>
                     <th className="py-2.5 px-4">Ticker</th>

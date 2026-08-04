@@ -74,7 +74,7 @@ function ScoreBreakdownBar({ breakdown }) {
             <div key={key} className="flex items-center gap-1.5 font-sans">
               <div className={`w-2 h-2 rounded-full ${config.bg}`} />
               <span className="text-xs text-dim">
-                {config.label}: <span className="text-prime font-mono font-medium">{value.toFixed(1)}</span>
+                {config.label}: <span className="text-prime font-sans font-medium">{value.toFixed(1)}</span>
               </span>
             </div>
           );
@@ -145,11 +145,11 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
       <div className="px-6 pt-6 pb-4 border-b border-surface-elevated/40 flex items-start justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2.5 mb-1">
-            <h3 className="text-2xl font-bold text-prime font-mono tracking-wide">
+            <h3 className="text-2xl font-bold text-prime font-sans tracking-wide">
               {ticker}
             </h3>
             {entryPrice != null && (
-              <span className="text-xs font-medium text-prime font-mono bg-surface-elevated px-3 py-1 rounded-full">
+              <span className="text-xs font-medium text-prime font-sans bg-surface-elevated px-3 py-1 rounded-full">
                 {isTSX ? 'CAD ' : ''}${Number(entryPrice).toFixed(2)}
               </span>
             )}
@@ -243,7 +243,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
               className="transition-all duration-700 ease-out"
             />
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center font-mono">
+          <div className="absolute inset-0 flex flex-col items-center justify-center font-sans">
             <span className={`text-2xl font-bold ${s.textClass}`}>
               {clampedScore}
             </span>
@@ -257,7 +257,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
             <span className="text-xs text-dim uppercase tracking-wider font-semibold">
               Grade
             </span>
-            <p className="text-2xl font-bold text-prime font-mono">{grade}</p>
+            <p className="text-2xl font-bold text-prime font-sans">{grade}</p>
           </div>
           {consensus && (
             <div>
@@ -362,7 +362,7 @@ export default function Scorecard({ data, holdPeriod, onSelectGuest, className =
 
       {/* ── Footer ── */}
       <div className="px-6 py-3 bg-[#24262B]/50 text-xs text-dim flex items-center justify-between font-sans">
-        <span className="font-mono text-[11px]">
+        <span className="font-sans text-[11px]">
           {scoredAt ? new Date(scoredAt).toLocaleString() : ''}
         </span>
         <span className="italic text-[11px]">Not financial advice</span>

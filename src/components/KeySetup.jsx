@@ -60,7 +60,7 @@ export default function KeySetup({ onComplete, className = '' }) {
                 setError('');
               }}
               placeholder="Your Finnhub API key"
-              className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-prime placeholder:text-dim/40 focus:outline-none focus:ring-1 focus:ring-accent/50 text-sm font-mono shadow-inner border-transparent"
+              className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-prime placeholder:text-dim/40 focus:outline-none focus:ring-1 focus:ring-accent/50 text-sm font-sans shadow-inner border-transparent"
               autoComplete="off"
             />
             <a
@@ -86,7 +86,7 @@ export default function KeySetup({ onComplete, className = '' }) {
                 setError('');
               }}
               placeholder="Your LLM API key"
-              className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-prime placeholder:text-dim/40 focus:outline-none focus:ring-1 focus:ring-accent/50 text-sm font-mono shadow-inner border-transparent"
+              className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-prime placeholder:text-dim/40 focus:outline-none focus:ring-1 focus:ring-accent/50 text-sm font-sans shadow-inner border-transparent"
               autoComplete="off"
             />
           </div>
@@ -108,7 +108,7 @@ export default function KeySetup({ onComplete, className = '' }) {
               value={youtubeKey}
               onChange={(e) => setYoutubeKey(e.target.value)}
               placeholder="Optional — enables MarketCall Digest"
-              className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-prime placeholder:text-dim/40 focus:outline-none focus:ring-1 focus:ring-accent/50 text-sm font-mono shadow-inner border-transparent"
+              className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-prime placeholder:text-dim/40 focus:outline-none focus:ring-1 focus:ring-accent/50 text-sm font-sans shadow-inner border-transparent"
               autoComplete="off"
             />
           </div>
@@ -123,7 +123,7 @@ export default function KeySetup({ onComplete, className = '' }) {
               value={alphaVantageKey}
               onChange={(e) => setAlphaVantageKey(e.target.value)}
               placeholder="Optional — earnings &amp; fundamentals"
-              className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-prime placeholder:text-dim/40 focus:outline-none focus:ring-1 focus:ring-accent/50 text-sm font-mono shadow-inner border-transparent"
+              className="w-full px-4 py-3 bg-surface-elevated rounded-xl text-prime placeholder:text-dim/40 focus:outline-none focus:ring-1 focus:ring-accent/50 text-sm font-sans shadow-inner border-transparent"
               autoComplete="off"
             />
           </div>

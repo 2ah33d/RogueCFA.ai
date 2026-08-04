@@ -422,11 +422,11 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <span className="font-mono text-xs">{progressMessage}</span>
+            <span className="font-sans text-xs">{progressMessage}</span>
           </div>
           {isPolling ? (
             <div className="mt-2 space-y-1.5">
-              <p className="text-[10px] text-faint font-mono">
+              <p className="text-[10px] text-faint font-sans">
                 Elapsed: {pollingElapsed}s — audio transcription typically takes 30–60 seconds
               </p>
               {/* Progress bar */}
@@ -481,10 +481,10 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
       <div className="space-y-3 mb-5 max-w-lg mx-auto text-left">
         {cleanMsg && <p className="text-sm text-dim leading-relaxed text-center">{cleanMsg}</p>}
         <div className="bg-surface-elevated border border-accent/40 rounded-xl p-4 shadow-inner">
-          <div className="flex items-center gap-2 font-mono text-xs font-bold text-accent mb-1.5">
+          <div className="flex items-center gap-2 font-sans text-xs font-bold text-accent mb-1.5">
             <span>DIAGNOSTIC TRACE &amp; REMEDIATION</span>
           </div>
-          <p className="font-mono text-xs text-prime leading-relaxed">{diagText}</p>
+          <p className="font-sans text-xs text-prime leading-relaxed">{diagText}</p>
         </div>
       </div>
     );
@@ -498,7 +498,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           {error.type === 'no_key' ? (
             <>
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-signal-watch/10 border border-signal-watch/30
-                              flex items-center justify-center font-mono font-bold text-lg text-signal-watch">
+                              flex items-center justify-center font-sans font-bold text-lg text-signal-watch">
                 KEY
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">YouTube API Key Required</h3>
@@ -529,7 +529,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           ) : error.type === 'no_episode' ? (
             <>
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-surface-elevated border border-edge
-                              flex items-center justify-center font-mono font-bold text-lg text-faint">
+                              flex items-center justify-center font-sans font-bold text-lg text-faint">
                 BNN
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">No Recent Episode Found</h3>
@@ -538,7 +538,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           ) : error.type === 'no_transcript' ? (
             <>
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-signal-watch/10 border border-signal-watch/30
-                              flex items-center justify-center font-mono font-bold text-lg text-signal-watch">
+                              flex items-center justify-center font-sans font-bold text-lg text-signal-watch">
                 ...
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">Transcript Not Ready</h3>
@@ -570,7 +570,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
           ) : (
             <>
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-danger/10 border border-danger/30
-                              flex items-center justify-center font-mono font-bold text-lg text-danger">
+                              flex items-center justify-center font-sans font-bold text-lg text-danger">
                 !
               </div>
               <h3 className="text-lg font-bold text-prime mb-2">Diagnostic Trace — API Error</h3>
@@ -690,7 +690,7 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             )}
           </div>
 
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/15 flex items-center justify-center font-mono font-bold text-lg text-accent pt-2">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/15 flex items-center justify-center font-sans font-bold text-lg text-accent pt-2">
             <svg className="w-7 h-7 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>

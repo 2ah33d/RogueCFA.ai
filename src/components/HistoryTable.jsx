@@ -135,13 +135,13 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                 if (isBuy) {
                   if (returnPct >= 0) {
                     outcomeBadge = (
-                      <span className="inline-flex items-center text-xs font-semibold text-signal-buy bg-signal-buy/15 px-3 py-1 rounded-full font-mono">
+                      <span className="inline-flex items-center text-xs font-semibold text-signal-buy bg-signal-buy/15 px-3 py-1 rounded-full font-sans">
                         HIT ({pctStr})
                       </span>
                     );
                   } else {
                     outcomeBadge = (
-                      <span className="inline-flex items-center text-xs font-semibold text-signal-avoid bg-signal-avoid/15 px-3 py-1 rounded-full font-mono">
+                      <span className="inline-flex items-center text-xs font-semibold text-signal-avoid bg-signal-avoid/15 px-3 py-1 rounded-full font-sans">
                         MISS ({pctStr})
                       </span>
                     );
@@ -149,20 +149,20 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                 } else if (isAvoid) {
                   if (returnPct <= 0) {
                     outcomeBadge = (
-                      <span className="inline-flex items-center text-xs font-semibold text-signal-buy bg-signal-buy/15 px-3 py-1 rounded-full font-mono">
+                      <span className="inline-flex items-center text-xs font-semibold text-signal-buy bg-signal-buy/15 px-3 py-1 rounded-full font-sans">
                         HIT (Avoided {pctStr})
                       </span>
                     );
                   } else {
                     outcomeBadge = (
-                      <span className="inline-flex items-center text-xs font-semibold text-signal-avoid bg-signal-avoid/15 px-3 py-1 rounded-full font-mono">
+                      <span className="inline-flex items-center text-xs font-semibold text-signal-avoid bg-signal-avoid/15 px-3 py-1 rounded-full font-sans">
                         MISS (Up {pctStr})
                       </span>
                     );
                   }
                 } else {
                   outcomeBadge = (
-                    <span className="inline-flex items-center text-xs font-semibold text-signal-watch bg-signal-watch/15 px-3 py-1 rounded-full font-mono">
+                    <span className="inline-flex items-center text-xs font-semibold text-signal-watch bg-signal-watch/15 px-3 py-1 rounded-full font-sans">
                       WATCH ({pctStr})
                     </span>
                   );
@@ -179,8 +179,8 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
 
               return (
                 <tr key={entry.scoredAt || idx} className="hover:bg-surface-elevated/40 transition-colors">
-                  <td className="py-4 px-6 text-dim whitespace-nowrap font-mono">{dateStr}</td>
-                  <td className="py-4 px-4 font-mono font-bold text-prime">
+                  <td className="py-4 px-6 text-dim whitespace-nowrap font-sans">{dateStr}</td>
+                  <td className="py-4 px-4 font-sans font-bold text-prime">
                     <div className="flex items-center gap-1.5">
                       {onSelectTicker ? (
                         <button
@@ -199,7 +199,7 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                       )}
                     </div>
                   </td>
-                  <td className="py-4 px-4 font-mono">
+                  <td className="py-4 px-4 font-sans">
                     <span className="font-bold text-prime">{entry.score}</span>
                     <span className="text-xs text-dim">/100 ({entry.grade})</span>
                   </td>
@@ -216,10 +216,10 @@ export default function HistoryTable({ finnhubKey, onSelectTicker }) {
                       {entry.signal === 'BUY_SIGNAL' ? 'BUY' : entry.signal || 'WATCH'}
                     </span>
                   </td>
-                  <td className="py-4 px-4 text-right font-mono text-dim">
+                  <td className="py-4 px-4 text-right font-sans text-dim">
                     {entryPrice != null ? `${isTSX ? 'CAD ' : ''}$${entryPrice.toFixed(2)}` : '—'}
                   </td>
-                  <td className="py-4 px-4 text-right font-mono text-prime">
+                  <td className="py-4 px-4 text-right font-sans text-prime">
                     {currentPrice != null ? `${isTSX ? 'CAD ' : ''}$${currentPrice.toFixed(2)}` : '—'}
                   </td>
                   <td className="py-4 px-6">{outcomeBadge}</td>
