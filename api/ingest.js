@@ -98,9 +98,6 @@ export default async function handler(req, res) {
   }
 
   const timer = createTimer();
-  const todayStr = getLatestMarketCallDateStr();
-  const showName = show || 'Market Call';
-  const jobId = `live-${todayStr}`;
 
   try {
     /* ── Step 1: Clean Transcript ── */
