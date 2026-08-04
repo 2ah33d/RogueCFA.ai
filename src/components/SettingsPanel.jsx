@@ -33,6 +33,7 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
   const [provider, setProvider] = useState(getProvider());
   const [confirmClearKeys, setConfirmClearKeys] = useState(false);
   const [historyCleared, setHistoryCleared] = useState(false);
+  const [keysClearedSuccess, setKeysClearedSuccess] = useState(false);
   const [isEditingKeys, setIsEditingKeys] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -97,7 +98,17 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
       return;
     }
     clearKeys();
-    onKeysCleared();
+    setFinnhubKey('');
+    setLlmKey('');
+    setAlphaVantageKey('');
+    setYoutubeKey('');
+    setGroqKey('');
+    setConfirmClearKeys(false);
+    setKeysClearedSuccess(true);
+    setTimeout(() => setKeysClearedSuccess(false), 2500);
+    if (onKeysCleared) {
+      onKeysCleared();
+    }
   };
 
   const handleClearHistory = () => {
@@ -353,9 +364,11 @@ export default function SettingsPanel({ onClose, onKeysCleared, className = '' }
                       : 'bg-surface-elevated text-dim hover:text-danger'
                   }`}
                 >
-                  {confirmClearKeys
-                    ? 'Confirm Sign Out & Clear All Keys'
-                    : 'Clear Keys & Sign Out'}
+                  {keysClearedSuccess
+                    ? '✓ Custom Keys Cleared'
+                    : confirmClearKeys
+                    ? 'Confirm Clear Custom API Keys'
+                    : 'Clear Custom API Keys'}
                 </button>
               </div>
             </section>

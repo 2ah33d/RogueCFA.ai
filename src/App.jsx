@@ -182,8 +182,6 @@ export default function App() {
 
   /* ── Key management ── */
   const handleKeysCleared = useCallback(() => {
-    setKeysReady(false);
-    setShowSettings(false);
     setScorecards([]);
   }, []);
 
@@ -193,8 +191,6 @@ export default function App() {
       <style>{THEME}</style>
 
       <div className="min-h-screen bg-surface text-prime flex flex-col">
-        {/* Key setup modal (first visit) */}
-        {!keysReady && <KeySetup onComplete={() => setKeysReady(true)} />}
 
         {/* ── Header ── */}
         <header

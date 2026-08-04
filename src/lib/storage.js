@@ -47,6 +47,8 @@ export function clearKeys() {
   localStorage.removeItem(KEYS.LLM);
   localStorage.removeItem(KEYS.PROVIDER);
   localStorage.removeItem(KEYS.ALPHAVANTAGE);
+  localStorage.removeItem(KEYS.YOUTUBE);
+  localStorage.removeItem(KEYS.GROQ);
 }
 
 /* ── LLM provider ── */
