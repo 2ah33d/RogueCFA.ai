@@ -25,36 +25,44 @@ export default async function handler(req, res) {
   const toDate = today.toISOString().split('T')[0];
   const fromDate = thirtyDaysAgo.toISOString().split('T')[0];
 
+  const fetchWithTimeout = (url, timeoutMs = 6000) =>
+    fetch(url, { signal: AbortSignal.timeout(timeoutMs) }).catch(() => null);
+
   try {
-    const [profileRes, quoteRes, recRes, newsRes, metricRes] = await Promise.all([
-      fetch(`${BASE}/stock/profile2?symbol=${symbol}&token=${finnhubKey}`),
-      fetch(`${BASE}/quote?symbol=${symbol}&token=${finnhubKey}`),
-      fetch(`${BASE}/stock/recommendation?symbol=${symbol}&token=${finnhubKey}`),
-      fetch(
+    /* ── Fetch essential endpoints (profile2 & quote) and secondary endpoints with timeout protection ── */
+    const results = await Promise.allSettled([
+      fetchWithTimeout(`${BASE}/stock/profile2?symbol=${symbol}&token=${finnhubKey}`),
+      fetchWithTimeout(`${BASE}/quote?symbol=${symbol}&token=${finnhubKey}`),
+      fetchWithTimeout(`${BASE}/stock/recommendation?symbol=${symbol}&token=${finnhubKey}`),
+      fetchWithTimeout(
         `${BASE}/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}&token=${finnhubKey}`
       ),
-      fetch(`${BASE}/stock/metric?symbol=${symbol}&metric=all&token=${finnhubKey}`),
+      fetchWithTimeout(`${BASE}/stock/metric?symbol=${symbol}&metric=all&token=${finnhubKey}`),
     ]);
 
-    /* ── Auth / rate-limit errors (check first response as proxy) ── */
-    if (profileRes.status === 401 || profileRes.status === 403) {
+    const profileRes = results[0]?.value;
+    const quoteRes = results[1]?.value;
+    const recRes = results[2]?.value;
+    const newsRes = results[3]?.value;
+    const metricRes = results[4]?.value;
+
+    /* ── Auth / rate-limit errors ── */
+    if (profileRes && (profileRes.status === 401 || profileRes.status === 403)) {
       return res.status(401).json({
-        error: '[DIAGNOSTIC: Invalid or Unauthorized Finnhub API Key (HTTP 401/403).] REMEDIATION: Open Settings (gear icon at top right) and verify your Finnhub API key string.',
+        error: '[DIAGNOSTIC: Invalid or Unauthorized Finnhub API Key (HTTP 401/403).] REMEDIATION: Open Settings (gear icon at top right) and verify your Finnhub API key string or add FINNHUB_KEY in Vercel.',
       });
     }
-    if (profileRes.status === 429) {
+    if (profileRes && profileRes.status === 429) {
       return res.status(429).json({
         error: '[DIAGNOSTIC: Finnhub API Rate Limit Exceeded (HTTP 429).] REMEDIATION: Finnhub free tier allows 60 requests per minute. Please wait 30-60 seconds before scoring more tickers.',
       });
     }
 
-    const [profile, quote, recommendation, news, metricData] = await Promise.all([
-      profileRes.json(),
-      quoteRes.json(),
-      recRes.json(),
-      newsRes.json(),
-      metricRes.json().catch(() => ({})),
-    ]);
+    const profile = profileRes?.ok ? await profileRes.json().catch(() => null) : null;
+    const quote = quoteRes?.ok ? await quoteRes.json().catch(() => ({})) : {};
+    const recommendation = recRes?.ok ? await recRes.json().catch(() => []) : [];
+    const news = newsRes?.ok ? await newsRes.json().catch(() => []) : [];
+    const metricData = metricRes?.ok ? await metricRes.json().catch(() => ({})) : {};
 
     /* ── Validate ticker exists ── */
     if (!profile || !profile.ticker) {
