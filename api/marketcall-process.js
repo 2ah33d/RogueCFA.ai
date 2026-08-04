@@ -24,6 +24,7 @@ import {
   getLatestMarketCallDateStr,
   sanitizeAnalystName,
   sanitizeDigestResult,
+  pruneStaleJobs,
 } from './_pipeline.js';
 
 export const config = { maxDuration: 300 };
@@ -310,6 +311,9 @@ export default async function handler(req, res) {
 
     await updateJob(jobId, 'complete', result, null, selectedVideo.videoId, selectedVideo.videoTitle);
     console.log('[marketcall-process] Pipeline complete:', JSON.stringify(timer.report()));
+
+    /* Non-blocking background pruning of old jobs older than 14 days */
+    pruneStaleJobs(supabase, 14).catch(() => {});
 
     /* ── Step 7: Track Record Processing (Passive & Cold-Start) ── */
     if (digest.guest) {
