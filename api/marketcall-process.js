@@ -166,25 +166,40 @@ export default async function handler(req, res) {
 
     /* ── Priority 0: Check if a saved raw transcript exists in Supabase for this episode_date ── */
     try {
-      const { data: savedJob } = await supabase
+      let { data: savedJob } = await supabase
         .from('digest_jobs')
-        .select('result, video_title')
+        .select('result, video_title, episode_date')
         .eq('episode_date', targetDateStr)
         .not('result', 'is', null)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
+      if (!savedJob || !(savedJob.result?.rawText || savedJob.result?.raw_text || savedJob.result?.text)) {
+        /* Fallback: search for latest completed transcript in digest_jobs */
+        const { data: altJob } = await supabase
+          .from('digest_jobs')
+          .select('result, video_title, episode_date')
+          .not('result', 'is', null)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (altJob && (altJob.result?.rawText || altJob.result?.raw_text || altJob.result?.text)) {
+          savedJob = altJob;
+        }
+      }
+
       const existingRawText = savedJob?.result?.rawText || savedJob?.result?.raw_text || savedJob?.result?.text;
       if (existingRawText && existingRawText.length >= 200) {
         const matchingYtVid = candidateVideos.find((v) => v.isTodayMatch || v.publishDate === targetDateStr);
         const resolvedVideoId = savedJob?.result?.videoId || matchingYtVid?.videoId || '';
-        const resolvedVideoTitle = matchingYtVid?.title || savedJob?.video_title || savedJob?.result?.videoTitle || `BNN Bloomberg MarketCall (${targetDateStr})`;
+        const resolvedVideoTitle = savedJob?.video_title || savedJob?.result?.videoTitle || matchingYtVid?.title || `BNN Bloomberg MarketCall (${targetDateStr})`;
 
         selectedVideo = {
           videoId: resolvedVideoId,
           videoTitle: resolvedVideoTitle,
-          episodeDate: targetDateStr,
+          episodeDate: savedJob?.episode_date || targetDateStr,
           source: 'database_transcript_cache',
         };
         cleanedTranscript = cleanRawTranscript(existingRawText);
