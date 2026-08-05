@@ -275,7 +275,7 @@ export function calculateGoldenGoose(episodes = [], windowDays = DEFAULT_WINDOW_
  * @param {string} provider
  * @returns {Promise<string>} Synthesized 2-sentence thesis
  */
-export async function synthesizeGoldenPickThesis(ticker, companyName, reasonings = [], llmKey, provider = 'gemini') {
+export async function synthesizeGoldenPickThesis(ticker, companyName, reasonings = [], llmKey, provider = 'claude') {
   if (!reasonings || reasonings.length === 0) {
     return 'Multiple guest analysts cited this stock across recent episodes, showing strong consensus.';
   }

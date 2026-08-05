@@ -106,12 +106,14 @@ export default async function handler(req, res) {
     timer.end('Clean Transcript');
 
     /* ── Step 2: Determine LLM Credentials ── */
-    const llmKey = process.env.LLM_KEY || process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY || process.env.CRON_LLM_KEY;
-    const provider = process.env.LLM_PROVIDER || process.env.CRON_LLM_PROVIDER || 'gemini';
+    const provider = process.env.CRON_LLM_PROVIDER || process.env.LLM_PROVIDER || 'claude';
+    const llmKey = provider === 'groq'
+      ? (process.env.CRON_GROQ_KEY || process.env.GROQ_API_KEY || process.env.CRON_LLM_KEY)
+      : (process.env.CRON_LLM_KEY || process.env.LLM_KEY || process.env.GEMINI_API_KEY);
 
     if (!llmKey) {
       return res.status(500).json({
-        error: 'Server configuration error: LLM_KEY (or GEMINI_API_KEY / GROQ_API_KEY) is missing.',
+        error: 'Server configuration error: CRON_LLM_KEY is missing.',
       });
     }
 

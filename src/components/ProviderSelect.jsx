@@ -1,15 +1,15 @@
 const PROVIDERS = [
   {
+    id: 'claude',
+    label: 'Anthropic Claude',
+    model: 'claude-sonnet-5 / claude-haiku-4-5',
+    tag: 'Primary engine',
+  },
+  {
     id: 'gemini',
     label: 'Google Gemini',
     model: 'gemini-2.0-flash',
-    tag: 'Free tier',
-  },
-  {
-    id: 'claude',
-    label: 'Anthropic Claude',
-    model: 'claude-sonnet-5',
-    tag: 'Paid API key',
+    tag: 'Fallback',
   },
   {
     id: 'openai',

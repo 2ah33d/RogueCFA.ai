@@ -10,7 +10,7 @@ export default function KeySetup({ onComplete, className = '' }) {
   const [llmKey, setLlmKey] = useState('');
   const [alphaVantageKey, setAlphaVantageKey] = useState('');
   const [youtubeKey, setYoutubeKey] = useState('');
-  const [provider, setProvider] = useState('gemini');
+  const [provider, setProvider] = useState('claude');
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {

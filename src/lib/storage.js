@@ -54,7 +54,7 @@ export function clearKeys() {
 /* ── LLM provider ── */
 
 export function getProvider() {
-  return localStorage.getItem(KEYS.PROVIDER) || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_LLM_PROVIDER) || 'gemini';
+  return localStorage.getItem(KEYS.PROVIDER) || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_LLM_PROVIDER) || 'claude';
 }
 
 export function saveProvider(provider) {

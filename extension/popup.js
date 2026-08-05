@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         videoTitle: response.data.videoTitle,
         episodeDate: response.data.episodeDate,
         /* Pass standard provider if configured */
-        provider: 'gemini',
+        provider: 'claude',
       };
 
       const apiRes = await fetch(endpoint, {
