@@ -389,7 +389,7 @@ export async function fetchRssPodcastFallback(groqKey = '', timer, targetDate = 
                 const audioRes = await fetch(mp3Url, {
                   headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0)' },
                   redirect: 'follow',
-                  signal: AbortSignal.timeout(35000)
+                  signal: AbortSignal.timeout(120000)
                 });
                 if (!audioRes.ok) {
                   timer?.end('MP3 download');
@@ -450,7 +450,7 @@ export async function fetchRssPodcastFallback(groqKey = '', timer, targetDate = 
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${groqKey}` },
                     body: formData,
-                    signal: AbortSignal.timeout(45000),
+                    signal: AbortSignal.timeout(120000),
                   });
 
                   if (!res.ok && res.status === 400) {
@@ -460,7 +460,7 @@ export async function fetchRssPodcastFallback(groqKey = '', timer, targetDate = 
                       method: 'POST',
                       headers: { 'Authorization': `Bearer ${groqKey}` },
                       body: formData,
-                      signal: AbortSignal.timeout(45000),
+                      signal: AbortSignal.timeout(120000),
                     });
                   }
 
