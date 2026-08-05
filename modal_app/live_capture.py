@@ -33,12 +33,7 @@ def run_live_capture(duration_secs: int = 3600):
     if not supabase_url or not supabase_key:
         raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in modal.Secret('roguecfa-secrets')")
 
-    try:
-        import zoneinfo
-        eastern_tz = zoneinfo.ZoneInfo("America/New_York")
-        today_str = datetime.datetime.now(eastern_tz).strftime("%Y-%m-%d")
-    except Exception:
-        today_str = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=5)).strftime("%Y-%m-%d")
+    today_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
     raw_filename = "raw_marketcall.m4a"
     compressed_filename = f"marketcall-{today_str}.m4a"
 

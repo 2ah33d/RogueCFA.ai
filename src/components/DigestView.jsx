@@ -165,29 +165,30 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             } else {
               setDigest(null);
             }
-          } else if (!cached || !cached.digest) {
-            /* Device has no local cache — load newest completed digest from Supabase DB history automatically */
-            const newestValid = data.history.find((h) => h && h.digest);
-            if (newestValid) {
-              setDigest(newestValid.digest);
-              setSelectedDate(newestValid.episodeDate);
-              setVideoInfo({
-                videoId: newestValid.videoId || '',
-                videoTitle: newestValid.videoTitle || `BNN Bloomberg MarketCall (${newestValid.episodeDate})`,
-                episodeDate: newestValid.episodeDate,
+          } else if (cached && cached.episodeDate) {
+            /* If DB now has a videoId for this cached date, sync it */
+            const matchingDBRow = data.history.find((h) => h.episodeDate === cached.episodeDate);
+            if (matchingDBRow && matchingDBRow.videoId && (!cached.videoId || cached.videoId !== matchingDBRow.videoId)) {
+              setVideoInfo((prev) => ({
+                ...prev,
+                videoId: matchingDBRow.videoId,
+                videoTitle: matchingDBRow.videoTitle || prev?.videoTitle,
+              }));
+              saveDigestCache(cached.episodeDate, {
+                ...cached,
+                videoId: matchingDBRow.videoId,
+                videoTitle: matchingDBRow.videoTitle || cached.videoTitle,
               });
               saveDigestCache('latest_marketcall', {
-                digest: newestValid.digest,
-                videoId: newestValid.videoId || '',
-                videoTitle: newestValid.videoTitle || `BNN Bloomberg MarketCall (${newestValid.episodeDate})`,
-                episodeDate: newestValid.episodeDate,
+                ...cached,
+                videoId: matchingDBRow.videoId,
+                videoTitle: matchingDBRow.videoTitle || cached.videoTitle,
               });
-              setHasAttempted(true);
             }
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [todayStr]);
 
   const handleRefresh = () => {
@@ -762,101 +763,101 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     fetchDigest(true, epDate);
   };
 
-/**
- * Helper to split text into real sentences without breaking on common abbreviations
- * like e.g., i.e., U.S., S&P 500, numbers, etc.
- */
-function splitIntoSentences(text) {
-  if (!text || typeof text !== 'string') return [];
-  const cleaned = text.trim();
+  /**
+   * Helper to split text into real sentences without breaking on common abbreviations
+   * like e.g., i.e., U.S., S&P 500, numbers, etc.
+   */
+  function splitIntoSentences(text) {
+    if (!text || typeof text !== 'string') return [];
+    const cleaned = text.trim();
 
-  // Temporarily mask periods inside known abbreviations & decimal numbers
-  const masked = cleaned
-    .replace(/\b(e\.g|i\.e|u\.s|vs|inc|ltd|corp|co|mr|mrs|dr|prof)\./gi, '$1___DOT___')
-    .replace(/(\d)\.(\d)/g, '$1___DOT___$2');
+    // Temporarily mask periods inside known abbreviations & decimal numbers
+    const masked = cleaned
+      .replace(/\b(e\.g|i\.e|u\.s|vs|inc|ltd|corp|co|mr|mrs|dr|prof)\./gi, '$1___DOT___')
+      .replace(/(\d)\.(\d)/g, '$1___DOT___$2');
 
-  // Split on actual sentence endings (. ! ?) followed by whitespace + capital letter or end of text
-  const parts = masked.split(/(?<=[.!?])\s+(?=[A-Z0-9"']|$)/);
+    // Split on actual sentence endings (. ! ?) followed by whitespace + capital letter or end of text
+    const parts = masked.split(/(?<=[.!?])\s+(?=[A-Z0-9"']|$)/);
 
-  return parts
-    .map((s) => s.replace(/___DOT___/g, '.').trim())
-    .filter(Boolean);
-}
+    return parts
+      .map((s) => s.replace(/___DOT___/g, '.').trim())
+      .filter(Boolean);
+  }
 
-/**
- * Helper to render Market Outlook cleanly:
- * 1. Safely extracts a top TL;DR takeaway banner without splitting abbreviations (e.g. / i.e. / U.S.)
- * 2. Formats remaining body into clean, well-spaced paragraphs.
- */
-function renderScannableOutlook(outlook) {
-  if (!outlook) return null;
+  /**
+   * Helper to render Market Outlook cleanly:
+   * 1. Safely extracts a top TL;DR takeaway banner without splitting abbreviations (e.g. / i.e. / U.S.)
+   * 2. Formats remaining body into clean, well-spaced paragraphs.
+   */
+  function renderScannableOutlook(outlook) {
+    if (!outlook) return null;
 
-  let tldrText = null;
-  let bodyText = '';
+    let tldrText = null;
+    let bodyText = '';
 
-  if (typeof outlook === 'object' && outlook !== null) {
-    tldrText = outlook.takeaway || outlook.tldr || outlook.keyTakeaway || null;
-    bodyText = outlook.summary || outlook.details || outlook.body || '';
-  } else if (typeof outlook === 'string') {
-    const trimmed = outlook.trim();
-    // Check for explicit "TL;DR:" or "Key Takeaway:" prefix
-    const tldrMatch = trimmed.match(/^(?:TL;?DR|KEY TAKEAWAY):\s*([^\n]+)(?:\n+([\s\S]+))?$/i);
-    if (tldrMatch) {
-      tldrText = tldrMatch[1].trim();
-      bodyText = (tldrMatch[2] || '').trim();
-    } else {
-      const sentences = splitIntoSentences(trimmed);
-      if (sentences.length > 1) {
-        tldrText = sentences[0];
-        bodyText = sentences.slice(1).join(' ');
+    if (typeof outlook === 'object' && outlook !== null) {
+      tldrText = outlook.takeaway || outlook.tldr || outlook.keyTakeaway || null;
+      bodyText = outlook.summary || outlook.details || outlook.body || '';
+    } else if (typeof outlook === 'string') {
+      const trimmed = outlook.trim();
+      // Check for explicit "TL;DR:" or "Key Takeaway:" prefix
+      const tldrMatch = trimmed.match(/^(?:TL;?DR|KEY TAKEAWAY):\s*([^\n]+)(?:\n+([\s\S]+))?$/i);
+      if (tldrMatch) {
+        tldrText = tldrMatch[1].trim();
+        bodyText = (tldrMatch[2] || '').trim();
       } else {
-        bodyText = trimmed;
+        const sentences = splitIntoSentences(trimmed);
+        if (sentences.length > 1) {
+          tldrText = sentences[0];
+          bodyText = sentences.slice(1).join(' ');
+        } else {
+          bodyText = trimmed;
+        }
       }
     }
-  }
 
-  // Create clean paragraph blocks for the body
-  let paragraphs = bodyText ? bodyText.split(/\n\n+/).map((p) => p.trim()).filter(Boolean) : [];
-  if (paragraphs.length <= 1 && bodyText) {
-    const bodySentences = splitIntoSentences(bodyText);
-    if (bodySentences.length > 2) {
-      const midPoint = Math.ceil(bodySentences.length / 2);
-      paragraphs = [
-        bodySentences.slice(0, midPoint).join(' '),
-        bodySentences.slice(midPoint).join(' '),
-      ];
-    } else if (bodySentences.length > 0) {
-      paragraphs = [bodySentences.join(' ')];
+    // Create clean paragraph blocks for the body
+    let paragraphs = bodyText ? bodyText.split(/\n\n+/).map((p) => p.trim()).filter(Boolean) : [];
+    if (paragraphs.length <= 1 && bodyText) {
+      const bodySentences = splitIntoSentences(bodyText);
+      if (bodySentences.length > 2) {
+        const midPoint = Math.ceil(bodySentences.length / 2);
+        paragraphs = [
+          bodySentences.slice(0, midPoint).join(' '),
+          bodySentences.slice(midPoint).join(' '),
+        ];
+      } else if (bodySentences.length > 0) {
+        paragraphs = [bodySentences.join(' ')];
+      }
     }
-  }
 
-  return (
-    <div className="space-y-4 font-sans">
-      {/* TL;DR Key Takeaway Box */}
-      {tldrText && (
-        <div className="bg-surface-elevated/70 border-l-4 border-accent p-4 rounded-r-2xl shadow-sm space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/15 px-2.5 py-0.5 rounded-full">
-              TL;DR Key Takeaway
-            </span>
+    return (
+      <div className="space-y-4 font-sans">
+        {/* TL;DR Key Takeaway Box */}
+        {tldrText && (
+          <div className="bg-surface-elevated/70 border-l-4 border-accent p-4 rounded-r-2xl shadow-sm space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/15 px-2.5 py-0.5 rounded-full">
+                TL;DR Key Takeaway
+              </span>
+            </div>
+            <p className="text-sm sm:text-base font-medium text-prime leading-relaxed">
+              {tldrText}
+            </p>
           </div>
-          <p className="text-sm sm:text-base font-medium text-prime leading-relaxed">
-            {tldrText}
-          </p>
-        </div>
-      )}
+        )}
 
-      {/* Main body text split cleanly into paragraphs */}
-      {paragraphs.length > 0 && (
-        <div className="space-y-3 text-sm sm:text-base text-dim leading-relaxed font-normal">
-          {paragraphs.map((para, idx) => (
-            <p key={idx}>{para}</p>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+        {/* Main body text split cleanly into paragraphs */}
+        {paragraphs.length > 0 && (
+          <div className="space-y-3 text-sm sm:text-base text-dim leading-relaxed font-normal">
+            {paragraphs.map((para, idx) => (
+              <p key={idx}>{para}</p>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   /* ── Digest loaded ── */
   const activeProviderKey = getProvider();

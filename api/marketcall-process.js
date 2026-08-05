@@ -164,36 +164,33 @@ export default async function handler(req, res) {
       }
     }
 
-    /* ── Priority 0: Check if a saved raw transcript exists in Supabase for this episode_date ── */
+    /* ── Priority 0: Check if a saved raw transcript or completed result exists in Supabase for this episode_date ── */
     try {
       let { data: savedJob } = await supabase
         .from('digest_jobs')
-        .select('result, video_title, episode_date')
+        .select('result, video_title, video_id, episode_date, status')
         .eq('episode_date', targetDateStr)
         .not('result', 'is', null)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (!savedJob || !(savedJob.result?.rawText || savedJob.result?.raw_text || savedJob.result?.text)) {
-        /* Fallback: search for latest completed transcript in digest_jobs */
+      if (!savedJob) {
         const { data: altJob } = await supabase
           .from('digest_jobs')
-          .select('result, video_title, episode_date')
+          .select('result, video_title, video_id, episode_date, status')
+          .ilike('id', `%${targetDateStr}%`)
           .not('result', 'is', null)
           .order('updated_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-
-        if (altJob && (altJob.result?.rawText || altJob.result?.raw_text || altJob.result?.text)) {
-          savedJob = altJob;
-        }
+        if (altJob) savedJob = altJob;
       }
 
       const existingRawText = savedJob?.result?.rawText || savedJob?.result?.raw_text || savedJob?.result?.text;
       if (existingRawText && existingRawText.length >= 200) {
         const matchingYtVid = candidateVideos.find((v) => v.isTodayMatch || v.publishDate === targetDateStr);
-        const resolvedVideoId = savedJob?.result?.videoId || matchingYtVid?.videoId || '';
+        const resolvedVideoId = savedJob?.result?.videoId || savedJob?.video_id || matchingYtVid?.videoId || '';
         const resolvedVideoTitle = savedJob?.video_title || savedJob?.result?.videoTitle || matchingYtVid?.title || `BNN Bloomberg MarketCall (${targetDateStr})`;
 
         selectedVideo = {
@@ -204,6 +201,23 @@ export default async function handler(req, res) {
         };
         cleanedTranscript = cleanRawTranscript(existingRawText);
         console.log(`[marketcall-process] Reusing pre-existing transcript from database for ${targetDateStr} (${cleanedTranscript.length} chars), videoId: ${resolvedVideoId}`);
+      } else if (savedJob && savedJob.result && savedJob.result.digest) {
+        /* Historical digest exists in Supabase without rawText — return completed digest directly */
+        console.log(`[marketcall-process] Reusing completed historical digest from database for ${targetDateStr}`);
+        const result = savedJob.result;
+        await supabase
+          .from('digest_jobs')
+          .upsert({
+            id: jobId,
+            episode_date: targetDateStr,
+            status: 'complete',
+            result,
+            error_message: null,
+            video_id: savedJob.video_id || result.videoId || '',
+            video_title: savedJob.video_title || result.videoTitle || `BNN Bloomberg Market Call (${targetDateStr})`,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+        return res.status(200).json({ success: true, jobId, result });
       }
     } catch (cacheLookErr) {
       console.warn('[marketcall-process] Database transcript lookup failed:', cacheLookErr.message);
@@ -360,7 +374,7 @@ export default async function handler(req, res) {
     console.log('[marketcall-process] Pipeline complete:', JSON.stringify(timer.report()));
 
     /* Non-blocking background pruning of old jobs older than 14 days */
-    pruneStaleJobs(supabase, 14).catch(() => {});
+    pruneStaleJobs(supabase, 14).catch(() => { });
 
     /* ── Step 7: Track Record Processing (Passive & Cold-Start) ── */
     if (digest.guest) {
