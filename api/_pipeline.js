@@ -1131,13 +1131,20 @@ export function extractJSON(text) {
     return JSON.parse(repaired);
   } catch {}
 
-  /* Step 3: Fast regex missing bracket repair (}\n}) */
+  /* Step 3: Unquoted string value repair (e.g. "company": AeroVironm" -> "company": "AeroVironm") */
+  try {
+    let unquotedFixed = repaired.replace(/:\s*(?!(?:true|false|null|-?\d+(?:\.\d+)?)\b)([A-Za-z][^,\{\}\[\]"\r\n]*?)(?=\s*[,}\]\n])/g, ': "$1"');
+    unquotedFixed = unquotedFixed.replace(/:\s*([A-Za-z0-9_\-\. ]+)"/g, ': "$1"');
+    return JSON.parse(unquotedFixed);
+  } catch {}
+
+  /* Step 4: Fast regex missing bracket repair (}\n}) */
   let repairedBracket = repaired.replace(/\}\s*\}$/, '}\n  ]\n}');
   try {
     return JSON.parse(repairedBracket);
   } catch {}
 
-  /* Step 4: Full character scanner & stack auto-balancer */
+  /* Step 5: Full character scanner & stack auto-balancer */
   let out = '';
   let inString = false;
   let isEscaped = false;
@@ -1188,11 +1195,35 @@ export function extractJSON(text) {
 
   try {
     return JSON.parse(out);
-  } catch (err) {
-    const parseErr = new Error(`JSON malformed: ${err.message}`);
-    parseErr.rawText = out || str;
-    throw parseErr;
+  } catch {}
+
+  /* Step 6: Bulletproof regex-based pick block extraction fallback */
+  console.log('[extractJSON] Running regex fallback block extraction...');
+  const guestMatch = str.match(/"guest"\s*:\s*"([^"]+)"/) || str.match(/"guest"\s*:\s*([A-Za-z0-9_\- ]+)/);
+  const hostMatch = str.match(/"host"\s*:\s*"([^"]+)"/) || str.match(/"host"\s*:\s*([A-Za-z0-9_\- ]+)/);
+  
+  const picks = [];
+  const pickRegex = /{\s*"ticker"\s*:\s*"([^"]+)"[\s\S]*?"company"\s*:\s*"?([^",\n\}]+)"?[\s\S]*?"reasoning"\s*:\s*"([^"]+)"/g;
+  let match;
+  while ((match = pickRegex.exec(str)) !== null) {
+    picks.push({
+      ticker: match[1].trim(),
+      company: match[2].trim().replace(/^"|"$/g, ''),
+      reasoning: match[3].trim(),
+    });
   }
+
+  if (picks.length > 0) {
+    return {
+      guest: guestMatch ? guestMatch[1].trim() : 'Market Analyst',
+      host: hostMatch ? hostMatch[1].trim() : '',
+      picks: picks,
+    };
+  }
+
+  const parseErr = new Error(`JSON malformed`);
+  parseErr.rawText = out || str;
+  throw parseErr;
 }
 
 /**

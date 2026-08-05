@@ -267,7 +267,11 @@ function repairJSON(str) {
     return '';
   });
 
-  /* 3. State machine to fix unescaped double quotes inside string literals */
+  /* 3. Fix missing or unquoted string values e.g. "company": AeroVironm" -> "company": "AeroVironm" */
+  let unquotedFixed = cleaned.replace(/:\s*(?!(?:true|false|null|-?\d+(?:\.\d+)?)\b)([A-Za-z][^,\{\}\[\]"\r\n]*?)(?=\s*[,}\]\n])/g, ': "$1"');
+  cleaned = unquotedFixed.replace(/:\s*([A-Za-z0-9_\-\. ]+)"/g, ': "$1"');
+
+  /* 4. State machine to fix unescaped double quotes inside string literals */
   let inString = false;
   let escaped = false;
   let res = '';
