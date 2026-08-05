@@ -349,18 +349,19 @@ export async function fetchRssPodcastFallback(groqKey = '', timer, targetDate = 
             }
           }
 
-          /* Extract date from title e.g. "July 31, 2026" */
+          /* Extract date from title e.g. "July 31, 2026" or "Aug. 4, 2026" */
           let titleDateStr = '';
           const titleDateMatch = rssItemTitle.match(/\(([A-Za-z]+\.?\s+\d{1,2},\s+\d{4})\)/i);
           if (titleDateMatch && titleDateMatch[1]) {
-            const parsedTitleD = new Date(titleDateMatch[1]);
+            const rawD = titleDateMatch[1].replace('.', '');
+            const parsedTitleD = new Date(rawD + ' 12:00:00 UTC');
             if (!isNaN(parsedTitleD.getTime())) {
               titleDateStr = parsedTitleD.toISOString().split('T')[0];
             }
           }
 
           /* Enforce date check: match if pubDate or title date equals targetDateStr */
-          const matchesTarget = (rssItemDate && rssItemDate === targetDateStr) || (titleDateStr && titleDateStr === targetDateStr);
+          const matchesTarget = (rssItemDate && rssItemDate === targetDateStr) || (titleDateStr && titleDateStr === targetDateStr) || rssItemTitle.includes(targetDateStr);
           if (!matchesTarget) {
             console.warn(`[RSS Fallback] Item date (${rssItemDate} / ${titleDateStr}) does not match target date (${targetDateStr}). Skipping.`);
             continue;
@@ -388,7 +389,7 @@ export async function fetchRssPodcastFallback(groqKey = '', timer, targetDate = 
                 const audioRes = await fetch(mp3Url, {
                   headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RogueCFA/1.0)' },
                   redirect: 'follow',
-                  signal: AbortSignal.timeout(20000)
+                  signal: AbortSignal.timeout(35000)
                 });
                 if (!audioRes.ok) {
                   timer?.end('MP3 download');

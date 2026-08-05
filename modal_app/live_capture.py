@@ -21,7 +21,7 @@ app = modal.App("roguecfa-live-capture")
     timeout=3900,  # 65 minutes max execution time
     secrets=[modal.Secret.from_name("roguecfa-secrets")]
 )
-def run_live_capture(duration_secs: int = 3600):
+def run_live_capture(duration_secs: int = 3600, target_date: str = None):
     stream_url = os.environ.get("BNN_LIVE_STREAM_URL", "")
     webhook_url = os.environ.get("VERCEL_WEBHOOK_URL", "https://roguecfa.vercel.app/api/ingest")
     supabase_url = os.environ.get("SUPABASE_URL", "")
@@ -33,7 +33,16 @@ def run_live_capture(duration_secs: int = 3600):
     if not supabase_url or not supabase_key:
         raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in modal.Secret('roguecfa-secrets')")
 
-    today_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+    if target_date and re.match(r"^\d{4}-\d{2}-\d{2}$", target_date):
+        today_str = target_date
+    else:
+        try:
+            import zoneinfo
+            eastern_tz = zoneinfo.ZoneInfo("America/New_York")
+            today_str = datetime.datetime.now(eastern_tz).strftime("%Y-%m-%d")
+        except Exception:
+            today_str = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=5)).strftime("%Y-%m-%d")
+
     raw_filename = "raw_marketcall.m4a"
     compressed_filename = f"marketcall-{today_str}.m4a"
 
@@ -41,20 +50,56 @@ def run_live_capture(duration_secs: int = 3600):
 
     capture_success = False
 
-    # Attempt 1 (PRIMARY): Download official BNN Market Call broadcast audio feed from RSS
+    # Attempt 1 (PRIMARY): Download official BNN Market Call broadcast audio feed from RSS (searches up to 100 episodes)
     try:
         rss_url = "https://www.omnycontent.com/d/playlist/4809bc8a-e41a-405c-93da-a8cf011df2f4/fcfd42e4-d5c6-4b4a-8c62-ae32016f1b9a/4ecaf48c-23a4-4f5e-84b3-ae3201711923/podcast.rss"
-        rss_res = requests.get(rss_url, timeout=10)
-        mp3_matches = re.findall(r'<enclosure[^>]+url=["\']([^"\']+)["\']', rss_res.text)
-        if mp3_matches:
-            audio_url = mp3_matches[0].replace("&amp;", "&")
-            print(f"Downloading latest BNN Market Call episode audio from RSS feed: {audio_url}")
-            dl_res = requests.get(audio_url, timeout=60)
+        rss_res = requests.get(rss_url, timeout=15)
+        
+        items = re.findall(r'<item>([\s\S]*?)</item>', rss_res.text)
+        selected_audio_url = None
+        selected_title = None
+
+        for item in items:
+            title_m = re.search(r'<title>([^<]+)</title>', item)
+            enc_m = re.search(r'<enclosure[^>]+url=["\']([^"\']+)["\']', item)
+            
+            if enc_m:
+                url = enc_m.group(1).replace("&amp;", "&")
+                title = title_m.group(1) if title_m else ""
+                
+                if today_str:
+                    if today_str in item or today_str in title:
+                        selected_audio_url = url
+                        selected_title = title
+                        break
+                    
+                    title_date_m = re.search(r'\(([A-Za-z]+\.?\s+\d{1,2},\s+\d{4})\)', title)
+                    if title_date_m:
+                        raw_title_date = title_date_m.group(1).replace('.', '')
+                        for fmt in ("%B %d, %Y", "%b %d, %Y"):
+                            try:
+                                parsed_dt = datetime.datetime.strptime(raw_title_date, fmt)
+                                if parsed_dt.strftime("%Y-%m-%d") == today_str:
+                                    selected_audio_url = url
+                                    selected_title = title
+                                    break
+                            except Exception:
+                                pass
+                        if selected_audio_url:
+                            break
+                else:
+                    selected_audio_url = url
+                    selected_title = title
+                    break
+
+        if selected_audio_url:
+            print(f"Downloading BNN Market Call audio from RSS feed ({selected_title or today_str}): {selected_audio_url}")
+            dl_res = requests.get(selected_audio_url, timeout=120)
             with open(raw_filename, "wb") as f:
                 f.write(dl_res.content)
             capture_success = True
         else:
-            raise Exception("No audio enclosure found in RSS feed")
+            raise Exception(f"No audio enclosure matching date {today_str} found in RSS feed")
     except Exception as rss_err:
         print(f"Primary RSS audio download failed: {rss_err}. Trying secondary Streamlink live stream capture fallback...")
 
