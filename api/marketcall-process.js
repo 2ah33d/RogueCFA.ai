@@ -67,9 +67,17 @@ export default async function handler(req, res) {
     /* ── Standard or Debug Client Invocation (POST) ── */
     const body = req.body || {};
     youtubeKey = body.youtubeKey || process.env.CRON_YOUTUBE_KEY || process.env.VITE_YOUTUBE_KEY || process.env.YOUTUBE_KEY || '';
-    llmKey = body.llmKey || process.env.CRON_LLM_KEY || process.env.VITE_LLM_KEY || process.env.LLM_KEY || process.env.GEMINI_KEY || process.env.OPENAI_API_KEY || '';
-    provider = body.provider || process.env.CRON_LLM_PROVIDER || process.env.VITE_LLM_PROVIDER || process.env.LLM_PROVIDER || 'gemini';
     groqKey = body.groqKey || process.env.CRON_GROQ_KEY || process.env.VITE_GROQ_KEY || process.env.GROQ_KEY || '';
+
+    if (body.llmKey && body.llmKey.trim()) {
+      llmKey = body.llmKey.trim();
+      provider = body.provider || 'gemini';
+    } else {
+      provider = process.env.CRON_LLM_PROVIDER || process.env.LLM_PROVIDER || 'gemini';
+      llmKey = provider === 'groq'
+        ? (process.env.CRON_GROQ_KEY || process.env.CRON_LLM_KEY || process.env.LLM_KEY)
+        : (process.env.CRON_LLM_KEY || process.env.LLM_KEY || process.env.OPENAI_API_KEY || '');
+    }
 
     if (body.debugSecret && body.debugSecret === process.env.DEBUG_SECRET) {
       isDebug = true;

@@ -9,11 +9,16 @@ export default async function handler(req, res) {
   }
 
   const { llmKey: bodyKey, provider: bodyProvider, systemPrompt, userPrompt, mathScore } = req.body || {};
-  const usingServerKey = !bodyKey;
-  const llmKey = bodyKey || process.env.LLM_KEY || process.env.CRON_LLM_KEY || process.env.VITE_LLM_KEY || process.env.GEMINI_KEY || process.env.OPENAI_API_KEY;
-  const provider = (usingServerKey && (process.env.LLM_PROVIDER || process.env.CRON_LLM_PROVIDER))
-    ? (process.env.LLM_PROVIDER || process.env.CRON_LLM_PROVIDER)
-    : (bodyProvider || process.env.LLM_PROVIDER || process.env.CRON_LLM_PROVIDER || process.env.VITE_LLM_PROVIDER || 'claude');
+  let provider, llmKey;
+  if (bodyKey && bodyKey.trim()) {
+    llmKey = bodyKey.trim();
+    provider = bodyProvider || 'gemini';
+  } else {
+    provider = process.env.CRON_LLM_PROVIDER || process.env.LLM_PROVIDER || 'claude';
+    llmKey = provider === 'groq'
+      ? (process.env.CRON_GROQ_KEY || process.env.CRON_LLM_KEY || process.env.LLM_KEY)
+      : (process.env.CRON_LLM_KEY || process.env.LLM_KEY || process.env.OPENAI_API_KEY);
+  }
 
   if (!llmKey || !provider || !systemPrompt || !userPrompt) {
     return res.status(400).json({ error: 'Missing required fields or LLM key.' });

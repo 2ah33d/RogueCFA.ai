@@ -52,9 +52,18 @@ export default async function handler(req, res) {
   } = req.body || {};
 
   const youtubeKey = bodyYoutubeKey || process.env.CRON_YOUTUBE_KEY || process.env.VITE_YOUTUBE_KEY || process.env.YOUTUBE_KEY || '';
-  const llmKey = bodyLlmKey || process.env.CRON_LLM_KEY || process.env.VITE_LLM_KEY || process.env.LLM_KEY || process.env.GEMINI_KEY || process.env.OPENAI_API_KEY || '';
-  const provider = bodyProvider || process.env.CRON_LLM_PROVIDER || process.env.VITE_LLM_PROVIDER || process.env.LLM_PROVIDER || 'gemini';
   const groqKey = bodyGroqKey || process.env.CRON_GROQ_KEY || process.env.VITE_GROQ_KEY || process.env.GROQ_KEY || '';
+
+  let provider, llmKey;
+  if (bodyLlmKey && bodyLlmKey.trim()) {
+    llmKey = bodyLlmKey.trim();
+    provider = bodyProvider || 'gemini';
+  } else {
+    provider = process.env.CRON_LLM_PROVIDER || process.env.LLM_PROVIDER || 'gemini';
+    llmKey = provider === 'groq'
+      ? (process.env.CRON_GROQ_KEY || process.env.CRON_LLM_KEY || process.env.LLM_KEY)
+      : (process.env.CRON_LLM_KEY || process.env.LLM_KEY || process.env.OPENAI_API_KEY || '');
+  }
 
   if (!llmKey || !provider) {
     return res.status(400).json({
