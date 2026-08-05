@@ -1,17 +1,21 @@
 /* ════════════════════════════════════════════════════════════════
-   goldenGoose.js
-   Deterministic Weekly Golden-Pick & Warning-Sell Scoring Engine
-   (PRD Task 3.5 / Feature 3 — $0.00 LLM Cost)
-   Updated: 7-Day Rolling Window & Persistent Multi-Week 🔥 Fire Streak Signals
+   goldenGoose.js — Golden Goose v2
+   Layer 1: Deterministic shortlist builder ($0 cost, 0 threshold decisions)
+   Layer 2: LLM Eyes prompt builder & response validator (Claude Sonnet 5)
    ════════════════════════════════════════════════════════════════ */
 
-/**
- * Configurable Constants per PRD Spec
- */
-export const W_FREQUENCY = 1.0;
-export const W_PENALTY = -2.0;
-export const W_CONVERGENCE = 4.5;
-export const DEFAULT_WINDOW_DAYS = 7; // 7 days ensures coverage of 5 weekday MarketCall episodes
+export const STANCE_WEIGHT = {
+  buy: 1.0,
+  hold: 0.3,
+  sell: -1.0,
+};
+
+export const SOURCE_MULTIPLIER = {
+  pick: 1.5,           // formal top pick — always bullish
+  caller_mention: 1.0, // guest responding to caller Q&A — can be buy/hold/sell
+};
+
+export const BUY_HOLD_MIN_MENTIONS = 2;
 
 /**
  * Standardize ticker symbol for comparison (e.g. SHOP -> SHOP, SHOP.TO -> SHOP.TO)
@@ -22,9 +26,7 @@ export function normalizeTicker(ticker) {
 }
 
 /**
- * Normalize stance string to standard categories
- * @param {string} stance 
- * @returns {'buy' | 'sell' | 'hold' | 'unsure'}
+ * Normalize stance string to standard categories ('buy', 'hold', 'sell')
  */
 export function normalizeStance(stance) {
   if (!stance || typeof stance !== 'string') return 'buy';
@@ -35,273 +37,218 @@ export function normalizeStance(stance) {
   if (s.includes('hold') || s.includes('neutral') || s.includes('wait')) {
     return 'hold';
   }
-  if (s.includes('unsure') || s.includes('ambiguous') || s.includes('uncertain')) {
-    return 'unsure';
-  }
   return 'buy';
 }
 
 /**
- * Calculate Golden Goose & Warning Sell signals across recent MarketCall episodes.
- *
- * @param {Array<Object>} episodes - Array of episode objects with { episodeDate, guest, firm, picks, callerMentions }
- * @param {number} windowDays - Rolling window size in days (default: 7)
- * @returns {Object} { goldenPicks, warningSells, allScores, episodeCount, windowDays }
+ * Calculate deterministic weighted score for a single mention.
  */
-export function calculateGoldenGoose(episodes = [], windowDays = DEFAULT_WINDOW_DAYS) {
+export function weightedScore(mention) {
+  const stanceWeight = STANCE_WEIGHT[mention.stance] ?? 0;
+  const sourceMultiplier = SOURCE_MULTIPLIER[mention.mentionType] ?? 1.0;
+  return stanceWeight * sourceMultiplier;
+}
+
+/**
+ * Layer 1: Build deterministic shortlists for Buy/Hold candidates and Sell candidates.
+ * No threshold decisions — only counts, weights, and shortlists.
+ *
+ * @param {Array<Object>} episodes - Array of episode objects
+ * @param {number} windowDays - Rolling window size in days (default: 7)
+ * @returns {{ buyHoldCandidates: Array, sellCandidates: Array }}
+ */
+export function buildShortlists(episodes = [], windowDays = 7) {
   if (!Array.isArray(episodes) || episodes.length === 0) {
-    return { goldenPicks: [], warningSells: [], allScores: [], episodeCount: 0, windowDays };
+    return { buyHoldCandidates: [], sellCandidates: [] };
   }
 
-  const now = new Date();
-  const windowMs = windowDays * 24 * 60 * 60 * 1000;
-  
-  const validEpisodes = episodes.filter(ep => {
-    if (!ep) return false;
-    const epDateStr = ep.episodeDate || ep.air_date || ep.date;
-    if (!epDateStr) return true;
-    const epDate = new Date(epDateStr);
-    if (isNaN(epDate.getTime())) return true;
-    return (now.getTime() - epDate.getTime()) <= windowMs + (24 * 60 * 60 * 1000); // 1-day buffer
-  });
+  const cutoff = Date.now() - windowDays * 86_400_000;
+  const tickerAgg = {};
 
-  const allTickerHistoryDates = new Map();
+  for (const episode of episodes) {
+    if (!episode) continue;
+    const epDateStr = episode.episodeDate || episode.air_date || episode.date;
+    if (epDateStr && new Date(epDateStr).getTime() < cutoff) continue;
 
-  episodes.forEach(ep => {
-    if (!ep) return;
-    const epDateStr = ep.episodeDate || ep.air_date || ep.date;
-    if (!epDateStr) return;
-    const epDateObj = new Date(epDateStr);
-    if (isNaN(epDateObj.getTime())) return;
-    const epTimestamp = epDateObj.getTime();
+    const guestName = episode.guest || episode.analyst_name || 'Guest Analyst';
+    const digest = episode.digest || episode;
 
-    const digest = ep.digest || ep;
-    const topPicks = Array.isArray(digest.picks) ? digest.picks : (Array.isArray(digest.top_picks) ? digest.top_picks : []);
-    const callerMentions = Array.isArray(digest.callerMentions) ? digest.callerMentions : (Array.isArray(digest.caller_mentions) ? digest.caller_mentions : []);
+    const topPicks = Array.isArray(digest.picks)
+      ? digest.picks
+      : Array.isArray(digest.top_picks)
+      ? digest.top_picks
+      : [];
 
-    const allItems = [...topPicks, ...callerMentions];
-    allItems.forEach(item => {
-      const ticker = normalizeTicker(item.ticker);
-      if (!ticker) return;
-      const stance = normalizeStance(item.stance || item.rating);
-      if (stance === 'buy' || stance === 'hold') {
-        if (!allTickerHistoryDates.has(ticker)) {
-          allTickerHistoryDates.set(ticker, new Set());
-        }
-        allTickerHistoryDates.get(ticker).add(epTimestamp);
-      }
-    });
-  });
+    const callerMentions = Array.isArray(digest.callerMentions)
+      ? digest.callerMentions
+      : Array.isArray(digest.caller_mentions)
+      ? digest.caller_mentions
+      : [];
 
-  const tickerMap = new Map();
+    /* Exclude pastPicks / recap section entirely — only current picks & callerMentions */
+    const allMentions = [
+      ...topPicks.map((p) => ({ ...p, mentionType: 'pick' })),
+      ...callerMentions.map((c) => ({ ...c, mentionType: 'caller_mention' })),
+    ];
 
-  validEpisodes.forEach((ep) => {
-    const epDate = ep.episodeDate || ep.air_date || 'Recent';
-    const guestName = ep.guest || ep.analyst_name || 'Guest Analyst';
-    const digest = ep.digest || ep;
+    for (const m of allMentions) {
+      const ticker = normalizeTicker(m.ticker);
+      if (!ticker) continue;
 
-    const topPicks = Array.isArray(digest.picks) ? digest.picks : (Array.isArray(digest.top_picks) ? digest.top_picks : []);
-    const callerMentions = Array.isArray(digest.callerMentions) ? digest.callerMentions : (Array.isArray(digest.caller_mentions) ? digest.caller_mentions : []);
+      const stance = normalizeStance(m.stance || m.rating || (m.mentionType === 'pick' ? 'buy' : 'buy'));
+      const epDate = epDateStr || 'Recent';
 
-    // 1. Process Formal Top Picks
-    topPicks.forEach((pick) => {
-      const ticker = normalizeTicker(pick.ticker);
-      if (!ticker) return;
-      
-      if (!tickerMap.has(ticker)) {
-        tickerMap.set(ticker, {
+      /* Dedup key incorporates mentionType:
+         Same guest naming a ticker as a pick + answering a caller question = 2 mentions.
+         Same guest answering 2 callers on same ticker in same episode = 1 mention. */
+      const epKey = `${epDate}_${guestName}_${ticker}_${m.mentionType}`;
+
+      if (!tickerAgg[ticker]) {
+        tickerAgg[ticker] = {
           ticker,
-          companyName: pick.company || pick.companyName || pick.company_name || ticker,
-          episodes: new Map(),
-          topPickAnalysts: new Set(),
-          callerAnalysts: new Set(),
-          allAnalysts: new Set(),
-          topPickReasonings: [],
-          callerReasonings: []
-        });
+          company: m.company || m.companyName || m.company_name || ticker,
+          seenEpKeys: new Set(),
+          mentions: [],
+        };
       }
 
-      const item = tickerMap.get(ticker);
-      item.topPickAnalysts.add(guestName);
-      item.allAnalysts.add(guestName);
-      if (pick.reasoning || pick.thesis) {
-        item.topPickReasonings.push({ analyst: guestName, text: pick.reasoning || pick.thesis, date: epDate });
-      }
-
-      const epKey = `${epDate}_${guestName}`;
-      item.episodes.set(epKey, {
+      const agg = tickerAgg[ticker];
+      agg.mentions.push({
+        guest: guestName,
         date: epDate,
-        analyst: guestName,
-        isTopPick: true,
-        stance: normalizeStance(pick.stance || 'buy')
+        stance,
+        mentionType: m.mentionType,
+        reasoning: m.reasoning || m.summary || m.thesis || m.commentary || 'Mentioned during broadcast.',
+        epKey,
       });
-    });
+      agg.seenEpKeys.add(epKey);
+    }
+  }
 
-    // 2. Process Caller Mentions (Q&A)
-    callerMentions.forEach((call) => {
-      const ticker = normalizeTicker(call.ticker);
-      if (!ticker) return;
+  const buyHoldCandidates = [];
+  const sellCandidates = [];
 
-      if (!tickerMap.has(ticker)) {
-        tickerMap.set(ticker, {
-          ticker,
-          companyName: call.company || call.companyName || ticker,
-          episodes: new Map(),
-          topPickAnalysts: new Set(),
-          callerAnalysts: new Set(),
-          allAnalysts: new Set(),
-          topPickReasonings: [],
-          callerReasonings: []
-        });
-      }
+  for (const agg of Object.values(tickerAgg)) {
+    /* One mention per unique epKey — dedup happens here */
+    const deduped = [...agg.seenEpKeys].map((key) => agg.mentions.find((m) => m.epKey === key));
 
-      const item = tickerMap.get(ticker);
-      item.callerAnalysts.add(guestName);
-      item.allAnalysts.add(guestName);
-      if (call.reasoning || call.summary || call.commentary) {
-        item.callerReasonings.push({ analyst: guestName, text: call.reasoning || call.summary || call.commentary, date: epDate });
-      }
+    const buyHoldCount = deduped.filter((m) => m.stance === 'buy' || m.stance === 'hold').length;
+    const sellCount = deduped.filter((m) => m.stance === 'sell').length;
+    const weightedTotal = deduped.reduce((sum, m) => sum + weightedScore(m), 0);
 
-      const epKey = `${epDate}_${guestName}`;
-      if (!item.episodes.has(epKey)) {
-        item.episodes.set(epKey, {
-          date: epDate,
-          analyst: guestName,
-          isTopPick: false,
-          stance: normalizeStance(call.stance || call.rating || 'buy')
-        });
-      }
-    });
-  });
+    const candidate = {
+      ticker: agg.ticker,
+      company: agg.company,
+      mentionCount: deduped.length,
+      distinctGuestCount: new Set(deduped.map((m) => m.guest)).size,
+      weightedScore: Math.round(weightedTotal * 10) / 10,
+      mentions: deduped,
+    };
 
-  const scoredTickers = [];
-
-  tickerMap.forEach((data, ticker) => {
-    let score = 0;
-    let positiveEpisodes = 0;
-    let negativeEpisodes = 0;
-    let neutralEpisodes = 0;
-
-    data.episodes.forEach((epInfo) => {
-      if (epInfo.stance === 'buy' || epInfo.stance === 'hold') {
-        score += W_FREQUENCY;
-        positiveEpisodes++;
-      } else if (epInfo.stance === 'sell') {
-        score += W_PENALTY;
-        negativeEpisodes++;
-      } else {
-        neutralEpisodes++;
-      }
-    });
-
-    let convergenceBonusApplied = false;
-
-    if (data.callerAnalysts.size > 0 && data.topPickAnalysts.size > 0) {
-      const distinctTopPick = Array.from(data.topPickAnalysts);
-      const distinctCaller = Array.from(data.callerAnalysts);
-      const hasDifferentAnalyst = distinctTopPick.some(tp => distinctCaller.some(c => c !== tp));
-
-      if (hasDifferentAnalyst || data.allAnalysts.size >= 2) {
-        score += W_CONVERGENCE;
-        convergenceBonusApplied = true;
-      }
-    } else if (data.topPickAnalysts.size >= 2 || data.callerAnalysts.size >= 2) {
-      score += W_CONVERGENCE;
-      convergenceBonusApplied = true;
+    if (buyHoldCount >= BUY_HOLD_MIN_MENTIONS) {
+      buyHoldCandidates.push(candidate);
     }
 
-    const finalScore = Math.round(score * 10) / 10;
-
-    let isPersistentHotPick = false;
-    let streakDays = 0;
-
-    if (allTickerHistoryDates.has(ticker)) {
-      const timestamps = Array.from(allTickerHistoryDates.get(ticker)).sort((a, b) => a - b);
-      if (timestamps.length >= 2) {
-        const spanMs = timestamps[timestamps.length - 1] - timestamps[0];
-        streakDays = Math.round(spanMs / (1000 * 60 * 60 * 24));
-        if (streakDays >= 7 || timestamps.length >= 3) {
-          isPersistentHotPick = true;
-        }
-      }
+    if (sellCount >= 1) {
+      sellCandidates.push(candidate);
     }
+  }
 
-    const allReasonings = [...data.topPickReasonings, ...data.callerReasonings];
+  buyHoldCandidates.sort((a, b) => b.weightedScore - a.weightedScore);
+  sellCandidates.sort((a, b) => a.weightedScore - b.weightedScore);
 
-    scoredTickers.push({
-      ticker,
-      companyName: data.companyName,
-      score: finalScore,
-      positiveEpisodes,
-      negativeEpisodes,
-      neutralEpisodes,
-      totalEpisodes: data.episodes.size,
-      convergenceBonusApplied,
-      isPersistentHotPick,
-      streakDays,
-      participatingAnalysts: Array.from(data.allAnalysts),
-      topPickAnalysts: Array.from(data.topPickAnalysts),
-      callerAnalysts: Array.from(data.callerAnalysts),
-      topPickReasonings: data.topPickReasonings,
-      callerReasonings: data.callerReasonings,
-      allReasonings,
-      isGoldenPick: finalScore >= 3.5 && positiveEpisodes >= 1,
-      isWarningSell: negativeEpisodes >= 2 || (negativeEpisodes >= 1 && finalScore < 0)
-    });
-  });
+  return { buyHoldCandidates, sellCandidates };
+}
 
-  scoredTickers.sort((a, b) => b.score - a.score);
+/**
+ * Layer 2: Construct the LLM Eyes prompt.
+ */
+export function buildLLMEyesPrompt({ buyHoldCandidates, sellCandidates }, windowDays = 7) {
+  const allowedTickers = [
+    ...buyHoldCandidates.map((c) => c.ticker),
+    ...sellCandidates.map((c) => c.ticker),
+  ];
 
-  const goldenPicks = scoredTickers.filter(t => t.isGoldenPick || t.score >= 3.5);
-  const warningSells = scoredTickers.filter(t => t.isWarningSell);
+  const formatCandidate = (c) => `
+Ticker: ${c.ticker} (${c.company})
+Deterministic weighted score: ${c.weightedScore} | ${c.mentionCount} mention(s) across ${c.distinctGuestCount} distinct analyst(s)
+Mentions:
+${c.mentions.map((m) => `  - [${m.mentionType}, ${m.stance}] ${m.guest} (${m.date}): "${m.reasoning}"`).join('\n')}`;
+
+  const prompt = `You are evaluating stock tickers for RogueCFA's "Golden Goose" weekly watchlist, based on BNN Bloomberg MarketCall episodes from the past ${windowDays} days.
+
+You may ONLY reference tickers from this exact list: ${allowedTickers.join(', ')}.
+Never introduce a ticker that isn't on this list, even if one appears inside the reasoning text below.
+
+=== BUY/HOLD CANDIDATES (2+ mentions, sorted by weighted score) ===
+${buyHoldCandidates.map(formatCandidate).join('\n---\n') || '(none this window)'}
+
+=== SELL CANDIDATES (all sell mentions, unfiltered by count) ===
+${sellCandidates.map(formatCandidate).join('\n---\n') || '(none this window)'}
+
+Your task:
+1. From the buy/hold candidates, select tickers showing genuine, substantive conviction — not just repeated hedge language. If every mention for a ticker is "hold" with no actual "buy" among them, EXCLUDE it, even though it met the mention-count threshold. A pure hold-only pattern is not a golden goose signal.
+2. From the sell candidates, decide which are worth surfacing as warnings. These were NOT pre-filtered by frequency — a single sell mention can still be worth including if the reasoning cites a specific, substantive concern. Skip vague or low-conviction one-off caller answers.
+3. There is no target count for either list. Some weeks may have 4-5 genuine golden picks, others may have 1 or 0 — let the actual conviction in the reasoning drive the count, not a quota. Same logic applies to warnings.
+
+Respond in this exact JSON shape, using ONLY tickers from the allowed list above, with no text before or after the JSON:
+{
+  "goldenPicks": [{ "ticker": "...", "rationale": "1-2 sentences, must reference specific reasoning provided above" }],
+  "warningSells": [{ "ticker": "...", "rationale": "1-2 sentences, must reference specific reasoning provided above" }]
+}`;
+
+  return { prompt, allowedTickers };
+}
+
+/**
+ * Validate LLM Eyes JSON response against allowedTickers list.
+ */
+export function validateLLMEyesResponse(llmJson, allowedTickers) {
+  const allowedSet = new Set(allowedTickers);
+  const filterValid = (arr) => (arr || []).filter((item) => item && item.ticker && allowedSet.has(item.ticker));
+
+  const allItems = [...(llmJson?.goldenPicks || []), ...(llmJson?.warningSells || [])];
+  const rejectedTickers = allItems
+    .filter((item) => item && item.ticker && !allowedSet.has(item.ticker))
+    .map((item) => item.ticker);
 
   return {
-    goldenPicks,
-    warningSells,
-    allScores: scoredTickers,
-    episodeCount: validEpisodes.length,
-    windowDays
+    goldenPicks: filterValid(llmJson?.goldenPicks),
+    warningSells: filterValid(llmJson?.warningSells),
+    _rejectedTickers: rejectedTickers,
   };
 }
 
 /**
- * Synthesize multi-episode analyst commentary for a top Golden Pick or Warning Sell stock.
- * Extremely token-efficient: consumes ~300-500 input tokens max ($0.00005 on Gemini / Groq).
- *
- * @param {string} ticker
- * @param {string} companyName
- * @param {Array<{analyst: string, text: string, date: string}>} reasonings
- * @param {string} llmKey
- * @param {string} provider
- * @returns {Promise<string>} Synthesized 2-sentence thesis
+ * Legacy compatibility fallback calculation (deterministic threshold mode).
  */
-export async function synthesizeGoldenPickThesis(ticker, companyName, reasonings = [], llmKey, provider = 'claude') {
-  if (!reasonings || reasonings.length === 0) {
-    return 'Multiple guest analysts cited this stock across recent episodes, showing strong consensus.';
-  }
-
-  const excerpts = reasonings.map((r, i) => `[Mention ${i + 1} - ${r.analyst} (${r.date})]: "${r.text}"`).join('\n');
-
-  const prompt = `You are a CFA research analyst. Synthesize the following multi-analyst commentary excerpts for ${ticker} (${companyName}) into a concise, high-signal 2-sentence overarching investment outlook:\n\n${excerpts}\n\nRespond ONLY with 2 clear, high-signal sentences summarizing why analysts repeatedly recommended or flagged this stock.`;
-
-  try {
-    if (provider === 'gemini' && llmKey) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${llmKey}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) return text.trim();
-    }
-  } catch (err) {
-    console.warn('Synthesis failed, using fallback:', err);
-  }
-
-  // Pure deterministic fallback (0 tokens burned)
-  return `Featured across ${reasonings.length} distinct analyst discussions this week, demonstrating strong multi-analyst conviction and caller interest.`;
+export function calculateGoldenGoose(episodes = [], windowDays = 7) {
+  const { buyHoldCandidates, sellCandidates } = buildShortlists(episodes, windowDays);
+  return {
+    goldenPicks: buyHoldCandidates.map((c) => ({
+      ticker: c.ticker,
+      companyName: c.company,
+      score: c.weightedScore,
+      totalEpisodes: c.mentionCount,
+      participatingAnalysts: Array.from(new Set(c.mentions.map((m) => m.guest))),
+      allReasonings: c.mentions,
+      topPickReasonings: c.mentions.filter((m) => m.mentionType === 'pick'),
+      callerReasonings: c.mentions.filter((m) => m.mentionType === 'caller_mention'),
+      isGoldenPick: true,
+      isWarningSell: false,
+    })),
+    warningSells: sellCandidates.map((c) => ({
+      ticker: c.ticker,
+      companyName: c.company,
+      score: c.weightedScore,
+      totalEpisodes: c.mentionCount,
+      participatingAnalysts: Array.from(new Set(c.mentions.map((m) => m.guest))),
+      allReasonings: c.mentions,
+      isGoldenPick: false,
+      isWarningSell: true,
+    })),
+    allScores: [...buyHoldCandidates, ...sellCandidates],
+    episodeCount: episodes.length,
+    windowDays,
+  };
 }
