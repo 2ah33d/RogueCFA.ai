@@ -1013,10 +1013,7 @@ async function callGemini(key, systemPrompt, userPrompt) {
 
 async function callClaude(key, systemPrompt, userPrompt) {
   const models = [
-    'claude-3-5-haiku-latest',
     'claude-haiku-4-5',
-    'claude-3-7-sonnet-latest',
-    'claude-3-5-sonnet-latest',
     'claude-sonnet-5',
   ];
 
