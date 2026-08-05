@@ -302,6 +302,16 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     };
     saveDigestCache('latest_marketcall', cacheData);
     saveDigestCache(epDate, cacheData);
+
+    /* Re-fetch history so Golden Goose Radar updates immediately with new episode */
+    fetch('/api/marketcall-history?limit=10')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((histData) => {
+        if (histData && Array.isArray(histData.history)) {
+          setHistoryEpisodes(histData.history);
+        }
+      })
+      .catch(() => {});
   }, [todayStr]);
 
   /* ══════════════════════════════════════════
