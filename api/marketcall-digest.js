@@ -132,7 +132,7 @@ export default async function handler(req, res) {
 
     if (!force && !bypassCache) {
       try {
-        const { data: cached } = await supabase
+        let { data: cached } = await supabase
           .from('digest_jobs')
           .select('id, status, result, error_message, video_id, video_title')
           .eq('episode_date', targetDateStr)
@@ -140,6 +140,20 @@ export default async function handler(req, res) {
           .order('updated_at', { ascending: false })
           .limit(1)
           .maybeSingle();
+
+        if (!cached || !cached.result) {
+          const { data: latestCompleted } = await supabase
+            .from('digest_jobs')
+            .select('id, status, result, error_message, video_id, video_title')
+            .eq('status', 'complete')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (latestCompleted && latestCompleted.result) {
+            cached = latestCompleted;
+          }
+        }
 
         if (cached && cached.result) {
           return res.status(200).json(cached.result);

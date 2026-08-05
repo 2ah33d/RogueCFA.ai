@@ -165,25 +165,24 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
             } else {
               setDigest(null);
             }
-          } else if (cached && cached.episodeDate) {
-            /* If DB now has a videoId for this cached date, sync it */
-            const matchingDBRow = data.history.find((h) => h.episodeDate === cached.episodeDate);
-            if (matchingDBRow && matchingDBRow.videoId && (!cached.videoId || cached.videoId !== matchingDBRow.videoId)) {
-              setVideoInfo((prev) => ({
-                ...prev,
-                videoId: matchingDBRow.videoId,
-                videoTitle: matchingDBRow.videoTitle || prev?.videoTitle,
-              }));
-              saveDigestCache(cached.episodeDate, {
-                ...cached,
-                videoId: matchingDBRow.videoId,
-                videoTitle: matchingDBRow.videoTitle || cached.videoTitle,
+          } else if (!cached || !cached.digest) {
+            /* Device has no local cache — load newest completed digest from Supabase DB history automatically */
+            const newestValid = data.history.find((h) => h && h.digest);
+            if (newestValid) {
+              setDigest(newestValid.digest);
+              setSelectedDate(newestValid.episodeDate);
+              setVideoInfo({
+                videoId: newestValid.videoId || '',
+                videoTitle: newestValid.videoTitle || `BNN Bloomberg MarketCall (${newestValid.episodeDate})`,
+                episodeDate: newestValid.episodeDate,
               });
               saveDigestCache('latest_marketcall', {
-                ...cached,
-                videoId: matchingDBRow.videoId,
-                videoTitle: matchingDBRow.videoTitle || cached.videoTitle,
+                digest: newestValid.digest,
+                videoId: newestValid.videoId || '',
+                videoTitle: newestValid.videoTitle || `BNN Bloomberg MarketCall (${newestValid.episodeDate})`,
+                episodeDate: newestValid.episodeDate,
               });
+              setHasAttempted(true);
             }
           }
         }
