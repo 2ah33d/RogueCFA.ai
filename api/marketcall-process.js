@@ -23,6 +23,7 @@ import {
   callLLM,
   extractJSON,
   getLatestMarketCallDateStr,
+  findMatchingYtVideo,
   sanitizeAnalystName,
   sanitizeDigestResult,
   pruneStaleJobs,
@@ -94,6 +95,13 @@ export default async function handler(req, res) {
     : getLatestMarketCallDateStr();
   const jobId = req.body?.jobId || (isDebug ? `debug-${Date.now()}` : generateJobId(targetDateStr));
 
+  const latestValidBroadcastDate = getLatestMarketCallDateStr();
+  if (targetDateStr > latestValidBroadcastDate) {
+    return res.status(400).json({
+      error: `Market Call episode for ${targetDateStr} has not aired yet. Broadcasts air Mon-Fri at 12:00 PM EST (9:00 AM PST).`,
+    });
+  }
+
   const { force } = req.body || {};
 
   /* ── Check if this job (or any job for this episode_date) is already completed (skip if debug or force refresh) ── */
@@ -164,6 +172,15 @@ export default async function handler(req, res) {
       }
     }
 
+    if (candidateVideos.length === 0) {
+      try {
+        const { discoverMarketCallVideos } = await import('./_youtubeFetcher.js');
+        candidateVideos = (await discoverMarketCallVideos(targetDateStr, youtubeKey, timer)) || [];
+      } catch (ytFetchErr) {
+        console.warn('[marketcall-process] YouTube channel fallback failed:', ytFetchErr.message);
+      }
+    }
+
     /* ── Priority 0: Check if a saved raw transcript exists in Supabase for this episode_date ── */
     try {
       const { data: savedJob } = await supabase
@@ -177,13 +194,15 @@ export default async function handler(req, res) {
 
       const existingRawText = savedJob?.result?.rawText || savedJob?.result?.raw_text || savedJob?.result?.text;
       if (existingRawText && existingRawText.length >= 200) {
-        const matchingYtVid = candidateVideos.find((v) => v.isTodayMatch || v.publishDate === targetDateStr);
-        const resolvedVideoId = savedJob?.result?.videoId || matchingYtVid?.videoId || '';
-        const resolvedVideoTitle = matchingYtVid?.title || savedJob?.video_title || savedJob?.result?.videoTitle || `BNN Bloomberg MarketCall (${targetDateStr})`;
+        const matchingYtVid = findMatchingYtVideo(candidateVideos, targetDateStr);
+        const resolvedVideoId = matchingYtVid?.videoId || savedJob?.result?.videoId || '';
+        const resolvedVideoTitle = matchingYtVid?.videoTitle || savedJob?.video_title || savedJob?.result?.videoTitle || `BNN Bloomberg MarketCall (${targetDateStr})`;
+        const resolvedDescription = matchingYtVid?.description || savedJob?.result?.description || '';
 
         selectedVideo = {
           videoId: resolvedVideoId,
           videoTitle: resolvedVideoTitle,
+          description: resolvedDescription,
           episodeDate: targetDateStr,
           source: 'database_transcript_cache',
         };
@@ -201,10 +220,11 @@ export default async function handler(req, res) {
       timer.end('Groq Whisper RSS pipeline');
 
       if (rssResult && rssResult.text && rssResult.text.length >= 200) {
-        const matchingYtVid = candidateVideos.find((v) => v.isTodayMatch || v.publishDate === targetDateStr);
+        const matchingYtVid = findMatchingYtVideo(candidateVideos, targetDateStr);
         selectedVideo = {
           videoId: matchingYtVid?.videoId || '',
-          videoTitle: rssResult.rssItemTitle || matchingYtVid?.title || `BNN Bloomberg MarketCall (${targetDateStr})`,
+          videoTitle: matchingYtVid?.videoTitle || rssResult.rssItemTitle || `BNN Bloomberg MarketCall (${targetDateStr})`,
+          description: matchingYtVid?.description || '',
           episodeDate: rssResult.rssItemDate || targetDateStr,
           source: 'bnn_rss_podcast',
         };
@@ -221,10 +241,11 @@ export default async function handler(req, res) {
       timer.end('Supabase Storage audio fallback');
 
       if (storageAudioResult && storageAudioResult.text && storageAudioResult.text.length >= 200) {
-        const matchingYtVid = candidateVideos.find((v) => v.isTodayMatch || v.publishDate === targetDateStr);
+        const matchingYtVid = findMatchingYtVideo(candidateVideos, targetDateStr);
         selectedVideo = {
           videoId: matchingYtVid?.videoId || '',
-          videoTitle: storageAudioResult.rssItemTitle || matchingYtVid?.title || `BNN Bloomberg MarketCall (${targetDateStr})`,
+          videoTitle: matchingYtVid?.videoTitle || storageAudioResult.rssItemTitle || `BNN Bloomberg MarketCall (${targetDateStr})`,
+          description: matchingYtVid?.description || '',
           episodeDate: targetDateStr,
           source: 'supabase_storage_live_audio',
         };
@@ -232,46 +253,23 @@ export default async function handler(req, res) {
       }
     }
 
-    /* ── Step 3: Priority 2 — YouTube Auto-Captions ── */
+    /* ── Step 3: Priority 2 — YouTube Auto-Captions (DORMANT - Disabled per system architectural directive) ──
     if (!selectedVideo || !cleanedTranscript) {
       if (candidateVideos.length > 0) {
+        const matchingYtVid = findMatchingYtVideo(candidateVideos, targetDateStr) || candidateVideos[0];
         timer.start('YouTube caption fetch');
-        const firstCandidate = candidateVideos[0];
-        const firstRaw = await fetchTranscript(firstCandidate.videoId);
+        const firstRaw = await fetchTranscript(matchingYtVid.videoId);
         timer.end('YouTube caption fetch');
         if (firstRaw && firstRaw.length >= 100) {
           const cleaned = cleanRawTranscript(firstRaw);
           if (cleaned && cleaned.length >= 200) {
-            selectedVideo = firstCandidate;
+            selectedVideo = matchingYtVid;
             cleanedTranscript = cleaned;
           }
         }
       }
     }
-
-    /* ── Step 4: Priority 3 — Try older candidates ── */
-    if (!selectedVideo || !cleanedTranscript) {
-      if (!groqKey || !groqKey.startsWith('gsk_')) {
-        const maxCandidates = Math.min(candidateVideos.length, 3);
-        for (let i = 1; i < maxCandidates; i++) {
-          /* Fail fast if approaching 300s Vercel limit */
-          if (timer.report().totalMs > 240000) {
-            groqDiagnosticMsg += ' [DIAGNOSTIC: Fallback loop aborted to prevent Vercel 300s hard timeout.]';
-            break;
-          }
-          const candidate = candidateVideos[i];
-          const raw = await fetchTranscript(candidate.videoId);
-          if (raw && raw.length >= 100) {
-            const cleaned = cleanRawTranscript(raw);
-            if (cleaned && cleaned.length >= 200) {
-              selectedVideo = candidate;
-              cleanedTranscript = cleaned;
-              break;
-            }
-          }
-        }
-      }
-    }
+    */
 
     /* ── Step 5: Final RSS text fallback ── */
     if (!selectedVideo || !cleanedTranscript) {

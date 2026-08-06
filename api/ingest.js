@@ -52,7 +52,9 @@ export default async function handler(req, res) {
   const fullText = raw_text || rawText || '';
   const targetAudioUrl = audioUrl || audio_url || '';
 
-  const todayStr = episodeDate || getLatestMarketCallDateStr();
+  const latestValidDateStr = getLatestMarketCallDateStr();
+  const rawDate = episodeDate && /^\d{4}-\d{2}-\d{2}$/.test(episodeDate) ? episodeDate : latestValidDateStr;
+  const todayStr = rawDate > latestValidDateStr ? latestValidDateStr : rawDate;
   const showName = show || 'Market Call';
   const jobId = `live-${todayStr}`;
 

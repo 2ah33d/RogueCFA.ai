@@ -31,15 +31,44 @@ export default async function handler(req, res) {
     }
 
     /* Fetch complete digests ordered by episode_date descending, then created_at descending */
-    const { data, error } = await supabase
-      .from('digest_jobs')
-      .select('id, episode_date, video_id, video_title, result, created_at, updated_at')
-      .eq('status', 'complete')
-      .not('result', 'is', null)
-      .order('episode_date', { ascending: false })
-      .order('created_at', { ascending: false });
+    let data = null;
+    let error = null;
 
-    if (error) {
+    try {
+      const dbRes = await supabase
+        .from('digest_jobs')
+        .select('id, episode_date, video_id, video_title, result, created_at, updated_at')
+        .eq('status', 'complete')
+        .not('result', 'is', null)
+        .order('episode_date', { ascending: false })
+        .order('created_at', { ascending: false });
+      data = dbRes.data;
+      error = dbRes.error;
+    } catch (e) {
+      error = e;
+    }
+
+    if (error || !data) {
+      /* Fallback to direct REST fetch to bypass JWT clock skew (JWT issued at future) */
+      try {
+        const sUrl = process.env.SUPABASE_URL;
+        const sKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (sUrl && sKey) {
+          const restUrl = `${sUrl}/rest/v1/digest_jobs?select=id,episode_date,video_id,video_title,result,created_at,updated_at&status=eq.complete&result=not.is.null&order=episode_date.desc,created_at.desc`;
+          const restRes = await fetch(restUrl, {
+            headers: { 'apikey': sKey, 'Authorization': `Bearer ${sKey}` },
+          });
+          if (restRes.ok) {
+            data = await restRes.json();
+            error = null;
+          }
+        }
+      } catch (restErr) {
+        console.warn('[marketcall-history] REST fallback failed:', restErr.message);
+      }
+    }
+
+    if (error && !data) {
       console.error('[marketcall-history] Database error:', error.message);
       return res.status(500).json({ error: `Database error: ${error.message}` });
     }

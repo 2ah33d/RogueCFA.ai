@@ -7,15 +7,25 @@
  * MarketCall only airs Mon-Fri. If invoked on Sat/Sun, resolves to Friday.
  */
 export function getLatestMarketCallDateStr(d = new Date()) {
-  /* Enforce North American Pacific/Eastern timezone to prevent UTC server clock overflow after 5pm local time */
-  const options = { timeZone: 'America/Vancouver', year: 'numeric', month: '2-digit', day: '2-digit' };
+  /* Enforce North American Eastern timezone (America/Toronto where BNN airs) */
+  const options = { timeZone: 'America/Toronto', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false };
   const formatter = new Intl.DateTimeFormat('en-CA', options);
-  const parts = formatter.format(d).split('-'); // YYYY-MM-DD
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  const day = parseInt(parts[2], 10);
+  const parts = formatter.formatToParts(d);
+  const getPart = (type) => parts.find(p => p.type === type)?.value;
+  
+  const year = parseInt(getPart('year'), 10);
+  const month = parseInt(getPart('month'), 10);
+  const day = parseInt(getPart('day'), 10);
+  const hour = parseInt(getPart('hour'), 10);
 
   const dateObj = new Date(Date.UTC(year, month - 1, day));
+  
+  /* BNN Market Call airs Mon-Fri at 12:00 PM EST (9:00 AM PST).
+     Before 12:00 PM EST on any day, today's show HAS NOT AIRED YET -> latest broadcast is previous day! */
+  if (hour < 12) {
+    dateObj.setUTCDate(dateObj.getUTCDate() - 1);
+  }
+
   const dayOfWeek = dateObj.getUTCDay();
   if (dayOfWeek === 6) { // Saturday -> Friday
     dateObj.setUTCDate(dateObj.getUTCDate() - 1);
@@ -181,6 +191,50 @@ export async function findRecentMarketCallVideos(youtubeKey, timer) {
 
   timer?.end('YouTube video search');
   return Array.from(candidateMap.values()).slice(0, 8);
+}
+
+/**
+ * Normalizes candidate video items and finds the best matching YouTube video for targetDateStr.
+ */
+export function findMatchingYtVideo(candidateVideos, targetDateStr) {
+  if (!Array.isArray(candidateVideos) || candidateVideos.length === 0) return null;
+
+  const normalized = candidateVideos.map((v) => {
+    if (!v || !v.videoId) return null;
+    const title = v.videoTitle || v.title || '';
+    const date = v.episodeDate || v.publishDate || (v.publishedAt ? v.publishedAt.split('T')[0] : '');
+    return {
+      videoId: v.videoId,
+      videoTitle: title,
+      title: title,
+      episodeDate: date,
+      publishDate: date,
+      description: v.description || '',
+      isTodayMatch: Boolean(v.isTodayMatch),
+    };
+  }).filter(Boolean);
+
+  if (normalized.length === 0) return null;
+
+  /* 1. Exact match on date or isTodayMatch */
+  let match = normalized.find((v) => v.isTodayMatch || (v.episodeDate && v.episodeDate === targetDateStr));
+  if (match) return match;
+
+  /* 2. Check if video published within 1.5 days of targetDateStr */
+  if (targetDateStr) {
+    const targetMs = new Date(targetDateStr).getTime();
+    if (!isNaN(targetMs)) {
+      match = normalized.find((v) => {
+        if (!v.episodeDate) return false;
+        const vMs = new Date(v.episodeDate).getTime();
+        return !isNaN(vMs) && Math.abs(vMs - targetMs) <= 86400000 * 1.5;
+      });
+      if (match) return match;
+    }
+  }
+
+  /* 3. Fallback to newest video */
+  return normalized[0] || null;
 }
 
 /* ════════════════════════════════════════════════════════════════

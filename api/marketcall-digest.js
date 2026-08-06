@@ -16,6 +16,8 @@ import {
   callLLM,
   extractJSON,
   getLatestMarketCallDateStr,
+  findRecentMarketCallVideos,
+  findMatchingYtVideo,
   sanitizeAnalystName,
 } from './_pipeline.js';
 
@@ -130,6 +132,13 @@ export default async function handler(req, res) {
       ? rawDate
       : getLatestMarketCallDateStr();
 
+    const latestValidBroadcastDate = getLatestMarketCallDateStr();
+    if (targetDateStr > latestValidBroadcastDate) {
+      return res.status(400).json({
+        error: `Market Call episode for ${targetDateStr} has not aired yet. Broadcasts air Mon-Fri at 12:00 PM EST (9:00 AM PST).`,
+      });
+    }
+
     if (!force && !bypassCache) {
       try {
         const { data: cached } = await supabase
@@ -142,6 +151,39 @@ export default async function handler(req, res) {
           .maybeSingle();
 
         if (cached && cached.result) {
+          /* Backfill YouTube videoId & analyst name if missing in cached result */
+          if (youtubeKey && (!cached.result.videoId || cached.result.videoId.trim() === '')) {
+            try {
+              let candidateVideos = (await findRecentMarketCallVideos(youtubeKey)) || [];
+              if (candidateVideos.length === 0) {
+                const { discoverMarketCallVideos } = await import('./_youtubeFetcher.js');
+                candidateVideos = (await discoverMarketCallVideos(targetDateStr, youtubeKey)) || [];
+              }
+              const matchingYtVid = findMatchingYtVideo(candidateVideos, targetDateStr);
+              if (matchingYtVid && matchingYtVid.videoId) {
+                cached.result.videoId = matchingYtVid.videoId;
+                cached.result.videoTitle = matchingYtVid.videoTitle || cached.result.videoTitle;
+                if (cached.result.digest && cached.result.digest.guest) {
+                  cached.result.digest.guest = sanitizeAnalystName(cached.result.digest.guest, matchingYtVid.videoTitle, matchingYtVid.description);
+                }
+                /* Persist updated result & video_id to Supabase */
+                supabase
+                  .from('digest_jobs')
+                  .update({
+                    video_id: matchingYtVid.videoId,
+                    video_title: matchingYtVid.videoTitle,
+                    result: cached.result,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', cached.id)
+                  .then(({ error }) => {
+                    if (error) console.warn('[marketcall-digest] Failed to persist YouTube backfill:', error.message);
+                  });
+              }
+            } catch (backfillErr) {
+              console.warn('[marketcall-digest] YouTube backfill check failed:', backfillErr.message);
+            }
+          }
           return res.status(200).json(cached.result);
         }
       } catch (cacheErr) {
