@@ -21,8 +21,8 @@ app = modal.App("roguecfa-live-capture")
     timeout=3900,  # 65 minutes max execution time
     secrets=[modal.Secret.from_name("roguecfa-secrets")]
 )
-def run_live_capture(duration_secs: int = 3600, target_date: str = None):
-    stream_url = os.environ.get("BNN_LIVE_STREAM_URL", "")
+def run_live_capture(duration_secs: int = 3600, target_date: str = None, skip_rss: bool = False):
+    stream_url = os.environ.get("BNN_LIVE_STREAM_URL") or "https://27153.live.streamtheworld.com/TV_BNN_ADP/HLS/playlist.m3u8"
     webhook_url = os.environ.get("VERCEL_WEBHOOK_URL", "https://roguecfa.vercel.app/api/ingest")
     supabase_url = os.environ.get("SUPABASE_URL", "")
     supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY", "")
@@ -39,75 +39,84 @@ def run_live_capture(duration_secs: int = 3600, target_date: str = None):
         try:
             import zoneinfo
             eastern_tz = zoneinfo.ZoneInfo("America/New_York")
-            today_str = datetime.datetime.now(eastern_tz).strftime("%Y-%m-%d")
+            now_et = datetime.datetime.now(eastern_tz)
+            today_dt = now_et.date()
+            if now_et.hour < 12:
+                today_dt -= datetime.timedelta(days=1)
+            if today_dt.weekday() == 5: # Saturday -> Friday
+                today_dt -= datetime.timedelta(days=1)
+            elif today_dt.weekday() == 6: # Sunday -> Friday
+                today_dt -= datetime.timedelta(days=2)
+            today_str = today_dt.strftime("%Y-%m-%d")
         except Exception:
             today_str = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=5)).strftime("%Y-%m-%d")
 
     raw_filename = "raw_marketcall.m4a"
     compressed_filename = f"marketcall-{today_str}.m4a"
 
-    print(f"=== Beginning Modal CPU Live Capture for date: {today_str} ===")
+    print(f"=== Beginning Modal CPU Live Capture for date: {today_str} (skip_rss={skip_rss}) ===")
 
     capture_success = False
 
     # Attempt 1 (PRIMARY): Download official BNN Market Call broadcast audio feed from RSS (searches up to 100 episodes)
-    try:
-        rss_url = "https://www.omnycontent.com/d/playlist/4809bc8a-e41a-405c-93da-a8cf011df2f4/fcfd42e4-d5c6-4b4a-8c62-ae32016f1b9a/4ecaf48c-23a4-4f5e-84b3-ae3201711923/podcast.rss"
-        rss_res = requests.get(rss_url, timeout=15)
-        
-        items = re.findall(r'<item>([\s\S]*?)</item>', rss_res.text)
-        selected_audio_url = None
-        selected_title = None
-
-        for item in items:
-            title_m = re.search(r'<title>([^<]+)</title>', item)
-            enc_m = re.search(r'<enclosure[^>]+url=["\']([^"\']+)["\']', item)
+    if not skip_rss:
+        try:
+            rss_url = "https://www.omnycontent.com/d/playlist/4809bc8a-e41a-405c-93da-a8cf011df2f4/fcfd42e4-d5c6-4b4a-8c62-ae32016f1b9a/4ecaf48c-23a4-4f5e-84b3-ae3201711923/podcast.rss"
+            rss_res = requests.get(rss_url, timeout=15)
             
-            if enc_m:
-                url = enc_m.group(1).replace("&amp;", "&")
-                title = title_m.group(1) if title_m else ""
+            items = re.findall(r'<item>([\s\S]*?)</item>', rss_res.text)
+            selected_audio_url = None
+            selected_title = None
+
+            for item in items:
+                title_m = re.search(r'<title>([^<]+)</title>', item)
+                enc_m = re.search(r'<enclosure[^>]+url=["\']([^"\']+)["\']', item)
                 
-                if today_str:
-                    if today_str in item or today_str in title:
+                if enc_m:
+                    url = enc_m.group(1).replace("&amp;", "&")
+                    title = title_m.group(1) if title_m else ""
+                    
+                    if today_str:
+                        if today_str in item or today_str in title:
+                            selected_audio_url = url
+                            selected_title = title
+                            break
+                        
+                        title_date_m = re.search(r'\(([A-Za-z]+\.?\s+\d{1,2},\s+\d{4})\)', title)
+                        if title_date_m:
+                            raw_title_date = title_date_m.group(1).replace('.', '')
+                            for fmt in ("%B %d, %Y", "%b %d, %Y"):
+                                try:
+                                    parsed_dt = datetime.datetime.strptime(raw_title_date, fmt)
+                                    if parsed_dt.strftime("%Y-%m-%d") == today_str:
+                                        selected_audio_url = url
+                                        selected_title = title
+                                        break
+                                except Exception:
+                                    pass
+                            if selected_audio_url:
+                                break
+                    else:
                         selected_audio_url = url
                         selected_title = title
                         break
-                    
-                    title_date_m = re.search(r'\(([A-Za-z]+\.?\s+\d{1,2},\s+\d{4})\)', title)
-                    if title_date_m:
-                        raw_title_date = title_date_m.group(1).replace('.', '')
-                        for fmt in ("%B %d, %Y", "%b %d, %Y"):
-                            try:
-                                parsed_dt = datetime.datetime.strptime(raw_title_date, fmt)
-                                if parsed_dt.strftime("%Y-%m-%d") == today_str:
-                                    selected_audio_url = url
-                                    selected_title = title
-                                    break
-                            except Exception:
-                                pass
-                        if selected_audio_url:
-                            break
-                else:
-                    selected_audio_url = url
-                    selected_title = title
-                    break
 
-        if selected_audio_url:
-            print(f"Downloading BNN Market Call audio from RSS feed ({selected_title or today_str}): {selected_audio_url}")
-            dl_res = requests.get(selected_audio_url, timeout=120)
-            with open(raw_filename, "wb") as f:
-                f.write(dl_res.content)
-            capture_success = True
-        else:
-            raise Exception(f"No audio enclosure matching date {today_str} found in RSS feed")
-    except Exception as rss_err:
-        print(f"Primary RSS audio download failed: {rss_err}. Trying secondary Streamlink live stream capture fallback...")
+            if selected_audio_url:
+                print(f"Downloading BNN Market Call audio from RSS feed ({selected_title or today_str}): {selected_audio_url}")
+                dl_res = requests.get(selected_audio_url, timeout=120)
+                with open(raw_filename, "wb") as f:
+                    f.write(dl_res.content)
+                capture_success = True
+            else:
+                raise Exception(f"No audio enclosure matching date {today_str} found in RSS feed")
+        except Exception as rss_err:
+            print(f"Primary RSS audio download failed: {rss_err}. Trying secondary Streamlink live stream capture fallback...")
 
     # Attempt 2 (FALLBACK): Direct stream capture via Streamlink / FFmpeg
     if not capture_success:
         try:
             target_stream_url = stream_url
-            if stream_url.startswith("http") and not stream_url.startswith("hls://"):
+            if stream_url.endswith(".m3u8") and not stream_url.startswith("hls://"):
                 target_stream_url = f"hls://{stream_url}"
 
             print(f"Attempting live stream capture via Streamlink ({target_stream_url})...")
@@ -175,9 +184,9 @@ def run_live_capture(duration_secs: int = 3600, target_date: str = None):
     public_audio_url = f"{supabase_url.rstrip('/')}/storage/v1/object/public/{bucket_name}/{compressed_filename}"
     print(f"Supabase Storage Upload complete! Public URL: {public_audio_url}")
 
-    # Step 4: Prune Supabase Storage audio files older than 7 days
+    # Step 4: Prune Supabase Storage audio files older than 2 days (keeps storage safely under ~42 MB total)
     try:
-        print(f"Checking '{bucket_name}' bucket for files older than 7 days...")
+        print(f"Checking '{bucket_name}' bucket for files older than 2 days...")
         list_url = f"{supabase_url.rstrip('/')}/storage/v1/object/list/{bucket_name}"
         list_res = requests.post(
             list_url,
@@ -190,7 +199,7 @@ def run_live_capture(duration_secs: int = 3600, target_date: str = None):
         )
         if list_res.ok:
             objects = list_res.json()
-            cutoff_date = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+            cutoff_date = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=2)).strftime("%Y-%m-%d")
             to_delete = []
             for obj in objects:
                 name = obj.get("name", "")
@@ -238,7 +247,131 @@ def run_live_capture(duration_secs: int = 3600, target_date: str = None):
             break
         except Exception as err:
             print(f"Webhook attempt {attempt} failed: {err}")
-            if attempt == max_retries:
-                print("Warning: Webhook failed after 3 attempts, but audio is saved safely in Supabase Storage.")
             import time
             time.sleep(3)
+
+
+@app.function(
+    image=app_image,
+    # Runs Mon-Fri at 1:30 PM, 2:30 PM, 3:30 PM EST after live broadcast finishes
+    schedule=modal.Cron("30 13,14,15 * * 1-5", timezone="America/New_York"),
+    timeout=300,
+    secrets=[modal.Secret.from_name("roguecfa-secrets")]
+)
+def check_and_purge_rss():
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY", "")
+    bucket_name = "marketcall-audio"
+
+    if not supabase_url or not supabase_key:
+        print("Missing Supabase credentials, skipping check_and_purge_rss.")
+        return
+
+    # 1. List files in marketcall-audio bucket
+    list_url = f"{supabase_url.rstrip('/')}/storage/v1/object/list/{bucket_name}"
+    try:
+        list_res = requests.post(
+            list_url,
+            headers={
+                "Authorization": f"Bearer {supabase_key}",
+                "Content-Type": "application/json",
+            },
+            json={"prefix": "", "limit": 100},
+            timeout=15
+        )
+        if not list_res.ok:
+            print(f"Failed to list Supabase bucket: {list_res.status_code}")
+            return
+        objects = list_res.json()
+    except Exception as e:
+        print(f"Error checking Supabase storage: {e}")
+        return
+
+    if not objects:
+        print("Supabase Storage is empty (0 MB). No live audio files to purge.")
+        return
+
+    # 2. Fetch OmnyStudio RSS feed
+    rss_url = "https://www.omnycontent.com/d/playlist/4809bc8a-e41a-405c-93da-a8cf011df2f4/fcfd42e4-d5c6-4b4a-8c62-ae32016f1b9a/4ecaf48c-23a4-4f5e-84b3-ae3201711923/podcast.rss"
+    try:
+        rss_res = requests.get(rss_url, timeout=15)
+        items = re.findall(r'<item>([\s\S]*?)</item>', rss_res.text)
+    except Exception as rss_err:
+        print(f"Failed to fetch RSS feed: {rss_err}")
+        return
+
+    for obj in objects:
+        name = obj.get("name", "")
+        m = re.search(r"marketcall-(\d{4}-\d{2}-\d{2})\.m4a", name)
+        if not m:
+            continue
+        
+        file_date = m.group(1)
+        rss_mp3_url = None
+        rss_title = None
+
+        for item in items:
+            title_m = re.search(r'<title>([^<]+)</title>', item)
+            enc_m = re.search(r'<enclosure[^>]+url=["\']([^"\']+)["\']', item)
+            if enc_m:
+                url = enc_m.group(1).replace("&amp;", "&")
+                title = title_m.group(1) if title_m else ""
+                if file_date in item or file_date in title:
+                    rss_mp3_url = url
+                    rss_title = title
+                    break
+                title_date_m = re.search(r'\(([A-Za-z]+\.?\s+\d{1,2},\s+\d{4})\)', title)
+                if title_date_m:
+                    raw_title_date = title_date_m.group(1).replace('.', '')
+                    for fmt in ("%B %d, %Y", "%b %d, %Y"):
+                        try:
+                            parsed_dt = datetime.datetime.strptime(raw_title_date, fmt)
+                            if parsed_dt.strftime("%Y-%m-%d") == file_date:
+                                rss_mp3_url = url
+                                rss_title = title
+                                break
+                        except Exception:
+                            pass
+                    if rss_mp3_url:
+                        break
+
+        if rss_mp3_url:
+            print(f"RSS podcast match found for {file_date}: {rss_title}")
+            # Update digest_jobs in Supabase DB for audio-DATE and live-DATE
+            for job_prefix in ["audio-", "live-"]:
+                job_id = f"{job_prefix}{file_date}"
+                get_url = f"{supabase_url.rstrip('/')}/rest/v1/digest_jobs?id=eq.{job_id}"
+                get_res = requests.get(
+                    get_url,
+                    headers={"Authorization": f"Bearer {supabase_key}", "apikey": supabase_key}
+                )
+                if get_res.ok and get_res.json():
+                    row = get_res.json()[0]
+                    res_obj = row.get("result") or {}
+                    res_obj["audioUrl"] = rss_mp3_url
+                    res_obj["source"] = "rss_podcast_swapped"
+                    res_obj["swappedAt"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    
+                    patch_url = f"{supabase_url.rstrip('/')}/rest/v1/digest_jobs?id=eq.{job_id}"
+                    requests.patch(
+                        patch_url,
+                        headers={
+                            "Authorization": f"Bearer {supabase_key}",
+                            "apikey": supabase_key,
+                            "Content-Type": "application/json",
+                            "Prefer": "return=minimal"
+                        },
+                        json={"result": res_obj, "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+                    )
+                    print(f"Updated digest_jobs row '{job_id}' audioUrl to RSS MP3.")
+
+            # Delete .m4a file from Supabase Storage
+            delete_url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}"
+            del_res = requests.delete(
+                delete_url,
+                headers={"Authorization": f"Bearer {supabase_key}", "Content-Type": "application/json"},
+                json={"prefixes": [name]},
+                timeout=15
+            )
+            print(f"Purged '{name}' from Supabase Storage (Status: {del_res.status_code}). Storage now 0 MB!")
+
