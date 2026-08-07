@@ -41,7 +41,7 @@ def run_live_capture(duration_secs: int = 3600, target_date: str = None, skip_rs
             eastern_tz = zoneinfo.ZoneInfo("America/New_York")
             now_et = datetime.datetime.now(eastern_tz)
             today_dt = now_et.date()
-            if now_et.hour < 12:
+            if now_et.hour < 11:
                 today_dt -= datetime.timedelta(days=1)
             if today_dt.weekday() == 5: # Saturday -> Friday
                 today_dt -= datetime.timedelta(days=1)
