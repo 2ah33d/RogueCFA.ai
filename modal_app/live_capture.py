@@ -113,34 +113,64 @@ def run_live_capture(duration_secs: int = 3600, target_date: str = None, skip_rs
             print(f"Primary RSS audio download failed: {rss_err}. Trying secondary Streamlink live stream capture fallback...")
 
     # Attempt 2 (FALLBACK): Direct stream capture via Streamlink / FFmpeg
-    if not capture_success:
-        try:
-            target_stream_url = stream_url
-            if stream_url.endswith(".m3u8") and not stream_url.startswith("hls://"):
-                target_stream_url = f"hls://{stream_url}"
+    # Track wall-clock start so we can budget remaining time for FFmpeg fallback
+    import time as _time
+    _capture_start = _time.monotonic()
+    MODAL_TIMEOUT = 3900  # Must match the @app.function timeout above
+    SAFETY_MARGIN = 180   # Reserve 3 min for compression + upload
 
-            print(f"Attempting live stream capture via Streamlink ({target_stream_url})...")
-            streamlink_cmd = [
-                "streamlink",
-                "--http-header", "Referer=https://www.bnnbloomberg.ca/",
-                "--http-header", "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                target_stream_url,
-                "best",
-                "-o", raw_filename
-            ]
+    if not capture_success:
+        target_stream_url = stream_url
+        if stream_url.endswith(".m3u8") and not stream_url.startswith("hls://"):
+            target_stream_url = f"hls://{stream_url}"
+
+        print(f"Attempting live stream capture via Streamlink ({target_stream_url})...")
+        streamlink_cmd = [
+            "streamlink",
+            "--http-header", "Referer=https://www.bnnbloomberg.ca/",
+            "--http-header", "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            target_stream_url,
+            "best",
+            "-o", raw_filename
+        ]
+        try:
             subprocess.run(streamlink_cmd, timeout=duration_secs + 15, check=True)
             capture_success = True
+        except subprocess.TimeoutExpired:
+            # TimeoutExpired after duration_secs means Streamlink recorded for the
+            # full intended duration — the output file should already be on disk.
+            if os.path.isfile(raw_filename) and os.path.getsize(raw_filename) > 1_000_000:
+                file_mb = os.path.getsize(raw_filename) / (1024 * 1024)
+                print(f"Streamlink timed out as expected after {duration_secs}s. "
+                      f"Output file exists ({file_mb:.1f} MB) — treating as successful capture.")
+                capture_success = True
+            else:
+                print("Streamlink timed out but output file is missing or too small. "
+                      "Falling back to FFmpeg...")
         except Exception as streamlink_err:
             print(f"Streamlink capture failed ({streamlink_err}). Attempting direct FFmpeg capture fallback...")
+
+        # FFmpeg fallback: only attempt if Streamlink didn't produce a usable file
+        if not capture_success:
+            elapsed = _time.monotonic() - _capture_start
+            remaining = MODAL_TIMEOUT - elapsed - SAFETY_MARGIN
+            if remaining < 120:
+                raise RuntimeError(
+                    f"Not enough time remaining for FFmpeg fallback "
+                    f"({remaining:.0f}s left, need at least 120s). "
+                    f"Streamlink consumed {elapsed:.0f}s.")
+            ffmpeg_duration = min(int(remaining), duration_secs)
+            print(f"Attempting direct FFmpeg capture fallback "
+                  f"({ffmpeg_duration}s budget, {remaining:.0f}s remaining before Modal timeout)...")
             try:
                 ffmpeg_cmd = [
                     "ffmpeg", "-y",
                     "-headers", "Referer: https://www.bnnbloomberg.ca/\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36\r\n",
                     "-i", stream_url,
-                    "-t", str(duration_secs),
+                    "-t", str(ffmpeg_duration),
                     "-vn", "-c:a", "aac", raw_filename
                 ]
-                subprocess.run(ffmpeg_cmd, timeout=duration_secs + 15, check=True)
+                subprocess.run(ffmpeg_cmd, timeout=ffmpeg_duration + 30, check=True)
                 capture_success = True
             except Exception as ffmpeg_err:
                 raise RuntimeError(f"Both Streamlink and direct FFmpeg live capture failed: {ffmpeg_err}")
