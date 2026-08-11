@@ -733,13 +733,159 @@ export function extractAnalystFromYouTubeTitle(videoTitle, description = '') {
   return null;
 }
 
-export function sanitizeAnalystName(rawGuest, videoTitle = '', description = '') {
+/**
+ * Scrapes BNN Bloomberg's Top Picks / Hot Picks page to find the analyst name
+ * for a given broadcast date. Falls back to Queryly search API.
+ * Returns the analyst name string or null if not found.
+ * @param {string} targetDate - YYYY-MM-DD date string
+ * @returns {Promise<string|null>}
+ */
+export async function fetchBnnTopPicksAnalyst(targetDate) {
+  if (!targetDate) return null;
+
+  const BROWSER_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
+
+  /* Helper: extract analyst name from a headline like "Christine Poole's Top Picks" */
+  function extractNameFromHeadline(headline) {
+    if (!headline || typeof headline !== 'string') return null;
+    const m = headline.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z\-]+)+)(?:'s|'s|,|\s*-\s*|\s+on\s+|\s+top\s+|\s+hot\s+)/i);
+    if (m && m[1]) {
+      const words = m[1].trim().split(/\s+/);
+      if (words.length >= 2 && words.length <= 4) return m[1].trim();
+    }
+    return null;
+  }
+
+  /* Helper: check if an article/item matches the target date */
+  function matchesDate(text, targetDateStr) {
+    if (!text) return false;
+    if (text.includes(targetDateStr)) return true;
+    /* Parse dates like "Aug. 11, 2026" or "August 11, 2026" */
+    const datePatterns = text.match(/([A-Z][a-z]+\.?\s+\d{1,2},?\s+\d{4})/g);
+    if (datePatterns) {
+      for (const dp of datePatterns) {
+        try {
+          const cleaned = dp.replace('.', '').replace(',', ',');
+          const parsed = new Date(cleaned);
+          if (!isNaN(parsed.getTime()) && parsed.toISOString().split('T')[0] === targetDateStr) {
+            return true;
+          }
+        } catch { /* skip */ }
+      }
+    }
+    return false;
+  }
+
+  /* Attempt 1: Scrape BNN Hot Picks page directly */
+  try {
+    const res = await fetch('https://www.bnnbloomberg.ca/investing/hot-picks/', {
+      headers: BROWSER_HEADERS,
+      signal: AbortSignal.timeout(3000),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      if (html.length > 1500 && !html.includes('captcha') && !html.includes('Access Denied')) {
+        /* Look for article links with headlines containing Top Picks / Hot Picks for today */
+        const articleRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
+        let match;
+        while ((match = articleRegex.exec(html)) !== null) {
+          const url = match[1];
+          const rawContent = match[2].replace(/<[^>]+>/g, '').trim();
+          if (rawContent.length < 15) continue;
+          if (!/top\s+picks|hot\s+picks/i.test(rawContent) && !/top\s+picks|hot\s+picks/i.test(url)) continue;
+
+          /* Check if the article is for today's date */
+          const surroundingHtml = html.slice(Math.max(0, match.index - 300), match.index + 500);
+          if (matchesDate(surroundingHtml, targetDate) || matchesDate(rawContent, targetDate)) {
+            const name = extractNameFromHeadline(rawContent);
+            if (name) {
+              console.log(`[fetchBnnTopPicksAnalyst] Found analyst from BNN Hot Picks page: "${name}" for ${targetDate}`);
+              return name;
+            }
+          }
+        }
+
+        /* If no date-matched article, check the most recent Top Picks headline
+           (BNN often doesn't include dates in the article card — the newest is today's) */
+        articleRegex.lastIndex = 0;
+        while ((match = articleRegex.exec(html)) !== null) {
+          const rawContent = match[2].replace(/<[^>]+>/g, '').trim();
+          if (rawContent.length < 15) continue;
+          if (!/top\s+picks/i.test(rawContent)) continue;
+          const name = extractNameFromHeadline(rawContent);
+          if (name) {
+            console.log(`[fetchBnnTopPicksAnalyst] Found analyst from most recent BNN Top Picks headline: "${name}"`);
+            return name;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[fetchBnnTopPicksAnalyst] BNN page scrape failed: ${err.message}`);
+  }
+
+  /* Attempt 2: Queryly search API */
+  try {
+    const QUERYLY_KEY = 'e5c9f131f6f04418';
+    const query = `top picks ${targetDate}`;
+    const searchUrl = `https://api.queryly.com/json.aspx?queryly_key=${QUERYLY_KEY}&query=${encodeURIComponent(query)}`;
+    const res = await fetch(searchUrl, {
+      headers: BROWSER_HEADERS,
+      signal: AbortSignal.timeout(3000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const items = data.items || [];
+      for (const item of items.slice(0, 10)) {
+        if (!item || !item.title) continue;
+        if (!/top\s+picks/i.test(item.title)) continue;
+        /* Check date proximity: pubdate should match targetDate */
+        if (item.pubdate && matchesDate(item.pubdate, targetDate)) {
+          const name = extractNameFromHeadline(item.title);
+          if (name) {
+            console.log(`[fetchBnnTopPicksAnalyst] Found analyst from Queryly search: "${name}" for ${targetDate}`);
+            return name;
+          }
+        }
+      }
+      /* Fallback: first Top Picks result regardless of date (may be today's if just published) */
+      for (const item of items.slice(0, 5)) {
+        if (!item || !item.title) continue;
+        if (!/top\s+picks/i.test(item.title)) continue;
+        const name = extractNameFromHeadline(item.title);
+        if (name) {
+          console.log(`[fetchBnnTopPicksAnalyst] Found analyst from Queryly (first Top Picks match): "${name}"`);
+          return name;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[fetchBnnTopPicksAnalyst] Queryly search failed: ${err.message}`);
+  }
+
+  return null;
+}
+
+export function sanitizeAnalystName(rawGuest, videoTitle = '', description = '', bnnArticleGuest = '') {
   if (!rawGuest) return 'BNN Bloomberg Guest';
+
+  /* Priority 1: BNN article-confirmed analyst name (scraped from Top Picks page) */
+  if (bnnArticleGuest && typeof bnnArticleGuest === 'string' && bnnArticleGuest.trim().length > 2) {
+    console.log(`[sanitizeAnalystName] Using BNN article-confirmed analyst: "${bnnArticleGuest.trim()}" (LLM said: "${rawGuest}")`);
+    return bnnArticleGuest.trim();
+  }
+
+  /* Priority 2: Phonetic override dictionary */
   const lower = rawGuest.trim().toLowerCase();
   if (PHONETIC_ANALYST_OVERRIDES[lower]) {
     return PHONETIC_ANALYST_OVERRIDES[lower];
   }
 
+  /* Priority 3: YouTube video title extraction */
   const ytName = extractAnalystFromYouTubeTitle(videoTitle, description);
   if (ytName) {
     return ytName;

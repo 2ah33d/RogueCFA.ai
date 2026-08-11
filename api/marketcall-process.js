@@ -27,6 +27,7 @@ import {
   sanitizeAnalystName,
   sanitizeDigestResult,
   pruneStaleJobs,
+  fetchBnnTopPicksAnalyst,
 } from './_pipeline.js';
 
 export const config = { maxDuration: 300 };
@@ -319,7 +320,14 @@ export default async function handler(req, res) {
 
     digest = sanitizeDigestResult(digest);
     if (digest && digest.guest) {
-      digest.guest = sanitizeAnalystName(digest.guest, selectedVideo.videoTitle, selectedVideo.description);
+      /* Check BNN Top Picks article for authoritative analyst name (best-effort, 3s timeout) */
+      let bnnArticleGuest = null;
+      try {
+        bnnArticleGuest = await fetchBnnTopPicksAnalyst(targetDateStr);
+      } catch (bnnErr) {
+        console.warn('[marketcall-process] BNN Top Picks analyst lookup failed:', bnnErr.message);
+      }
+      digest.guest = sanitizeAnalystName(digest.guest, selectedVideo.videoTitle, selectedVideo.description, bnnArticleGuest);
     }
 
     /* Attach real token usage so frontend can show actual costs */

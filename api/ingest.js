@@ -20,6 +20,7 @@ import {
   getLatestMarketCallDateStr,
   sanitizeAnalystName,
   sanitizeDigestResult,
+  fetchBnnTopPicksAnalyst,
 } from './_pipeline.js';
 
 export const config = { maxDuration: 300 };
@@ -137,7 +138,14 @@ export default async function handler(req, res) {
 
     /* ── Step 4: Sanitize Entities, Tickers, Analyst Name & Attach Metadata ── */
     digest = sanitizeDigestResult(digest);
-    digest.guest = sanitizeAnalystName(digest.guest, videoTitle);
+    /* Check BNN Top Picks article for authoritative analyst name (best-effort, 3s timeout) */
+    let bnnArticleGuest = null;
+    try {
+      bnnArticleGuest = await fetchBnnTopPicksAnalyst(todayStr);
+    } catch (bnnErr) {
+      console.warn('[api/ingest] BNN Top Picks analyst lookup failed:', bnnErr.message);
+    }
+    digest.guest = sanitizeAnalystName(digest.guest, videoTitle, '', bnnArticleGuest);
     if (llmUsage) {
       digest.usage = llmUsage;
     }
