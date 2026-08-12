@@ -16,8 +16,8 @@ app = modal.App("roguecfa-live-capture")
 
 @app.function(
     image=app_image,
-    # Runs Mon-Fri at 11:59 AM EST (1 minute before 12:00 PM broadcast)
-    schedule=modal.Cron("59 11 * * 1-5", timezone="America/New_York"),
+    # Runs Mon-Fri at 1:30 PM EST / 10:30 AM PST (after 12:00 PM broadcast)
+    schedule=modal.Cron("30 13 * * 1-5", timezone="America/New_York"),
     timeout=3900,  # 65 minutes max execution time
     secrets=[modal.Secret.from_name("roguecfa-secrets")]
 )
