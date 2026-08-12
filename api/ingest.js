@@ -86,9 +86,37 @@ export default async function handler(req, res) {
       console.warn('[api/ingest] Supabase audio notification upsert warning:', dbErr.message);
     }
 
+    /* Auto-trigger the full digest pipeline (transcription + LLM digest) — fire-and-forget */
+    try {
+      const protocol = req.headers['x-forwarded-proto'] || 'https';
+      const host = req.headers.host || 'roguecfa.vercel.app';
+      const processUrl = `${protocol}://${host}/api/marketcall-process`;
+      console.log(`[api/ingest] Auto-triggering digest pipeline at ${processUrl} for ${todayStr}`);
+      fetch(processUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${api_secret}`,
+        },
+        body: JSON.stringify({
+          episodeDate: todayStr,
+          jobId: `live-${todayStr}`,
+          groqKey: process.env.CRON_GROQ_KEY || process.env.GROQ_API_KEY || '',
+          llmKey: process.env.CRON_LLM_KEY || process.env.LLM_KEY || '',
+          provider: process.env.CRON_LLM_PROVIDER || process.env.LLM_PROVIDER || 'claude',
+          force: true,
+        }),
+        signal: AbortSignal.timeout(290000),
+      }).catch((triggerErr) => {
+        console.warn('[api/ingest] Auto-trigger digest pipeline warning:', triggerErr.message);
+      });
+    } catch (triggerErr) {
+      console.warn('[api/ingest] Failed to auto-trigger digest pipeline:', triggerErr.message);
+    }
+
     return res.status(200).json({
       success: true,
-      status: 'audio_uploaded',
+      status: 'audio_uploaded_and_processing',
       episodeDate: todayStr,
       audioUrl: targetAudioUrl,
     });
