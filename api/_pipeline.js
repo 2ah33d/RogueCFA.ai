@@ -109,6 +109,34 @@ export async function findRecentMarketCallVideos(youtubeKey, timer) {
   timer?.start('YouTube video search');
   const candidateMap = new Map();
 
+  const isMarketCallVideo = (t, d) => {
+    const text = `${t || ''} ${d || ''}`.toLowerCase();
+    return text.includes('market call') ||
+           text.includes('marketcall') ||
+           text.includes('market outlook') ||
+           text.includes('market-outlook') ||
+           text.includes('top picks') ||
+           text.includes('past picks');
+  };
+
+  const parseDateFromTitle = (title) => {
+    if (!title) return null;
+    const monthMap = {
+      january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+      july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
+      jan: '01', feb: '02', mar: '03', apr: '04', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+    };
+    const match = title.match(/(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\.?\s+([0-9]{1,2}),?\s+([0-9]{4})/i);
+    if (match) {
+      const mStr = match[1].toLowerCase();
+      const month = monthMap[mStr] || '01';
+      const day = match[2].padStart(2, '0');
+      const year = match[3];
+      return `${year}-${month}-${day}`;
+    }
+    return null;
+  };
+
   /* Strategy 1: Check BNN Bloomberg's Uploads playlist directly (UU... instead of UC...). */
   try {
     const uploadsPlaylistId = BNN_CHANNEL_ID.replace(/^UC/, 'UU');
@@ -123,16 +151,19 @@ export async function findRecentMarketCallVideos(youtubeKey, timer) {
       const data = await res.json();
       const items = data.items || [];
       for (const item of items) {
-        const title = (item.snippet?.title || '').toLowerCase();
-        const desc = (item.snippet?.description || '').toLowerCase();
-        if (title.includes('market call') || title.includes('marketcall') || desc.includes('market call') || desc.includes('marketcall')) {
+        const rawTitle = decodeHTMLEntities(item.snippet?.title || '');
+        const desc = decodeHTMLEntities(item.snippet?.description || '');
+        if (isMarketCallVideo(rawTitle, desc)) {
           const videoId = item.snippet?.resourceId?.videoId;
           if (videoId && !candidateMap.has(videoId)) {
+            const extractedDate = parseDateFromTitle(rawTitle);
+            const pubDate = item.snippet.publishedAt ? item.snippet.publishedAt.split('T')[0] : '';
             candidateMap.set(videoId, {
               videoId,
-              videoTitle: decodeHTMLEntities(item.snippet.title || ''),
-              episodeDate: item.snippet.publishedAt ? item.snippet.publishedAt.split('T')[0] : '',
-              description: decodeHTMLEntities(item.snippet.description || ''),
+              videoTitle: rawTitle,
+              episodeDate: extractedDate || pubDate || '',
+              publishDate: extractedDate || pubDate || '',
+              description: desc,
             });
           }
         }
@@ -153,7 +184,7 @@ export async function findRecentMarketCallVideos(youtubeKey, timer) {
     searchUrl.searchParams.set('q', 'BNN Bloomberg Market Call');
     searchUrl.searchParams.set('type', 'video');
     searchUrl.searchParams.set('order', 'date');
-    searchUrl.searchParams.set('maxResults', '20');
+    searchUrl.searchParams.set('maxResults', '25');
     searchUrl.searchParams.set('key', youtubeKey);
 
     const searchRes = await fetch(searchUrl.toString(), { signal: AbortSignal.timeout(10000) });
@@ -169,19 +200,21 @@ export async function findRecentMarketCallVideos(youtubeKey, timer) {
       const searchData = await searchRes.json();
       const videos = searchData.items || [];
       for (const v of videos) {
-        const title = (v.snippet?.title || '').toLowerCase();
-        const desc = (v.snippet?.description || '').toLowerCase();
+        const rawTitle = decodeHTMLEntities(v.snippet?.title || '');
+        const desc = decodeHTMLEntities(v.snippet?.description || '');
         const channel = (v.snippet?.channelTitle || '').toLowerCase();
-        const isBnnOrRelevant = channel.includes('bnn') || channel.includes('bloomberg') || channel.includes('market call') || channel.includes('marketcall');
-        const hasMarketCall = title.includes('market call') || title.includes('marketcall') || desc.includes('market call') || desc.includes('marketcall');
-        if (isBnnOrRelevant && hasMarketCall) {
+        const isBnnOrRelevant = channel.includes('bnn') || channel.includes('bloomberg') || isMarketCallVideo(rawTitle, desc);
+        if (isBnnOrRelevant && isMarketCallVideo(rawTitle, desc)) {
           const videoId = v.id?.videoId;
           if (videoId && !candidateMap.has(videoId)) {
+            const extractedDate = parseDateFromTitle(rawTitle);
+            const pubDate = v.snippet.publishedAt ? v.snippet.publishedAt.split('T')[0] : '';
             candidateMap.set(videoId, {
               videoId,
-              videoTitle: decodeHTMLEntities(v.snippet.title || ''),
-              episodeDate: v.snippet.publishedAt ? v.snippet.publishedAt.split('T')[0] : '',
-              description: decodeHTMLEntities(v.snippet.description || ''),
+              videoTitle: rawTitle,
+              episodeDate: extractedDate || pubDate || '',
+              publishDate: extractedDate || pubDate || '',
+              description: desc,
             });
           }
         }
@@ -199,10 +232,29 @@ export async function findRecentMarketCallVideos(youtubeKey, timer) {
 export function findMatchingYtVideo(candidateVideos, targetDateStr) {
   if (!Array.isArray(candidateVideos) || candidateVideos.length === 0) return null;
 
+  const parseDateFromTitle = (title) => {
+    if (!title) return null;
+    const monthMap = {
+      january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+      july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
+      jan: '01', feb: '02', mar: '03', apr: '04', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+    };
+    const match = title.match(/(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\.?\s+([0-9]{1,2}),?\s+([0-9]{4})/i);
+    if (match) {
+      const mStr = match[1].toLowerCase();
+      const month = monthMap[mStr] || '01';
+      const day = match[2].padStart(2, '0');
+      const year = match[3];
+      return `${year}-${month}-${day}`;
+    }
+    return null;
+  };
+
   const normalized = candidateVideos.map((v) => {
     if (!v || !v.videoId) return null;
     const title = v.videoTitle || v.title || '';
-    const date = v.episodeDate || v.publishDate || (v.publishedAt ? v.publishedAt.split('T')[0] : '');
+    const extractedDate = parseDateFromTitle(title);
+    const date = extractedDate || v.episodeDate || v.publishDate || (v.publishedAt ? v.publishedAt.split('T')[0] : '');
     return {
       videoId: v.videoId,
       videoTitle: title,
@@ -210,7 +262,7 @@ export function findMatchingYtVideo(candidateVideos, targetDateStr) {
       episodeDate: date,
       publishDate: date,
       description: v.description || '',
-      isTodayMatch: Boolean(v.isTodayMatch),
+      isTodayMatch: Boolean(v.isTodayMatch) || (extractedDate && extractedDate === targetDateStr),
     };
   }).filter(Boolean);
 
@@ -693,8 +745,20 @@ export function extractAnalystFromYouTubeTitle(videoTitle, description = '') {
 
   const cleanTitle = decodeHTMLEntities(videoTitle).trim();
 
+  // Pattern 0: "Jamie Murrays’ Market Outlook: ..." or "Keith Richards' Market Outlook: ..." or "Christine Poole's Top Picks"
+  const p0 = cleanTitle.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z\-]+)+)(?:['’]s?|['’])\s+(?:Market\s+Outlook|Outlook|Top\s+Picks|Past\s+Picks|takes|shares|talks|discusses)/i);
+  if (p0 && p0[1]) {
+    let candidate = p0[1].trim();
+    // Fix typo in plural possessive e.g. "Jamie Murrays’" -> "Jamie Murray"
+    if (candidate.endsWith('s') && !['Chris', 'James', 'Denis', 'Charles', 'Curtis', 'Travis', 'Lucas', 'Thomas', 'Richards', 'Williams', 'Davis', 'Jones', 'Evans', 'Roberts', 'Andrews', 'Blumas'].includes(candidate.split(/\s+/).pop())) {
+      candidate = candidate.replace(/s$/, '');
+    }
+    const words = candidate.split(/\s+/);
+    if (words.length >= 2 && words.length <= 4) return candidate;
+  }
+
   // Pattern 1: "Market Call: Julian Klymochko on U.S. equities" or "MarketCall: Eric Nuttall's Top Picks"
-  const p1 = cleanTitle.match(/market\s*call\s*[:\-–—]\s*([^'":\-–—\d\(\)]+?)(?:\s+(?:on|'s|takes|shares|talks|with|gives|top|picks|discusses)|$)/i);
+  const p1 = cleanTitle.match(/market\s*call\s*[:\-–—]\s*([^'":\-–—\d\(\)]+?)(?:\s+(?:on|'s|’s|takes|shares|talks|with|gives|top|picks|discusses|outlook)|$)/i);
   if (p1 && p1[1]) {
     const candidate = p1[1].trim();
     const words = candidate.split(/\s+/);
@@ -704,7 +768,7 @@ export function extractAnalystFromYouTubeTitle(videoTitle, description = '') {
   }
 
   // Pattern 2: "Julian Klymochko on U.S. Equities - MarketCall"
-  const p2 = cleanTitle.match(/^([^:\-–—\d\(\)]+?)\s+(?:on|takes|shares|talks|with|gives|top|picks|discusses)\s+.*(?:market\s*call)/i);
+  const p2 = cleanTitle.match(/^([^:\-–—\d\(\)]+?)\s+(?:on|takes|shares|talks|with|gives|top|picks|discusses)\s+.*(?:market\s*call|market\s*outlook)/i);
   if (p2 && p2[1]) {
     const candidate = p2[1].trim();
     const words = candidate.split(/\s+/);
@@ -749,13 +813,17 @@ export async function fetchBnnTopPicksAnalyst(targetDate) {
     'Accept-Language': 'en-US,en;q=0.9',
   };
 
-  /* Helper: extract analyst name from a headline like "Christine Poole's Top Picks" */
+  /* Helper: extract analyst name from a headline like "Christine Poole's Top Picks" or "Jamie Murrays’ Market Outlook" */
   function extractNameFromHeadline(headline) {
     if (!headline || typeof headline !== 'string') return null;
-    const m = headline.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z\-]+)+)(?:'s|'s|,|\s*-\s*|\s+on\s+|\s+top\s+|\s+hot\s+)/i);
+    const m = headline.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z\-]+)+)(?:['’]s|['’]s?|,|\s*-\s*|\s+on\s+|\s+top\s+|\s+hot\s+|\s+market\s+)/i);
     if (m && m[1]) {
-      const words = m[1].trim().split(/\s+/);
-      if (words.length >= 2 && words.length <= 4) return m[1].trim();
+      let name = m[1].trim();
+      if (name.endsWith('s') && !['Chris', 'James', 'Denis', 'Charles', 'Curtis', 'Travis', 'Lucas', 'Thomas', 'Richards', 'Williams', 'Davis', 'Jones', 'Evans', 'Roberts', 'Andrews', 'Blumas'].includes(name.split(/\s+/).pop())) {
+        name = name.replace(/s$/, '');
+      }
+      const words = name.split(/\s+/);
+      if (words.length >= 2 && words.length <= 4) return name;
     }
     return null;
   }
@@ -796,7 +864,7 @@ export async function fetchBnnTopPicksAnalyst(targetDate) {
           const url = match[1];
           const rawContent = match[2].replace(/<[^>]+>/g, '').trim();
           if (rawContent.length < 15) continue;
-          if (!/top\s+picks|hot\s+picks/i.test(rawContent) && !/top\s+picks|hot\s+picks/i.test(url)) continue;
+          if (!/top\s+picks|hot\s+picks|market\s+outlook/i.test(rawContent) && !/top\s+picks|hot\s+picks|market\s+outlook/i.test(url)) continue;
 
           /* Check if the article is for today's date */
           const surroundingHtml = html.slice(Math.max(0, match.index - 300), match.index + 500);
@@ -831,35 +899,25 @@ export async function fetchBnnTopPicksAnalyst(targetDate) {
   /* Attempt 2: Queryly search API */
   try {
     const QUERYLY_KEY = 'e5c9f131f6f04418';
-    const query = `top picks ${targetDate}`;
-    const searchUrl = `https://api.queryly.com/json.aspx?queryly_key=${QUERYLY_KEY}&query=${encodeURIComponent(query)}`;
-    const res = await fetch(searchUrl, {
-      headers: BROWSER_HEADERS,
-      signal: AbortSignal.timeout(3000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const items = data.items || [];
-      for (const item of items.slice(0, 10)) {
-        if (!item || !item.title) continue;
-        if (!/top\s+picks/i.test(item.title)) continue;
-        /* Check date proximity: pubdate should match targetDate */
-        if (item.pubdate && matchesDate(item.pubdate, targetDate)) {
-          const name = extractNameFromHeadline(item.title);
-          if (name) {
-            console.log(`[fetchBnnTopPicksAnalyst] Found analyst from Queryly search: "${name}" for ${targetDate}`);
-            return name;
+    const queries = ['market-call', 'top picks'];
+    for (const query of queries) {
+      const searchUrl = `https://api.queryly.com/json.aspx?queryly_key=${QUERYLY_KEY}&query=${encodeURIComponent(query)}&endindex=15`;
+      const res = await fetch(searchUrl, {
+        headers: BROWSER_HEADERS,
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const items = data.items || [];
+        for (const item of items) {
+          if (!item || !item.title) continue;
+          if (item.pubdate && matchesDate(item.pubdate, targetDate)) {
+            const name = extractNameFromHeadline(item.title);
+            if (name) {
+              console.log(`[fetchBnnTopPicksAnalyst] Found analyst from Queryly search: "${name}" for ${targetDate}`);
+              return name;
+            }
           }
-        }
-      }
-      /* Fallback: first Top Picks result regardless of date (may be today's if just published) */
-      for (const item of items.slice(0, 5)) {
-        if (!item || !item.title) continue;
-        if (!/top\s+picks/i.test(item.title)) continue;
-        const name = extractNameFromHeadline(item.title);
-        if (name) {
-          console.log(`[fetchBnnTopPicksAnalyst] Found analyst from Queryly (first Top Picks match): "${name}"`);
-          return name;
         }
       }
     }

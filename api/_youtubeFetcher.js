@@ -32,7 +32,7 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
   if (youtubeApiKey) {
     try {
       timer?.start('YouTube Data API search');
-      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${BNN_YOUTUBE_CHANNEL_ID}&q=Market+Call&type=video&order=date&maxResults=10&key=${youtubeApiKey}`;
+      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${BNN_YOUTUBE_CHANNEL_ID}&q=Market+Call&type=video&order=date&maxResults=15&key=${youtubeApiKey}`;
       const res = await fetch(searchUrl, { signal: AbortSignal.timeout(8000) });
       timer?.end('YouTube Data API search');
 
@@ -41,17 +41,18 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
         const items = (data.items || [])
           .filter((item) => {
             const title = (item.snippet?.title || '').toLowerCase();
-            return title.includes('market call') || title.includes('marketcall');
+            return isMarketCallVideoTitle(title);
           })
           .map((item) => {
             const rawTitle = item.snippet?.title || '';
             const pubDate = (item.snippet?.publishedAt || '').split('T')[0];
             const extractedDate = extractDateFromTitle(rawTitle);
+            const resolvedDate = extractedDate || pubDate || todayStr;
             return {
               videoId: item.id?.videoId || '',
               title: rawTitle,
-              publishDate: extractedDate || pubDate || todayStr,
-              isTodayMatch: pubDate === todayStr,
+              publishDate: resolvedDate,
+              isTodayMatch: resolvedDate === todayStr || pubDate === todayStr,
             };
           });
 
@@ -106,18 +107,18 @@ export async function discoverMarketCallVideos(todayStr, youtubeApiKey, timer) {
 
         const titleMatch = vHtml.match(/<title>([\s\S]*?)<\/title>/i);
         const rawTitle = titleMatch ? decodeHTMLTitle(titleMatch[1].trim()) : '';
-        const titleLower = rawTitle.toLowerCase();
 
-        if (titleLower.includes('market call') || titleLower.includes('marketcall')) {
+        if (isMarketCallVideoTitle(rawTitle)) {
+          const titleLower = rawTitle.toLowerCase();
           const isTodayMatch = dateFragments.some((frag) => titleLower.includes(frag));
           const extractedDate = extractDateFromTitle(rawTitle);
-          const publishDate = isTodayMatch ? todayStr : extractedDate || todayStr;
+          const publishDate = extractedDate || (isTodayMatch ? todayStr : todayStr);
 
           return {
             videoId: vid,
             title: rawTitle.replace(/ - YouTube$/, ''),
             publishDate,
-            isTodayMatch,
+            isTodayMatch: isTodayMatch || extractedDate === todayStr,
           };
         }
       } catch (e) {
@@ -341,10 +342,24 @@ export async function transcribeYoutubeAudio(streamUrl, groqKey, timer) {
 /* ── Internal Helpers ── */
 
 /**
- * Build date search fragments from YYYY-MM-DD for fuzzy title matching.
- * e.g. "2026-07-29" → ["july 29, 2026", "july 29 2026", "jul 29", "07/29"]
+ * Checks if a video title is a BNN Bloomberg Market Call segment (Market Call, Market Outlook, Top Picks, Past Picks).
  */
-function buildDateFragments(dateStr) {
+export function isMarketCallVideoTitle(rawTitle) {
+  if (!rawTitle) return false;
+  const t = rawTitle.toLowerCase();
+  return t.includes('market call') ||
+         t.includes('marketcall') ||
+         t.includes('market outlook') ||
+         t.includes('market-outlook') ||
+         t.includes('top picks') ||
+         t.includes('past picks');
+}
+
+/**
+ * Build date search fragments from YYYY-MM-DD for fuzzy title matching.
+ * e.g. "2026-08-18" → ["august 18, 2026", "aug 18", "aug. 18", "08/18"]
+ */
+export function buildDateFragments(dateStr) {
   const [year, month, day] = dateStr.split('-');
   const monthNames = [
     'january', 'february', 'march', 'april', 'may', 'june',
@@ -358,6 +373,8 @@ function buildDateFragments(dateStr) {
     `${monthNames[mi]} ${dayNum}, ${year}`,
     `${monthNames[mi]} ${dayNum} ${year}`,
     `${monthShort[mi]} ${dayNum}`,
+    `${monthShort[mi]}. ${dayNum}`,
+    `(${monthShort[mi]}. ${dayNum}`,
     `(${monthNames[mi]} ${dayNum}`,
   ];
 }
@@ -365,7 +382,7 @@ function buildDateFragments(dateStr) {
 /**
  * Decode common HTML entities in YouTube page titles.
  */
-function decodeHTMLTitle(str) {
+export function decodeHTMLTitle(str) {
   return str
     .replace(/&#39;/g, "'")
     .replace(/&amp;/g, '&')
@@ -376,9 +393,9 @@ function decodeHTMLTitle(str) {
 }
 
 /**
- * Extract YYYY-MM-DD date string from video title (e.g., "July 29, 2026" → "2026-07-29").
+ * Extract YYYY-MM-DD date string from video title (e.g., "Aug. 18, 2026" or "July 29, 2026" → "2026-08-18").
  */
-function extractDateFromTitle(title) {
+export function extractDateFromTitle(title) {
   if (!title) return null;
   const monthMap = {
     january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
@@ -386,7 +403,7 @@ function extractDateFromTitle(title) {
     jan: '01', feb: '02', mar: '03', apr: '04', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
   };
 
-  const match = title.match(/(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\s+([0-9]{1,2}),?\s+([0-9]{4})/i);
+  const match = title.match(/(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\.?\s+([0-9]{1,2}),?\s+([0-9]{4})/i);
   if (match) {
     const mStr = match[1].toLowerCase();
     const month = monthMap[mStr] || '01';

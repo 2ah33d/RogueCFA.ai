@@ -88,6 +88,7 @@ export default async function handler(req, res) {
 
     /* Auto-trigger the full digest pipeline (transcription + LLM digest) — fire-and-forget */
     try {
+      const activeSecret = validSecrets[0] || 'roguecfa_live_secret_key_2026';
       const protocol = req.headers['x-forwarded-proto'] || 'https';
       const host = req.headers.host || 'roguecfa.vercel.app';
       const processUrl = `${protocol}://${host}/api/marketcall-process`;
@@ -96,7 +97,7 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${api_secret}`,
+          'Authorization': `Bearer ${activeSecret}`,
         },
         body: JSON.stringify({
           episodeDate: todayStr,

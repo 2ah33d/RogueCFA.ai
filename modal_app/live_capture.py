@@ -16,12 +16,12 @@ app = modal.App("roguecfa-live-capture")
 
 @app.function(
     image=app_image,
-    # Runs Mon-Fri at 1:30 PM EST / 10:30 AM PST (after 12:00 PM broadcast)
-    schedule=modal.Cron("30 13 * * 1-5", timezone="America/New_York"),
+    # Runs Mon-Fri at 11:59 AM EST / 8:59 AM PST (captures 12:00 PM - 1:00 PM EST live broadcast)
+    schedule=modal.Cron("59 11 * * 1-5", timezone="America/New_York"),
     timeout=3900,  # 65 minutes max execution time
     secrets=[modal.Secret.from_name("roguecfa-secrets")]
 )
-def run_live_capture(duration_secs: int = 3600, target_date: str = None, skip_rss: bool = False):
+def run_live_capture(duration_secs: int = 3660, target_date: str = None, skip_rss: bool = True):
     stream_url = os.environ.get("BNN_LIVE_STREAM_URL") or "https://27153.live.streamtheworld.com/TV_BNN_ADP/HLS/playlist.m3u8"
     webhook_url = os.environ.get("VERCEL_WEBHOOK_URL", "https://roguecfa.vercel.app/api/ingest")
     supabase_url = os.environ.get("SUPABASE_URL", "")
@@ -283,8 +283,8 @@ def run_live_capture(duration_secs: int = 3600, target_date: str = None, skip_rs
 
 @app.function(
     image=app_image,
-    # Runs Mon-Fri at 1:30 PM, 2:30 PM, 3:30 PM EST after live broadcast finishes
-    schedule=modal.Cron("30 13,14,15 * * 1-5", timezone="America/New_York"),
+    # Runs Mon-Fri at 1:30 PM, 2:30 PM, 3:30 PM, 4:30 PM, 5:30 PM, 6:30 PM EST after live broadcast finishes
+    schedule=modal.Cron("30 13,14,15,16,17,18 * * 1-5", timezone="America/New_York"),
     timeout=300,
     secrets=[modal.Secret.from_name("roguecfa-secrets")]
 )

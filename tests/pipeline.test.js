@@ -111,3 +111,31 @@ test('word-boundary fuzzy matching prevents substring collisions on generic comp
   assert.equal(result.picks[0].ticker, 'XYZ', 'Should not match BDT for LADYBIRD');
   assert.equal(result.picks[0].company, 'LADYBIRD INC', 'No false positive canonical match for LADYBIRD');
 });
+
+test('extractDateFromTitle accurately parses dates with and without abbreviation dots', async () => {
+  const { extractDateFromTitle } = await import('../api/_youtubeFetcher.js');
+  assert.equal(extractDateFromTitle('Jamie Murrays’ Market Outlook: AI Trade (Aug. 18, 2026)'), '2026-08-18');
+  assert.equal(extractDateFromTitle('Market Call: Keith Richards\' outlook on Technical Analysis (Aug. 17, 2026)'), '2026-08-17');
+  assert.equal(extractDateFromTitle('Market Call: Tim Regan\'s outlook on North American Large Caps (July 29, 2026)'), '2026-07-29');
+  assert.equal(extractDateFromTitle('Richard Orrell\'s Market Outlook: ETFs (Aug 14, 2026)'), '2026-08-14');
+});
+
+test('extractAnalystFromYouTubeTitle extracts guest from Market Outlook and possessive typos', async () => {
+  const { extractAnalystFromYouTubeTitle } = await import('../api/_pipeline.js');
+  assert.equal(extractAnalystFromYouTubeTitle('Jamie Murrays’ Market Outlook: AI Trade (Aug. 18, 2026)'), 'Jamie Murray');
+  assert.equal(extractAnalystFromYouTubeTitle('Keith Richards\' Market Outlook: Technical Analysis (Aug. 17, 2026)'), 'Keith Richards');
+  assert.equal(extractAnalystFromYouTubeTitle('Chris Blumas\' Market Outlook: North American Large Caps (Aug. 12, 2026)'), 'Chris Blumas');
+  assert.equal(extractAnalystFromYouTubeTitle('Christine Poole\'s Market Outlook: Canadian Dividend Stocks (Aug. 11, 2026)'), 'Christine Poole');
+});
+
+test('findMatchingYtVideo matches Market Outlook titles with target date', async () => {
+  const { findMatchingYtVideo } = await import('../api/_pipeline.js');
+  const candidates = [
+    { videoId: 'O8OTYPsSkyk', videoTitle: 'Jamie Murrays’ Market Outlook: AI Trade (Aug. 18, 2026)', publishDate: '2026-08-18' },
+    { videoId: 'aYrH7EAEp6g', videoTitle: "Market Call: Keith Richards' outlook on Technical Analysis (Aug. 17, 2026)", publishDate: '2026-08-17' },
+  ];
+  const match = findMatchingYtVideo(candidates, '2026-08-18');
+  assert.ok(match, 'Must find matching video for 2026-08-18');
+  assert.equal(match.videoId, 'O8OTYPsSkyk', 'Must match videoId O8OTYPsSkyk');
+});
+
