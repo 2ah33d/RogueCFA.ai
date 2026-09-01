@@ -28,10 +28,10 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
         <div className="pt-2">
           <button
             type="button"
-            onClick={() => onLaunchTool('score')}
+            onClick={() => onLaunchTool('digest')}
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-accent text-accent-text hover:bg-accent-hover text-sm font-semibold rounded-full transition-all shadow-antigravity"
           >
-            Launch Tool
+            Launch MarketCall Radar
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
             </svg>
@@ -267,15 +267,6 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
               <p className="text-xs text-dim leading-relaxed">
                 Strong Q2 cash flow results, 6.2% dividend yield backed by long-term take-or-pay contracts, and key exposure to Western Canadian natural gas processing infrastructure.
               </p>
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => onSelectTicker && onSelectTicker('KEY', 'Eric Nuttall')}
-                  className="text-xs text-accent hover:underline font-medium transition-colors"
-                >
-                  Score KEY Stock Ticker →
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -284,18 +275,18 @@ export default function LandingPage({ onLaunchTool, onSelectTicker, onSelectGues
       {/* ── 5. SIMPLE CTA ── */}
       <section className="text-center space-y-4 pt-8 pb-10 border-t border-surface-elevated/40">
         <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-prime">
-          Score any stock ticker in seconds.
+          Track BNN MarketCall analyst picks with zero effort.
         </h3>
         <p className="text-xs text-dim max-w-md mx-auto">
-          Free, Bring Your Own Key (BYOK), zero accounts required.
+          Automated audio transcription, structured top picks, and verified analyst track records.
         </p>
         <div>
           <button
             type="button"
-            onClick={() => onLaunchTool('score')}
+            onClick={() => onLaunchTool('digest')}
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-accent text-accent-text hover:bg-accent-hover text-sm font-semibold rounded-full transition-all shadow-antigravity"
           >
-            Launch RogueCFA Tool
+            Launch MarketCall Radar
           </button>
         </div>
       </section>

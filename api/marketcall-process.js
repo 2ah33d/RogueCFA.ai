@@ -405,6 +405,24 @@ export default async function handler(req, res) {
               console.warn('[marketcall-process] Non-blocking cold-start fetch failed:', csErr.message);
             });
           }
+
+          /* 3. Golden Goose Evaluation: Pre-compute LLM Eyes for the 7-day window & persist to Supabase */
+          try {
+            const protocol = req.headers['x-forwarded-proto'] || 'http';
+            const host = req.headers.host || 'localhost:3000';
+            const ggUrl = `${protocol}://${host}/api/goldengoose`;
+
+            fetch(ggUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ windowDays: 7, llmKey, provider, force: true }),
+              signal: AbortSignal.timeout(20000),
+            }).catch((ggErr) => {
+              console.warn('[marketcall-process] Background Golden Goose trigger warning:', ggErr.message);
+            });
+          } catch (ggErr) {
+            console.warn('[marketcall-process] Golden Goose trigger error:', ggErr.message);
+          }
         } catch (trackErr) {
           console.warn('[marketcall-process] Track record processing warning:', trackErr.message);
         }

@@ -303,12 +303,34 @@ export default function DigestView({ onScoreTicker, onSelectGuest, onOpenSetting
     saveDigestCache('latest_marketcall', cacheData);
     saveDigestCache(epDate, cacheData);
 
-    /* Re-fetch history so Golden Goose Radar updates immediately with new episode */
+    /* Re-fetch history and generate fresh Golden Goose LLM Eyes for the new episode */
+    const { llmKey } = getKeys();
+    const provider = getProvider();
+
     fetch('/api/marketcall-history?limit=10')
       .then((res) => (res.ok ? res.json() : null))
       .then((histData) => {
         if (histData && Array.isArray(histData.history)) {
           setHistoryEpisodes(histData.history);
+
+          fetch('/api/goldengoose', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ windowDays: 7, llmKey, provider, force: true }),
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((ggData) => {
+              if (ggData?.result) {
+                setHistoryEpisodes((prev) =>
+                  prev.map((ep, idx) =>
+                    idx === 0
+                      ? { ...ep, digest: { ...(ep.digest || {}), goldenGoose: ggData.result } }
+                      : ep
+                  )
+                );
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {});

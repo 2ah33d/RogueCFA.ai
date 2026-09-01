@@ -3,9 +3,7 @@ import { motion } from 'framer-motion';
 
 const TABS = [
   { key: 'landing', label: 'Overview' },
-  { key: 'score', label: 'Score Ticker' },
   { key: 'digest', label: 'Latest Picks' },
-  { key: 'history', label: 'Score History' },
 ];
 
 /**

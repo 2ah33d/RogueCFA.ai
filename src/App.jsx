@@ -74,9 +74,7 @@ export default function App() {
 
   const MOBILE_TABS = [
     { key: 'landing', label: 'Overview', icon: LayoutDashboard },
-    { key: 'score', label: 'Score Ticker', icon: Target },
     { key: 'digest', label: 'Latest Picks', icon: Sparkles },
-    { key: 'history', label: 'Score History', icon: History },
   ];
 
   const [loading, setLoading] = useState(false);
@@ -112,81 +110,12 @@ export default function App() {
     setKeysReady(checkHasKeys());
   }, []);
 
-  /* ── Batch Scoring Pipeline ── */
+  /* ── Scoring Pipeline (Disabled / Under Development) ── */
   const handleScore = useCallback(
-    async (tickers, holdPeriod, analystGuest = null) => {
-      const keys = getKeys();
-      const provider = getProvider();
-      const finnhubKey = keys.finnhubKey || keys.finnhub;
-      const llmApiKey = keys.llmKey || keys.llm || keys[provider];
-      const alphaVantageKey = keys.alphaVantageKey || keys.alphavantage;
-
-      setLoading(true);
-      setLoadingTickers(tickers);
-      setScorecards([]);
-      setComparisonResult(null);
-      setCurrentHoldPeriod(holdPeriod);
-
-      const activeGuest = analystGuest || prefilledGuest;
-
-      const results = [];
-      const failed = [];
-
-      for (const ticker of tickers) {
-        try {
-          const finnhubData = await fetchTickerData(ticker, finnhubKey);
-          let alphaData = null;
-          if (alphaVantageKey) {
-            try {
-              alphaData = await fetchAlphaVantageData(ticker, alphaVantageKey);
-            } catch (err) {
-              console.warn(`[App] AlphaVantage failed for ${ticker}, continuing with Finnhub data:`, err.message);
-            }
-          }
-
-          const calc = calculateScore(finnhubData, alphaData, holdPeriod);
-          const { systemPrompt, userPrompt } = buildPrompt(finnhubData, alphaData, calc, holdPeriod, ticker);
-          const llmResult = await scoreWithLLM(provider, llmApiKey, systemPrompt, userPrompt, calc);
-
-          const scorecardData = {
-            ...calc,
-            ...llmResult,
-            ticker,
-            companyName: finnhubData.profile?.name || ticker,
-            holdPeriod,
-            scoredAt: new Date().toISOString(),
-            guest: activeGuest,
-          };
-
-          results.push(scorecardData);
-          saveScoreToHistory(scorecardData, holdPeriod);
-        } catch (err) {
-          console.error(`[App] Scoring failed for ${ticker}:`, err);
-          failed.push({ ticker, reason: err.message || 'Scoring failed' });
-        }
-      }
-
-      setScorecards(results);
-      setLoadingTickers([]);
-
-      if (results.length > 1) {
-        try {
-          const { systemPrompt, userPrompt } = buildComparisonPrompt(results, holdPeriod);
-          const rawComp = await scoreWithLLM(provider, llmApiKey, systemPrompt, userPrompt);
-          setComparisonResult(rawComp);
-        } catch (err) {
-          console.warn('[App] Comparative evaluation failed:', err.message);
-        }
-      }
-
-      if (failed.length > 0) {
-        const msg = failed.map((f) => `${f.ticker}: ${f.reason}`).join(' | ');
-        addToast(`Could not score some tickers — ${msg}`);
-      }
-
-      setLoading(false);
+    async () => {
+      addToast("sorry, we're still working on this part of the website", 'info');
     },
-    [addToast, prefilledGuest]
+    [addToast]
   );
 
   /* ── Key management ── */
@@ -367,63 +296,37 @@ export default function App() {
             >
               {activeTab === 'landing' ? (
                 <LandingPage
-                  onLaunchTool={(tab = 'score') => setActiveTab(tab)}
-                  onSelectTicker={(ticker, guest) => {
-                    setPrefilledTicker(ticker);
-                    setPrefilledGuest(guest);
-                    setActiveTab('score');
+                  onLaunchTool={(tab = 'digest') => setActiveTab(tab)}
+                  onSelectTicker={() => {
+                    addToast("sorry, we're still working on this part of the website", 'info');
                   }}
                   onSelectGuest={(guest) => setSelectedGuest(guest)}
                 />
-              ) : activeTab === 'score' ? (
-                <>
-                  {/* Tool Screen: Dense, straight into function, NO HERO TITLE */}
-                  <MarketCallBar
-                    onSelectTicker={(ticker, guest) => {
-                      setPrefilledTicker(ticker);
-                      setPrefilledGuest(guest);
-                    }}
-                    onSelectGuest={(guest) => setSelectedGuest(guest)}
-                  />
-
-                  <ScoreForm
-                    onScore={handleScore}
-                    loading={loading}
-                    prefilledTicker={prefilledTicker}
-                    prefilledGuest={prefilledGuest}
-                  />
-
-                  {scorecards.length > 1 && (
-                    <ComparisonMatrix
-                      scorecards={scorecards}
-                      comparisonResult={comparisonResult}
-                    />
-                  )}
-
-                  <ScorecardGrid
-                    scorecards={scorecards}
-                    loadingTickers={loadingTickers}
-                    holdPeriod={currentHoldPeriod}
-                    onSelectGuest={(guest) => setSelectedGuest(guest)}
-                  />
-                </>
               ) : activeTab === 'digest' ? (
                 <DigestView
-                  onScoreTicker={(ticker, guest) => {
-                    setPrefilledTicker(ticker);
-                    setPrefilledGuest(guest);
-                    setActiveTab('score');
+                  onScoreTicker={() => {
+                    addToast("sorry, we're still working on this part of the website", 'info');
                   }}
                   onSelectGuest={(guest) => setSelectedGuest(guest)}
                   onOpenSettings={() => setShowSettings(true)}
                 />
               ) : (
-                <HistoryTab
-                  onSelectTicker={(ticker) => {
-                    setPrefilledTicker(ticker);
-                    setActiveTab('score');
-                  }}
-                />
+                <div className="bg-surface-card border border-edge rounded-2xl p-8 text-center max-w-md mx-auto shadow-antigravity my-12 space-y-4">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-accent/15 border border-accent/30 flex items-center justify-center text-xl">
+                    🚧
+                  </div>
+                  <h3 className="text-base font-bold text-prime">Feature Under Construction</h3>
+                  <p className="text-xs text-dim leading-relaxed">
+                    sorry, we're still working on this part of the website
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('digest')}
+                    className="px-6 py-2.5 bg-accent text-accent-text text-xs font-semibold rounded-full hover:bg-accent-hover transition-all"
+                  >
+                    View Latest Picks
+                  </button>
+                </div>
               )}
             </motion.div>
           </AnimatePresence>

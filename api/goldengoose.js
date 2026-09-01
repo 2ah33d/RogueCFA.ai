@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const { windowDays = 7, llmKey: bodyKey, provider: bodyProvider } = req.body || {};
+    const { windowDays = 7, llmKey: bodyKey, provider: bodyProvider, force = false } = req.body || {};
 
     /* Fetch recent episodes from Supabase digest_jobs */
     const cutoffDate = new Date(Date.now() - (windowDays + 2) * 86_400_000).toISOString().split('T')[0];
@@ -25,6 +25,8 @@ export default async function handler(req, res) {
     if (dbError) {
       console.error('[goldengoose-api] Database query error:', dbError.message);
     }
+
+    const latestJob = (dbRows || [])[0];
 
     const episodes = (dbRows || []).map((row) => ({
       episodeDate: row.episode_date,
@@ -47,6 +49,18 @@ export default async function handler(req, res) {
           warningSells: [],
           _rejectedTickers: [],
           shortlists,
+          cached: true,
+        },
+      });
+    }
+
+    /* ── Supabase Cache Check: Return existing daily evaluation if already computed ── */
+    if (!force && latestJob?.result?.goldenGoose?.goldenPicks) {
+      return res.status(200).json({
+        result: {
+          ...latestJob.result.goldenGoose,
+          shortlists,
+          cached: true,
         },
       });
     }
@@ -54,7 +68,7 @@ export default async function handler(req, res) {
     /* Layer 2: Build LLM Eyes Prompt */
     const { prompt, allowedTickers } = buildLLMEyesPrompt({ buyHoldCandidates, sellCandidates }, windowDays);
 
-    /* Resolve Key & Provider (Defaults to claude-sonnet-5 / Anthropic API) */
+    /* Resolve Key & Provider (Defaults to Claude Haiku / Anthropic API for low token spend) */
     const provider = bodyProvider || 'claude';
     const apiKey = (bodyKey && bodyKey.trim())
       ? bodyKey.trim()
@@ -74,6 +88,7 @@ export default async function handler(req, res) {
           })),
           _rejectedTickers: [],
           shortlists,
+          cached: false,
         },
       });
     }
@@ -81,28 +96,40 @@ export default async function handler(req, res) {
     let rawText = '';
 
     if (provider === 'claude' || provider === 'anthropic' || process.env.ANTHROPIC_API_KEY) {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-5',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
+      const models = ['claude-haiku-4-5', 'claude-sonnet-5'];
+      let lastErr = null;
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error('[goldengoose-api] Claude API error:', response.status, errText);
-        throw new Error(`Claude API returned HTTP ${response.status}: ${errText.slice(0, 150)}`);
+      for (const model of models) {
+        try {
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+              model,
+              max_tokens: 1000,
+              messages: [{ role: 'user', content: prompt }],
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            rawText = data.content?.find((block) => block.type === 'text')?.text ?? '{}';
+            break;
+          } else {
+            const errText = await response.text();
+            lastErr = new Error(`Claude API (${model}) returned HTTP ${response.status}: ${errText.slice(0, 150)}`);
+            if (response.status === 404) continue;
+            throw lastErr;
+          }
+        } catch (e) {
+          lastErr = e;
+          if (model === models[models.length - 1]) throw lastErr;
+        }
       }
-
-      const data = await response.json();
-      rawText = data.content?.find((block) => block.type === 'text')?.text ?? '{}';
     } else if (provider === 'gemini') {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
       const response = await fetch(url, {
@@ -143,11 +170,37 @@ export default async function handler(req, res) {
     /* Validate LLM response against allowed tickers */
     const validated = validateLLMEyesResponse(parsed, allowedTickers);
 
+    /* ── Persist to Supabase: Update latest digest_jobs row with goldenGoose result ── */
+    if (latestJob?.id) {
+      try {
+        const updatedResult = {
+          ...(latestJob.result || {}),
+          goldenGoose: {
+            ...validated,
+            evaluatedAt: new Date().toISOString(),
+          },
+        };
+
+        await supabase
+          .from('digest_jobs')
+          .update({
+            result: updatedResult,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', latestJob.id);
+
+        console.log(`[goldengoose-api] Successfully saved LLM eyes analysis to Supabase job: ${latestJob.id}`);
+      } catch (saveErr) {
+        console.warn('[goldengoose-api] Failed to persist goldenGoose to Supabase:', saveErr.message);
+      }
+    }
+
     /* Surface _rejectedTickers in response so hallucinated off-list tickers are tracked */
     return res.status(200).json({
       result: {
         ...validated,
         shortlists,
+        cached: false,
       },
     });
   } catch (err) {

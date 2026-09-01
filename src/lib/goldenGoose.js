@@ -171,50 +171,83 @@ export function buildLLMEyesPrompt({ buyHoldCandidates, sellCandidates }, window
 
   const formatCandidate = (c) => `
 Ticker: ${c.ticker} (${c.company})
-Deterministic weighted score: ${c.weightedScore} | ${c.mentionCount} mention(s) across ${c.distinctGuestCount} distinct analyst(s)
-Mentions:
-${c.mentions.map((m) => `  - [${m.mentionType}, ${m.stance}] ${m.guest} (${m.date}): "${m.reasoning}"`).join('\n')}`;
+Weighted Score: ${c.weightedScore} | ${c.mentionCount} mention(s) across ${c.distinctGuestCount} distinct analyst(s)
+Analyst Reasoning:
+${c.mentions.map((m) => `  - [${m.mentionType.toUpperCase()}, ${m.stance.toUpperCase()}] ${m.guest} (${m.date}): "${m.reasoning}"`).join('\n')}`;
 
-  const prompt = `You are evaluating stock tickers for RogueCFA's "Golden Goose" weekly watchlist, based on BNN Bloomberg MarketCall episodes from the past ${windowDays} days.
+  const prompt = `You are an elite CFA analyst evaluating stock tickers for RogueCFA's "Golden Goose" multi-analyst radar, synthesizing recent BNN Bloomberg MarketCall broadcasts from the past ${windowDays} days.
 
-You may ONLY reference tickers from this exact list: ${allowedTickers.join(', ')}.
-Never introduce a ticker that isn't on this list, even if one appears inside the reasoning text below.
+You may ONLY evaluate and output tickers from this exact candidate list: ${allowedTickers.join(', ')}.
 
-=== BUY/HOLD CANDIDATES (2+ mentions, sorted by weighted score) ===
+=== BUY/HOLD CANDIDATES (Multi-analyst convergence) ===
 ${buyHoldCandidates.map(formatCandidate).join('\n---\n') || '(none this window)'}
 
-=== SELL CANDIDATES (all sell mentions, unfiltered by count) ===
+=== SELL CANDIDATES (All analyst sell/trim mentions) ===
 ${sellCandidates.map(formatCandidate).join('\n---\n') || '(none this window)'}
 
-Your task:
-1. From the buy/hold candidates, select tickers showing genuine, substantive conviction — not just repeated hedge language. If every mention for a ticker is "hold" with no actual "buy" among them, EXCLUDE it, even though it met the mention-count threshold. A pure hold-only pattern is not a golden goose signal.
-2. From the sell candidates, decide which are worth surfacing as warnings. These were NOT pre-filtered by frequency — a single sell mention can still be worth including if the reasoning cites a specific, substantive concern. Skip vague or low-conviction one-off caller answers.
-3. There is no target count for either list. Some weeks may have 4-5 genuine golden picks, others may have 1 or 0 — let the actual conviction in the reasoning drive the count, not a quota. Same logic applies to warnings.
+Your evaluation criteria:
+1. Golden Picks: Identify the strongest candidate tickers showing genuine fundamental, valuation, or structural tailwinds (e.g. accelerating growth, strong capital allocation, expanding margins, or secular industry momentum). If a candidate has multiple bullish mentions or high conviction from reputable analysts, select it.
+2. Warning Sells: Highlight companies facing real structural headwinds, balance sheet concerns, debt issues, or broken technical trends cited by the analysts.
+3. For each selected ticker, write a concise 1-2 sentence conviction rationale summarizing why it was selected based on the analyst quotes provided.
 
-Respond in this exact JSON shape, using ONLY tickers from the allowed list above, with no text before or after the JSON:
+Respond strictly in valid JSON format with NO surrounding markdown or extra text:
 {
-  "goldenPicks": [{ "ticker": "...", "rationale": "1-2 sentences, must reference specific reasoning provided above" }],
-  "warningSells": [{ "ticker": "...", "rationale": "1-2 sentences, must reference specific reasoning provided above" }]
+  "goldenPicks": [
+    { "ticker": "...", "rationale": "1-2 sentence concise conviction thesis referencing the analysts' points above" }
+  ],
+  "warningSells": [
+    { "ticker": "...", "rationale": "1-2 sentence warning summary referencing the analysts' points above" }
+  ]
 }`;
 
   return { prompt, allowedTickers };
 }
 
 /**
- * Validate LLM Eyes JSON response against allowedTickers list.
+ * Validate LLM Eyes JSON response against allowedTickers list with flexible key matching.
  */
 export function validateLLMEyesResponse(llmJson, allowedTickers) {
-  const allowedSet = new Set(allowedTickers);
-  const filterValid = (arr) => (arr || []).filter((item) => item && item.ticker && allowedSet.has(item.ticker));
+  const normalizedAllowed = allowedTickers.map((t) => normalizeTicker(t));
+  const allowedSet = new Set(normalizedAllowed);
 
-  const allItems = [...(llmJson?.goldenPicks || []), ...(llmJson?.warningSells || [])];
+  const rawPicks = llmJson?.goldenPicks || llmJson?.golden_picks || llmJson?.picks || [];
+  const rawSells = llmJson?.warningSells || llmJson?.warning_sells || llmJson?.warnings || [];
+
+  const filterAndFormat = (arr) => {
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((item) => {
+        if (!item || !item.ticker) return null;
+        const norm = normalizeTicker(item.ticker);
+        const matched = allowedTickers.find(
+          (orig) =>
+            normalizeTicker(orig) === norm ||
+            normalizeTicker(orig) === norm.replace(/\.(TO|UN|V|NE)$/, '') ||
+            norm === normalizeTicker(orig).replace(/\.(TO|UN|V|NE)$/, '')
+        );
+        if (!matched) return null;
+        return {
+          ticker: matched,
+          rationale: item.rationale || item.reasoning || item.thesis || 'Multi-analyst conviction pick surfaced from broadcast.',
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const goldenPicks = filterAndFormat(rawPicks);
+  const warningSells = filterAndFormat(rawSells);
+
+  const allItems = [
+    ...(Array.isArray(rawPicks) ? rawPicks : []),
+    ...(Array.isArray(rawSells) ? rawSells : []),
+  ];
   const rejectedTickers = allItems
-    .filter((item) => item && item.ticker && !allowedSet.has(item.ticker))
-    .map((item) => item.ticker);
+    .map((i) => i?.ticker)
+    .filter((t) => t && !allowedSet.has(normalizeTicker(t)));
 
   return {
-    goldenPicks: filterValid(llmJson?.goldenPicks),
-    warningSells: filterValid(llmJson?.warningSells),
+    goldenPicks,
+    warningSells,
     _rejectedTickers: rejectedTickers,
   };
 }

@@ -246,7 +246,7 @@ export default function DigestPickCard({
                   {reasoning || 'No detailed reasoning available.'}
                 </motion.blockquote>
 
-                {/* Primary CTA Button — text-accent-text dynamically adapts to Logo Blue or Google Soft Blue */}
+                {/* Modal Close Button */}
                 <motion.button
                   type="button"
                   initial={{ opacity: 0, y: 8 }}
@@ -256,15 +256,10 @@ export default function DigestPickCard({
                   onClick={(e) => {
                     e.stopPropagation();
                     handleClose();
-                    if (onScoreTicker) onScoreTicker(ticker, guestName);
                   }}
-                  className="inline-flex items-center gap-2 px-7 py-3 bg-accent text-accent-text text-sm font-semibold rounded-full hover:bg-accent-hover transition-colors shadow-antigravity"
+                  className="inline-flex items-center gap-2 px-7 py-2.5 bg-surface-elevated hover:bg-surface-elevated/80 border border-edge text-prime text-xs font-semibold rounded-full transition-colors shadow-antigravity"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  Score This Pick
+                  Close
                 </motion.button>
               </motion.div>
             </div>
