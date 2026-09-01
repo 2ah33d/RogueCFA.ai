@@ -1,12 +1,117 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { buildShortlists } from '../lib/goldenGoose';
 import { getKeys, getProvider } from '../lib/storage';
 
 /**
+ * AnalystMentionPill — Collapsible analyst commentary bubble
+ * Displays a sleek compact row with date, guest name, and BUY/HOLD/SELL flag.
+ * Expands on click to reveal full broadcast quote and guest profile link.
+ */
+function AnalystMentionPill({ mention, onSelectGuest }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const formattedDate = useMemo(() => {
+    if (!mention.date || mention.date === 'Recent') return 'Recent broadcast';
+    try {
+      const [y, m, d] = mention.date.split('-');
+      if (y && m && d) {
+        const dateObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+        return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+      return mention.date;
+    } catch {
+      return mention.date;
+    }
+  }, [mention.date]);
+
+  const isPick = mention.mentionType === 'pick';
+  const stance = mention.stance?.toLowerCase();
+
+  return (
+    <div className="bg-surface-elevated/40 hover:bg-surface-elevated/70 border border-edge/50 hover:border-edge rounded-xl overflow-hidden transition-all">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="w-full p-2.5 flex items-center justify-between gap-2 text-left cursor-pointer select-none group"
+      >
+        <div className="flex items-center gap-2 min-w-0 pr-1">
+          <svg
+            className={`w-3.5 h-3.5 text-dim transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-90 text-amber-400' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <p className="text-xs text-dim group-hover:text-prime truncate transition-colors">
+            <span className="text-faint">Mentioned on </span>
+            <span className="font-medium text-prime">{formattedDate}</span>
+            <span className="text-faint"> by </span>
+            <span className="font-semibold text-prime">{mention.guest}</span>
+          </p>
+        </div>
+
+        {/* Stance Flag Badge */}
+        <div className="shrink-0 flex items-center gap-1.5">
+          {isPick ? (
+            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">
+              BUY (TOP PICK)
+            </span>
+          ) : stance === 'buy' ? (
+            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+              BUY
+            </span>
+          ) : stance === 'hold' ? (
+            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300">
+              HOLD
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-400">
+              SELL
+            </span>
+          )}
+        </div>
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.18, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="p-3 pt-1 border-t border-edge/30 bg-surface-card/70 text-xs text-dim leading-relaxed space-y-2">
+              <p className="italic text-prime/90">"{mention.reasoning}"</p>
+              {onSelectGuest && mention.guest && mention.guest !== 'Guest Analyst' && mention.guest !== 'MarketCall Analyst' && (
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectGuest(mention.guest);
+                    }}
+                    className="text-[10px] text-amber-400 hover:text-amber-300 font-medium transition-colors inline-flex items-center gap-1"
+                  >
+                    <span>View {mention.guest}'s Track Record</span>
+                    <span>→</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/**
  * GoldenGoosePanel — Golden Goose v2 UI Component
- * Renders multi-analyst conviction picks & warning sells.
- * Loads pre-computed evaluations from Supabase without firing unprompted
- * background LLM calls on page reload.
+ * Renders multi-analyst conviction picks & warning sells with collapsible
+ * commentary bubbles and fixed AI conviction summaries.
  *
  * @param {Object} props
  * @param {Array<Object>} props.episodes - List of MarketCall episodes
@@ -169,7 +274,7 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
               type="button"
               onClick={() => handleGenerateLLMEyes(true)}
               disabled={loadingLLM}
-              className="px-3.5 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 rounded-xl transition-all flex items-center gap-1.5 text-xs font-semibold disabled:opacity-50 shadow-sm"
+              className="px-3.5 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 rounded-xl transition-all flex items-center gap-1.5 text-xs font-semibold disabled:opacity-50 shadow-sm cursor-pointer"
               title="Evaluate and synthesize candidate shortlists with AI"
             >
               {loadingLLM ? (
@@ -225,9 +330,9 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
                   key={pick.ticker}
                   className="bg-surface-card border border-amber-500/40 hover:border-amber-400/80 rounded-2xl p-5 shadow-lg shadow-amber-950/20 transition-all group relative flex flex-col justify-between"
                 >
-                  <div>
+                  <div className="space-y-4">
                     {/* Card Header: Ticker & Candidate Stats */}
-                    <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-lg font-extrabold text-prime group-hover:text-amber-400 transition-colors">
@@ -252,23 +357,30 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
                       )}
                     </div>
 
-                    {/* AI Rationale */}
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 leading-relaxed mb-4 shadow-sm">
-                      <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1">
+                    {/* AI Conviction Rationale (Fixed & Prominent) */}
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 leading-relaxed shadow-sm">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1.5">
                         <span>✨ Conviction Rationale</span>
                       </div>
                       <p>{pick.rationale}</p>
                     </div>
 
-                    {/* Mention Excerpts */}
+                    {/* Collapsible Analyst Commentary Pills */}
                     {cand?.mentions && cand.mentions.length > 0 && (
-                      <div className="space-y-1.5 mb-2">
-                        <div className="text-[10px] font-semibold text-faint uppercase">Analyst Commentary:</div>
-                        {cand.mentions.slice(0, 2).map((m, idx) => (
-                          <div key={idx} className="bg-surface-elevated/50 border border-edge/30 rounded-lg p-2 text-[11px] text-dim">
-                            <span className="font-semibold text-prime">[{m.mentionType.toUpperCase()}, {m.stance.toUpperCase()}] {m.guest}:</span> "{m.reasoning}"
-                          </div>
-                        ))}
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between text-[10px] font-semibold text-faint uppercase tracking-wider">
+                          <span>Analyst Commentary ({cand.mentions.length}):</span>
+                          <span className="text-[10px] font-normal text-dim/70">Click pill to expand quote</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {cand.mentions.map((m, idx) => (
+                            <AnalystMentionPill
+                              key={idx}
+                              mention={m}
+                              onSelectGuest={onSelectGuest}
+                            />
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -311,21 +423,50 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
               return (
                 <div
                   key={sell.ticker}
-                  className="bg-rose-950/20 border border-rose-500/40 rounded-2xl p-4 flex flex-col justify-between"
+                  className="bg-rose-950/20 border border-rose-500/40 rounded-2xl p-5 shadow-lg shadow-rose-950/20 flex flex-col justify-between"
                 >
-                  <div>
-                    <div className="flex items-start justify-between mb-2">
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
-                        <span className="text-base font-bold text-rose-300">{sell.ticker}</span>
-                        <p className="text-xs text-dim">{cand?.company || sell.ticker}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-extrabold text-rose-300">{sell.ticker}</span>
+                          <span className="px-2 py-0.5 text-[10px] font-sans font-bold bg-rose-500/20 border border-rose-500/40 text-rose-300 rounded-md">
+                            WARNING SELL
+                          </span>
+                        </div>
+                        <p className="text-xs text-dim line-clamp-1">{cand?.company || sell.ticker}</p>
                       </div>
                       {cand && (
                         <span className="text-xs font-bold text-rose-400">{cand.weightedScore} SCORE</span>
                       )}
                     </div>
-                    <div className="bg-rose-950/40 border border-rose-500/30 rounded-xl p-2.5 text-xs text-rose-200/90 mb-1">
-                      {sell.rationale}
+
+                    {/* Fixed AI Warning Summary */}
+                    <div className="bg-rose-950/40 border border-rose-500/30 rounded-xl p-3 text-xs text-rose-200/90 leading-relaxed">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-rose-400 mb-1.5">
+                        <span>⚠️ Risk Summary</span>
+                      </div>
+                      <p>{sell.rationale}</p>
                     </div>
+
+                    {/* Collapsible Analyst Commentary Pills for Warning Sells */}
+                    {cand?.mentions && cand.mentions.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between text-[10px] font-semibold text-faint uppercase tracking-wider">
+                          <span>Analyst Commentary ({cand.mentions.length}):</span>
+                          <span className="text-[10px] font-normal text-dim/70">Click pill to expand</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {cand.mentions.map((m, idx) => (
+                            <AnalystMentionPill
+                              key={idx}
+                              mention={m}
+                              onSelectGuest={onSelectGuest}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -339,7 +480,7 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
         <button
           type="button"
           onClick={() => setShowAllShortlists(!showAllShortlists)}
-          className="w-full py-2.5 px-4 bg-surface-card hover:bg-surface-elevated border border-edge text-dim hover:text-prime text-xs font-medium rounded-xl transition-all flex items-center justify-between"
+          className="w-full py-2.5 px-4 bg-surface-card hover:bg-surface-elevated border border-edge text-dim hover:text-prime text-xs font-medium rounded-xl transition-all flex items-center justify-between cursor-pointer"
         >
           <span>View Layer 1 Deterministic Shortlist Candidates ({buyHoldCandidates.length + sellCandidates.length})</span>
           <svg

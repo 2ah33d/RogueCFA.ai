@@ -70,7 +70,12 @@ export function buildShortlists(episodes = [], windowDays = 7) {
     const epDateStr = episode.episodeDate || episode.air_date || episode.date;
     if (epDateStr && new Date(epDateStr).getTime() < cutoff) continue;
 
-    const guestName = episode.guest || episode.analyst_name || 'Guest Analyst';
+    const guestName =
+      episode.guest ||
+      episode.digest?.guest ||
+      episode.result?.digest?.guest ||
+      episode.analyst_name ||
+      'MarketCall Analyst';
     const digest = episode.digest || episode;
 
     const topPicks = Array.isArray(digest.picks)
