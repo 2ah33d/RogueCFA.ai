@@ -69,12 +69,14 @@ export default function App() {
   /* ── State ── */
   const [keysReady, setKeysReady] = useState(checkHasKeys);
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState('landing'); /* Default root route: landing page */
+  const [activeTab, setActiveTab] = useState('landing');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const MOBILE_TABS = [
     { key: 'landing', label: 'Overview', icon: LayoutDashboard },
+    { key: 'score', label: 'Score Ticker', icon: Target },
     { key: 'digest', label: 'Latest Picks', icon: Sparkles },
+    { key: 'history', label: 'Score History', icon: History },
   ];
 
   const [loading, setLoading] = useState(false);
@@ -110,7 +112,7 @@ export default function App() {
     setKeysReady(checkHasKeys());
   }, []);
 
-  /* ── Scoring Pipeline (Disabled / Under Development) ── */
+  /* ── Scoring Pipeline: Intercept search submission before any AI usage ── */
   const handleScore = useCallback(
     async () => {
       addToast("sorry, we're still working on this part of the website", 'info');
@@ -128,14 +130,11 @@ export default function App() {
     <>
       <style>{THEME}</style>
 
-      <div className="min-h-screen bg-surface text-prime flex flex-col">
-
-        {/* ── Header ── */}
-        <header
-          className="w-full border-b border-surface-card/40 bg-surface/80
-                      backdrop-blur-md sticky top-0 z-30 shadow-antigravity"
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+      <div className="min-h-screen bg-surface flex flex-col font-sans selection:bg-accent/20">
+        {/* ── Sticky Top Bar ── */}
+        <header className="sticky top-0 z-40 bg-surface/85 backdrop-blur-xl border-b border-surface-card/60 shadow-sm transition-all">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            {/* Logo & Live Commit SHA */}
             <div className="flex items-center gap-3">
               <div
                 className="flex items-center gap-2.5 cursor-pointer select-none group"
@@ -296,37 +295,63 @@ export default function App() {
             >
               {activeTab === 'landing' ? (
                 <LandingPage
-                  onLaunchTool={(tab = 'digest') => setActiveTab(tab)}
-                  onSelectTicker={() => {
-                    addToast("sorry, we're still working on this part of the website", 'info');
+                  onLaunchTool={(tab = 'score') => setActiveTab(tab)}
+                  onSelectTicker={(ticker, guest) => {
+                    setPrefilledTicker(ticker);
+                    setPrefilledGuest(guest);
+                    setActiveTab('score');
                   }}
                   onSelectGuest={(guest) => setSelectedGuest(guest)}
                 />
+              ) : activeTab === 'score' ? (
+                <>
+                  {/* Tool Screen: Dense, straight into function, NO HERO TITLE */}
+                  <MarketCallBar
+                    onSelectTicker={(ticker, guest) => {
+                      setPrefilledTicker(ticker);
+                      setPrefilledGuest(guest);
+                    }}
+                    onSelectGuest={(guest) => setSelectedGuest(guest)}
+                  />
+
+                  <ScoreForm
+                    onScore={handleScore}
+                    loading={loading}
+                    prefilledTicker={prefilledTicker}
+                    prefilledGuest={prefilledGuest}
+                  />
+
+                  {scorecards.length > 1 && (
+                    <ComparisonMatrix
+                      scorecards={scorecards}
+                      comparisonResult={comparisonResult}
+                    />
+                  )}
+
+                  <ScorecardGrid
+                    scorecards={scorecards}
+                    loadingTickers={loadingTickers}
+                    holdPeriod={currentHoldPeriod}
+                    onSelectGuest={(guest) => setSelectedGuest(guest)}
+                  />
+                </>
               ) : activeTab === 'digest' ? (
                 <DigestView
-                  onScoreTicker={() => {
-                    addToast("sorry, we're still working on this part of the website", 'info');
+                  onScoreTicker={(ticker, guest) => {
+                    setPrefilledTicker(ticker);
+                    setPrefilledGuest(guest);
+                    setActiveTab('score');
                   }}
                   onSelectGuest={(guest) => setSelectedGuest(guest)}
                   onOpenSettings={() => setShowSettings(true)}
                 />
               ) : (
-                <div className="bg-surface-card border border-edge rounded-2xl p-8 text-center max-w-md mx-auto shadow-antigravity my-12 space-y-4">
-                  <div className="w-12 h-12 mx-auto rounded-2xl bg-accent/15 border border-accent/30 flex items-center justify-center text-xl">
-                    🚧
-                  </div>
-                  <h3 className="text-base font-bold text-prime">Feature Under Construction</h3>
-                  <p className="text-xs text-dim leading-relaxed">
-                    sorry, we're still working on this part of the website
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('digest')}
-                    className="px-6 py-2.5 bg-accent text-accent-text text-xs font-semibold rounded-full hover:bg-accent-hover transition-all"
-                  >
-                    View Latest Picks
-                  </button>
-                </div>
+                <HistoryTab
+                  onSelectTicker={(ticker) => {
+                    setPrefilledTicker(ticker);
+                    setActiveTab('score');
+                  }}
+                />
               )}
             </motion.div>
           </AnimatePresence>
