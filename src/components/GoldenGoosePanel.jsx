@@ -4,15 +4,15 @@ import { buildShortlists } from '../lib/goldenGoose';
 import { getKeys, getProvider } from '../lib/storage';
 
 /**
- * AnalystMentionPill — Collapsible analyst commentary bubble
- * Displays a sleek compact row with date, guest name, and BUY/HOLD/SELL flag.
- * Expands on click to reveal full broadcast quote and guest profile link.
+ * AnalystMentionPill — Subtle grey collapsible commentary pill
+ * Low-contrast, clean, understated styling to avoid visual noise.
+ * Expands on click to reveal full broadcast quote.
  */
 function AnalystMentionPill({ mention, onSelectGuest }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const formattedDate = useMemo(() => {
-    if (!mention.date || mention.date === 'Recent') return 'Recent broadcast';
+    if (!mention.date || mention.date === 'Recent') return 'Recent';
     try {
       const [y, m, d] = mention.date.split('-');
       if (y && m && d) {
@@ -29,45 +29,42 @@ function AnalystMentionPill({ mention, onSelectGuest }) {
   const stance = mention.stance?.toLowerCase();
 
   return (
-    <div className="bg-surface-elevated/40 hover:bg-surface-elevated/70 border border-edge/50 hover:border-edge rounded-xl overflow-hidden transition-all">
+    <div className="bg-surface-elevated/25 hover:bg-surface-elevated/50 border border-white/[0.04] hover:border-white/[0.08] rounded-xl overflow-hidden transition-all">
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full p-2.5 flex items-center justify-between gap-2 text-left cursor-pointer select-none group"
+        className="w-full px-3 py-2 flex items-center justify-between gap-2 text-left cursor-pointer select-none group"
       >
-        <div className="flex items-center gap-2 min-w-0 pr-1">
+        <div className="flex items-center gap-2 min-w-0 pr-1 text-xs text-dim group-hover:text-prime/90 transition-colors">
           <svg
-            className={`w-3.5 h-3.5 text-dim transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-90 text-amber-400' : ''}`}
+            className={`w-3 h-3 text-dim/60 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-90 text-amber-400/80' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          <p className="text-xs text-dim group-hover:text-prime truncate transition-colors">
-            <span className="text-faint">Mentioned on </span>
-            <span className="font-medium text-prime">{formattedDate}</span>
-            <span className="text-faint"> by </span>
-            <span className="font-semibold text-prime">{mention.guest}</span>
-          </p>
+          <span className="truncate text-[11px]">
+            Mentioned on <span className="text-dim/80">{formattedDate}</span> by <span className="text-dim/95 font-medium">{mention.guest}</span>
+          </span>
         </div>
 
-        {/* Stance Flag Badge */}
-        <div className="shrink-0 flex items-center gap-1.5">
+        {/* Subtle Stance Badge */}
+        <div className="shrink-0 flex items-center">
           {isPick ? (
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">
+            <span className="px-2 py-0.5 text-[9px] font-semibold uppercase rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400/90">
               BUY (TOP PICK)
             </span>
           ) : stance === 'buy' ? (
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+            <span className="px-2 py-0.5 text-[9px] font-semibold uppercase rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400/80">
               BUY
             </span>
           ) : stance === 'hold' ? (
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300">
+            <span className="px-2 py-0.5 text-[9px] font-semibold uppercase rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300/80">
               HOLD
             </span>
           ) : (
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-400">
+            <span className="px-2 py-0.5 text-[9px] font-semibold uppercase rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400/80">
               SELL
             </span>
           )}
@@ -80,20 +77,20 @@ function AnalystMentionPill({ mention, onSelectGuest }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.18, ease: 'easeInOut' }}
+            transition={{ duration: 0.16, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="p-3 pt-1 border-t border-edge/30 bg-surface-card/70 text-xs text-dim leading-relaxed space-y-2">
-              <p className="italic text-prime/90">"{mention.reasoning}"</p>
+            <div className="px-3 py-2.5 border-t border-white/[0.04] bg-surface/50 text-[11px] text-dim leading-relaxed space-y-2">
+              <p className="italic text-dim/90">"{mention.reasoning}"</p>
               {onSelectGuest && mention.guest && mention.guest !== 'Guest Analyst' && mention.guest !== 'MarketCall Analyst' && (
-                <div className="flex justify-end pt-1">
+                <div className="flex justify-end pt-0.5">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       onSelectGuest(mention.guest);
                     }}
-                    className="text-[10px] text-amber-400 hover:text-amber-300 font-medium transition-colors inline-flex items-center gap-1"
+                    className="text-[10px] text-dim/70 hover:text-amber-400 font-normal transition-colors inline-flex items-center gap-1"
                   >
                     <span>View {mention.guest}'s Track Record</span>
                     <span>→</span>
@@ -110,8 +107,8 @@ function AnalystMentionPill({ mention, onSelectGuest }) {
 
 /**
  * GoldenGoosePanel — Golden Goose v2 UI Component
- * Renders multi-analyst conviction picks & warning sells with collapsible
- * commentary bubbles and fixed AI conviction summaries.
+ * Renders multi-analyst conviction picks & warning sells with subtle grey
+ * collapsible commentary bubbles and fixed AI conviction summaries.
  *
  * @param {Object} props
  * @param {Array<Object>} props.episodes - List of MarketCall episodes
@@ -252,7 +249,7 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
   return (
     <div className="w-full max-w-4xl mx-auto my-8 space-y-6 font-sans">
       {/* ── Header Bar ── */}
-      <div className="bg-gradient-to-r from-amber-950/40 via-surface-card to-surface-card border border-amber-500/30 rounded-2xl p-6 shadow-antigravity relative overflow-hidden">
+      <div className="bg-gradient-to-r from-amber-950/30 via-surface-card to-surface-card border border-amber-500/25 rounded-2xl p-6 shadow-antigravity relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
@@ -260,7 +257,7 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xl">🪿</span>
               <h2 className="text-lg font-bold text-prime tracking-tight">Golden Goose Radar</h2>
-              <span className="px-2.5 py-0.5 text-[10px] font-sans font-semibold uppercase bg-amber-500/15 border border-amber-500/40 text-amber-400 rounded-full">
+              <span className="px-2.5 py-0.5 text-[10px] font-sans font-semibold uppercase bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-full">
                 {isAiCurated ? 'AI Conviction Curated' : '7-Day Multi-Analyst Convergence'}
               </span>
             </div>
@@ -288,12 +285,12 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
               <span>{loadingLLM ? 'Evaluating...' : 'Refresh AI Conviction'}</span>
             </button>
 
-            <div className="px-3 py-1.5 bg-surface-elevated/80 border border-edge rounded-xl text-dim flex items-center gap-2">
+            <div className="px-3 py-1.5 bg-surface-elevated/60 border border-edge rounded-xl text-dim flex items-center gap-2">
               <span className="text-amber-400 font-bold">+{goldenPicks.length}</span>
               <span>Golden Pick{goldenPicks.length === 1 ? '' : 's'}</span>
             </div>
             {warningSells.length > 0 && (
-              <div className="px-3 py-1.5 bg-rose-950/40 border border-rose-500/30 rounded-xl text-rose-400">
+              <div className="px-3 py-1.5 bg-rose-950/30 border border-rose-500/30 rounded-xl text-rose-400">
                 <span className="font-bold mr-1.5">{warningSells.length}</span>
                 <span>Warning Sell{warningSells.length === 1 ? '' : 's'}</span>
               </div>
@@ -303,7 +300,7 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
 
         {/* Diagnostic Tracker: Rejected Off-List Tickers */}
         {rejectedTickers.length > 0 && (
-          <div className="mt-3 bg-rose-950/30 border border-rose-500/30 rounded-xl p-2.5 text-[11px] text-rose-300 flex items-center gap-2">
+          <div className="mt-3 bg-rose-950/25 border border-rose-500/25 rounded-xl p-2.5 text-[11px] text-rose-300 flex items-center gap-2">
             <span className="font-bold">⚠️ LLM Hallucination Guard:</span>
             <span>Rejected off-list ticker(s): {rejectedTickers.join(', ')}</span>
           </div>
@@ -314,7 +311,7 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
       {goldenPicks.length > 0 ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-amber-400/90 flex items-center gap-2">
               <span>🏆 {isAiCurated ? 'AI-Curated Golden Picks' : 'Multi-Analyst Shortlist Picks'}</span>
               <span className="text-xs font-normal text-dim uppercase">({goldenPicks.length} Tickers)</span>
             </h3>
@@ -328,9 +325,9 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
               return (
                 <div
                   key={pick.ticker}
-                  className="bg-surface-card border border-amber-500/40 hover:border-amber-400/80 rounded-2xl p-5 shadow-lg shadow-amber-950/20 transition-all group relative flex flex-col justify-between"
+                  className="bg-surface-card border border-amber-500/30 hover:border-amber-400/60 rounded-2xl p-5 shadow-lg shadow-amber-950/10 transition-all group relative flex flex-col justify-between"
                 >
-                  <div className="space-y-4">
+                  <div className="space-y-3.5">
                     {/* Card Header: Ticker & Candidate Stats */}
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -338,7 +335,7 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
                           <span className="text-lg font-extrabold text-prime group-hover:text-amber-400 transition-colors">
                             {pick.ticker}
                           </span>
-                          <span className="px-2 py-0.5 text-[10px] font-sans font-bold bg-amber-400/20 border border-amber-400/50 text-amber-300 rounded-md">
+                          <span className="px-2 py-0.5 text-[9px] font-sans font-bold bg-amber-400/15 border border-amber-400/35 text-amber-300 rounded-md">
                             {isAiCurated ? 'AI CONVICTION' : 'SHORTLIST CANDIDATE'}
                           </span>
                         </div>
@@ -348,9 +345,9 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
                       {cand && (
                         <div className="text-right">
                           <div className="text-base font-black text-amber-400">
-                            +{cand.weightedScore} <span className="text-[10px] text-faint font-normal">SCORE</span>
+                            +{cand.weightedScore} <span className="text-[10px] text-dim/60 font-normal">SCORE</span>
                           </div>
-                          <div className="text-[10px] text-dim font-sans">
+                          <div className="text-[10px] text-dim/80 font-sans">
                             {cand.mentionCount} mention(s) · {cand.distinctGuestCount} guest(s)
                           </div>
                         </div>
@@ -358,21 +355,21 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
                     </div>
 
                     {/* AI Conviction Rationale (Fixed & Prominent) */}
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 leading-relaxed shadow-sm">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1.5">
+                    <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-3 text-xs text-amber-200/90 leading-relaxed shadow-sm">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1">
                         <span>✨ Conviction Rationale</span>
                       </div>
                       <p>{pick.rationale}</p>
                     </div>
 
-                    {/* Collapsible Analyst Commentary Pills */}
+                    {/* Collapsible Analyst Commentary Pills (Subtle Grey) */}
                     {cand?.mentions && cand.mentions.length > 0 && (
-                      <div className="space-y-2 pt-1">
-                        <div className="flex items-center justify-between text-[10px] font-semibold text-faint uppercase tracking-wider">
-                          <span>Analyst Commentary ({cand.mentions.length}):</span>
-                          <span className="text-[10px] font-normal text-dim/70">Click pill to expand quote</span>
+                      <div className="space-y-1.5 pt-0.5">
+                        <div className="flex items-center justify-between text-[10px] font-medium text-dim/60 uppercase tracking-wider px-0.5">
+                          <span>Analyst Mentions ({cand.mentions.length})</span>
+                          <span className="text-[10px] font-normal text-dim/40 lowercase">click to expand</span>
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           {cand.mentions.map((m, idx) => (
                             <AnalystMentionPill
                               key={idx}
@@ -411,7 +408,7 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
       {/* ── Warning Sells Section ── */}
       {warningSells.length > 0 && (
         <div className="space-y-3 pt-2">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-rose-400 flex items-center gap-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-rose-400/90 flex items-center gap-2">
             <span>⚠️ Multi-Analyst Warning Sells</span>
             <span className="text-xs font-normal text-dim">({warningSells.length})</span>
           </h3>
@@ -423,14 +420,14 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
               return (
                 <div
                   key={sell.ticker}
-                  className="bg-rose-950/20 border border-rose-500/40 rounded-2xl p-5 shadow-lg shadow-rose-950/20 flex flex-col justify-between"
+                  className="bg-rose-950/15 border border-rose-500/30 rounded-2xl p-5 shadow-lg shadow-rose-950/10 flex flex-col justify-between"
                 >
-                  <div className="space-y-4">
+                  <div className="space-y-3.5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-lg font-extrabold text-rose-300">{sell.ticker}</span>
-                          <span className="px-2 py-0.5 text-[10px] font-sans font-bold bg-rose-500/20 border border-rose-500/40 text-rose-300 rounded-md">
+                          <span className="px-2 py-0.5 text-[9px] font-sans font-bold bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-md">
                             WARNING SELL
                           </span>
                         </div>
@@ -442,8 +439,8 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
                     </div>
 
                     {/* Fixed AI Warning Summary */}
-                    <div className="bg-rose-950/40 border border-rose-500/30 rounded-xl p-3 text-xs text-rose-200/90 leading-relaxed">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-rose-400 mb-1.5">
+                    <div className="bg-rose-950/30 border border-rose-500/25 rounded-xl p-3 text-xs text-rose-200/90 leading-relaxed">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-rose-400 mb-1">
                         <span>⚠️ Risk Summary</span>
                       </div>
                       <p>{sell.rationale}</p>
@@ -451,12 +448,12 @@ export default function GoldenGoosePanel({ episodes = [], onSelectGuest }) {
 
                     {/* Collapsible Analyst Commentary Pills for Warning Sells */}
                     {cand?.mentions && cand.mentions.length > 0 && (
-                      <div className="space-y-2 pt-1">
-                        <div className="flex items-center justify-between text-[10px] font-semibold text-faint uppercase tracking-wider">
-                          <span>Analyst Commentary ({cand.mentions.length}):</span>
-                          <span className="text-[10px] font-normal text-dim/70">Click pill to expand</span>
+                      <div className="space-y-1.5 pt-0.5">
+                        <div className="flex items-center justify-between text-[10px] font-medium text-dim/60 uppercase tracking-wider px-0.5">
+                          <span>Analyst Mentions ({cand.mentions.length})</span>
+                          <span className="text-[10px] font-normal text-dim/40 lowercase">click to expand</span>
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           {cand.mentions.map((m, idx) => (
                             <AnalystMentionPill
                               key={idx}
